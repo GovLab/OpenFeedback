@@ -1,26 +1,38 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from app.models import FeedbackInput, ClassifiedFeedback, GraphData
-from app.classifier import classify_feedback
-from app.database import db
-from app.config import settings
+from .models import FeedbackInput, ClassifiedFeedback, GraphData
+from .classifier import classify_feedback
+from .database import db
+from .config import settings
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage application lifespan events."""
+    yield
+    db.close()
+
 
 app = FastAPI(
     title="Feedback Classification API",
     description="API for classifying and storing feedback in a graph database",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
+
 
 # Configure CORS to allow frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],  # Next.js default ports
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
+# Root endpoint
 @app.get("/")
 async def root():
     """Root endpoint."""
@@ -91,9 +103,3 @@ async def get_stats():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Close database connection on shutdown."""
-    db.close()

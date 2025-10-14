@@ -1,8 +1,7 @@
 from openai import OpenAI
-from app.config import settings
-from app.models import ClassifiedFeedback
+from .config import settings
+from .models import ClassifiedFeedback
 import json
-
 
 client = OpenAI(api_key=settings.openai_api_key)
 
@@ -43,7 +42,7 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
     """
     try:
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a feedback classification assistant that returns only valid JSON."},
                 {"role": "user", "content": CLASSIFICATION_PROMPT.format(feedback=feedback_text)}

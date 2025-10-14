@@ -1,18 +1,21 @@
 from neo4j import GraphDatabase
-from app.config import settings
-from app.models import ClassifiedFeedback, GraphData, GraphNode, GraphRelationship
+from .config import settings
+from .models import ClassifiedFeedback, GraphData, GraphNode, GraphRelationship
 from typing import List
 import uuid
 
 
 class Neo4jDatabase:
     """Neo4j database handler for feedback storage and retrieval."""
-    
     def __init__(self):
-        self.driver = GraphDatabase.driver(
-            settings.neo4j_uri,
-            auth=(settings.neo4j_user, settings.neo4j_password)
-        )
+        """Initialize the database connection."""
+        URI = settings.neo4j_uri
+        USER = settings.neo4j_username
+        PASSWORD = settings.neo4j_password
+        AUTH = (USER, PASSWORD)
+
+        self.driver = GraphDatabase.driver(URI, auth=AUTH)
+        self.driver.verify_connectivity()
     
     def close(self):
         """Close the database connection."""

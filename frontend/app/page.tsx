@@ -1,30 +1,52 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import FeedbackForm from '@/components/FeedbackForm';
-import GraphVisualization from '@/components/GraphVisualization';
-import StatsDisplay from '@/components/StatsDisplay';
-import { api, GraphData, Stats } from '@/lib/api';
+import { useState, useEffect } from "react";
+import FeedbackForm from "@/components/FeedbackForm";
+import GraphVisualization from "@/components/GraphVisualization";
+import StatsDisplay from "@/components/StatsDisplay";
+import { api, GraphData, Stats } from "@/lib/api";
 
 export default function Home() {
-  const [graphData, setGraphData] = useState<GraphData>({ nodes: [], relationships: [] });
-  const [stats, setStats] = useState<Stats>({ total_feedback: 0, categories: [] });
+  const [graphData, setGraphData] = useState<GraphData>({
+    nodes: [],
+    relationships: [],
+  });
+  const [stats, setStats] = useState<Stats>({
+    total_feedback: 0,
+    categories: [],
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
       setLoading(true);
+      console.log("Starting to fetch data from backend...");
+
       const [graph, statsData] = await Promise.all([
         api.getGraph(),
-        api.getStats()
+        api.getStats(),
       ]);
+
+      console.log("Graph data received:", graph);
+      console.log("Stats data received:", statsData);
+
       setGraphData(graph);
       setStats(statsData);
       setError(null);
-    } catch (err) {
-      setError('Failed to load data. Make sure the backend is running.');
-      console.error(err);
+    } catch (err: any) {
+      console.error("Error fetching data:", {
+        message: err.message,
+        response: err.response?.data,
+        request: err.request,
+        config: err.config,
+      });
+
+      const errorMessage =
+        err.response?.data?.detail ||
+        err.message ||
+        "Failed to load data. Make sure the backend is running.";
+      setError(`Error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
