@@ -13,12 +13,14 @@ A comprehensive web application for collecting, classifying, and visualizing fee
 ## Architecture
 
 ### Backend (FastAPI + Python)
+
 - **FastAPI**: Modern, high-performance Python web framework
 - **OpenAI API**: GPT-3.5-turbo for feedback classification
 - **Neo4j**: Graph database for storing and querying feedback relationships
 - **Pydantic**: Data validation and settings management
 
 ### Frontend (Next.js + TypeScript)
+
 - **Next.js 15**: React framework with App Router
 - **TypeScript**: Type-safe development
 - **Tailwind CSS**: Utility-first CSS framework
@@ -29,56 +31,40 @@ A comprehensive web application for collecting, classifying, and visualizing fee
 
 - Python 3.11+
 - Node.js 20+
-- Neo4j 5.16+ (or use Docker)
+- Neo4j 5.16+
 - OpenAI API key
-
-## Quick Start with Docker
-
-The easiest way to run the entire stack:
-
-```bash
-# Clone the repository
-git clone https://github.com/ShadowMasterAJ/OpenPermit.git
-cd OpenPermit
-
-# Set your OpenAI API key
-export OPENAI_API_KEY=your_api_key_here
-
-# Start all services
-docker-compose up
-```
-
-Access the application:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
-- Neo4j Browser: http://localhost:7474
 
 ## Manual Setup
 
 ### Backend Setup
 
 1. Navigate to the backend directory:
+
 ```bash
 cd backend
 ```
 
 2. Create a virtual environment:
+
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
 3. Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
 
 4. Create `.env` file from example:
+
 ```bash
 cp .env.example .env
 ```
 
 5. Edit `.env` and add your credentials:
+
 ```env
 OPENAI_API_KEY=your_openai_api_key
 NEO4J_URI=bolt://localhost:7687
@@ -87,6 +73,7 @@ NEO4J_PASSWORD=your_neo4j_password
 ```
 
 6. Start the backend:
+
 ```bash
 uvicorn app.main:app --reload
 ```
@@ -96,21 +83,25 @@ The API will be available at http://localhost:8000
 ### Frontend Setup
 
 1. Navigate to the frontend directory:
+
 ```bash
 cd frontend
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
 
 3. Create `.env.local` file:
+
 ```bash
 cp .env.local.example .env.local
 ```
 
 4. Start the development server:
+
 ```bash
 npm run dev
 ```
@@ -119,26 +110,18 @@ The frontend will be available at http://localhost:3000
 
 ### Neo4j Setup
 
-#### Option 1: Local Installation
 1. Download and install Neo4j from https://neo4j.com/download/
 2. Start Neo4j and create a database
 3. Set the password and update the `.env` file
 
-#### Option 2: Docker
-```bash
-docker run -d \
-  --name neo4j \
-  -p 7474:7474 -p 7687:7687 \
-  -e NEO4J_AUTH=neo4j/password123 \
-  neo4j:5.16.0
-```
-
 ## API Endpoints
 
 ### POST /api/feedback
+
 Submit feedback for classification
 
 **Request:**
+
 ```json
 {
   "text": "The app is great but the UI could be improved"
@@ -146,6 +129,7 @@ Submit feedback for classification
 ```
 
 **Response:**
+
 ```json
 {
   "text": "The app is great but the UI could be improved",
@@ -156,9 +140,11 @@ Submit feedback for classification
 ```
 
 ### GET /api/graph
+
 Get graph data for visualization
 
 **Response:**
+
 ```json
 {
   "nodes": [
@@ -179,9 +165,11 @@ Get graph data for visualization
 ```
 
 ### GET /api/stats
+
 Get feedback statistics
 
 **Response:**
+
 ```json
 {
   "total_feedback": 42,
@@ -210,6 +198,7 @@ The system classifies feedback into the following categories:
 ## Development
 
 ### Backend Development
+
 ```bash
 cd backend
 source venv/bin/activate
@@ -217,13 +206,16 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### Frontend Development
+
 ```bash
 cd frontend
 npm run dev
 ```
 
 ### View API Documentation
+
 FastAPI automatically generates interactive API documentation:
+
 - Swagger UI: http://localhost:8000/docs
 - ReDoc: http://localhost:8000/redoc
 
@@ -240,7 +232,6 @@ OpenPermit/
 │   │   ├── classifier.py     # OpenAI classification logic
 │   │   └── database.py       # Neo4j database operations
 │   ├── requirements.txt
-│   ├── Dockerfile
 │   └── .env.example
 ├── frontend/
 │   ├── app/
@@ -254,15 +245,14 @@ OpenPermit/
 │   ├── lib/
 │   │   └── api.ts            # API client
 │   ├── package.json
-│   ├── Dockerfile
 │   └── .env.local.example
-├── docker-compose.yml
 └── README.md
 ```
 
 ## Technologies Used
 
 ### Backend
+
 - FastAPI 0.109.0
 - OpenAI API (GPT-3.5-turbo)
 - Neo4j 5.16.0
@@ -270,6 +260,7 @@ OpenPermit/
 - Uvicorn
 
 ### Frontend
+
 - Next.js 15
 - React 19
 - TypeScript
