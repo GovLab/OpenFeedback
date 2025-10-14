@@ -9,7 +9,7 @@ interface GraphVisualizationProps {
 }
 
 export default function GraphVisualization({ data }: GraphVisualizationProps) {
-  const graphRef = useRef<any>();
+  const graphRef = useRef<any>(null);
 
   // Transform data to force-graph format
   const graphData = {
