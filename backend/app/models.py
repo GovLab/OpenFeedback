@@ -1,0 +1,41 @@
+from pydantic import BaseModel
+from typing import List, Optional
+
+
+class FeedbackInput(BaseModel):
+    """Model for feedback input from user."""
+    text: str
+
+
+class Category(BaseModel):
+    """Model for a feedback category."""
+    name: str
+    subcategories: List[str] = []
+
+
+class ClassifiedFeedback(BaseModel):
+    """Model for classified feedback."""
+    text: str
+    categories: List[str]
+    subcategories: List[str] = []
+    sentiment: Optional[str] = None
+
+
+class GraphNode(BaseModel):
+    """Model for a graph node."""
+    id: str
+    label: str
+    type: str
+
+
+class GraphRelationship(BaseModel):
+    """Model for a graph relationship."""
+    source: str
+    target: str
+    type: str
+
+
+class GraphData(BaseModel):
+    """Model for graph visualization data."""
+    nodes: List[GraphNode]
+    relationships: List[GraphRelationship]
