@@ -1,287 +1,117 @@
-# OpenPermit - Feedback Classification System
+# 🚀 Feedback Classification System
 
-A comprehensive web application for collecting, classifying, and visualizing feedback using AI and graph databases.
+A web app that classifies feedback using AI and visualizes it in a graph database.
 
-## Features
+## Quick Start (2 minutes)
 
-- 🤖 **AI-Powered Classification**: Uses OpenAI's GPT models to automatically classify feedback into categories and subcategories
-- 📊 **Graph Visualization**: Real-time visualization of feedback relationships using Neo4j graph database
-- 🚀 **Modern Stack**: FastAPI backend with Next.js frontend for optimal performance
-- 📈 **Analytics**: Track feedback statistics and category distributions
-- 🎨 **Beautiful UI**: Clean, responsive interface built with Tailwind CSS
+1. **Clone the repository**
+2. **Open a terminal and run:**
 
-## Architecture
+   ```bash
+   # Linux/Mac:
+   ./start-app.sh
 
-### Backend (FastAPI + Python)
+   # Windows (Command Prompt):
+   start-app.bat
 
-- **FastAPI**: Modern, high-performance Python web framework
-- **OpenAI API**: GPT-3.5-turbo for feedback classification
-- **Neo4j**: Graph database for storing and querying feedback relationships
-- **Pydantic**: Data validation and settings management
+   # Windows (PowerShell):
+   powershell -ExecutionPolicy Bypass -File start-app.ps1
+   ```
 
-### Frontend (Next.js + TypeScript)
+3. **Open your browser and go to:** http://localhost:3001
 
-- **Next.js 15**: React framework with App Router
-- **TypeScript**: Type-safe development
-- **Tailwind CSS**: Utility-first CSS framework
-- **React Force Graph**: Interactive graph visualization
-- **Axios**: HTTP client for API communication
+4. **Try it out:**
+   - Type feedback like "The app is amazing but could be faster"
+   - Click submit
+   - Watch AI classification appear in the interactive graph
 
-## Prerequisites
+## Requirements
 
 - Python 3.11+
 - Node.js 20+
-- Neo4j 5.16+
-- OpenAI API key
+- Neo4j (graph database)
 
-## Manual Setup
+## Setup
 
-### Backend Setup
+### 1. Install Neo4j (graph database)
 
-1. Navigate to the backend directory:
+[Download Neo4j](https://neo4j.com/download/) and start it with default settings
 
-```bash
-cd backend
+### 2. Get OpenAI API key
+
+[Get OpenAI key](https://platform.openai.com/api-keys) for AI classification
+
+### 3. Configure credentials
+
+Create `backend/.env` file:
+
 ```
-
-2. Create a virtual environment:
-
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-4. Create `.env` file from example:
-
-```bash
-cp .env.example .env
-```
-
-5. Edit `.env` and add your credentials:
-
-```env
-OPENAI_API_KEY=your_openai_api_key
+OPENAI_API_KEY=your_openai_api_key_here
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USER=neo4j
-NEO4J_PASSWORD=your_neo4j_password
+NEO4J_PASSWORD=your_neo4j_password_here
 ```
 
-6. Start the backend:
+### 4. Start the system
 
 ```bash
-uvicorn app.main:app --reload
+# Linux/Mac:
+./start-app.sh
+
+# Windows (Command Prompt):
+start-app.bat
+
+# Windows (PowerShell):
+powershell -ExecutionPolicy Bypass -File start-app.ps1
 ```
 
-The API will be available at http://localhost:8000
+That's it! The system handles the rest automatically.
 
-### Frontend Setup
+## What's Running
 
-1. Navigate to the frontend directory:
+- **Frontend**: http://localhost:3001 (sometimes 3001 if 3000 is busy)
+- **Backend**: http://localhost:8003 (sometimes 8003 if 8000 is busy)
+- **Database**: Neo4j graph visualization
+
+## How It Works
+
+1. **You submit feedback** (e.g., "Love the app but it's slow")
+2. **AI classifies it** using OpenAI GPT into categories like "Product/UI/Performance"
+3. **Graph updates** showing relationships between feedback topics
+4. **Statistics update** showing category counts
+
+## Example Feedback to Try
+
+- "Great app but the UI is confusing"
+- "Too expensive for what it offers"
+- "Perfect app, love everything about it"
+
+Watch the graph change as you submit different feedback!
+
+## Troubleshooting
+
+**If ports 8000/3000 show "in use":**
+
+- Don't worry - the system will automatically use 8003/3001 instead
+
+**If "Access is denied" when killing processes:**
+
+- The system will work around locked processes automatically
+
+**If nothing happens:**
+
+- Check the CMD windows that opened - they'll show any errors
+
+**To manually start:**
 
 ```bash
-cd frontend
-```
-
-2. Install dependencies:
-
-```bash
-npm install
-```
-
-3. Create `.env.local` file:
-
-```bash
-cp .env.local.example .env.local
-```
-
-4. Start the development server:
-
-```bash
-npm run dev
-```
-
-The frontend will be available at http://localhost:3000
-
-### Neo4j Setup
-
-1. Download and install Neo4j from https://neo4j.com/download/
-2. Start Neo4j and create a database
-3. Set the password and update the `.env` file
-
-## API Endpoints
-
-### POST /api/feedback
-
-Submit feedback for classification
-
-**Request:**
-
-```json
-{
-  "text": "The app is great but the UI could be improved"
-}
-```
-
-**Response:**
-
-```json
-{
-  "text": "The app is great but the UI could be improved",
-  "categories": ["Product"],
-  "subcategories": ["UI/UX"],
-  "sentiment": "Positive"
-}
-```
-
-### GET /api/graph
-
-Get graph data for visualization
-
-**Response:**
-
-```json
-{
-  "nodes": [
-    {
-      "id": "123",
-      "label": "Product",
-      "type": "Category"
-    }
-  ],
-  "relationships": [
-    {
-      "source": "456",
-      "target": "123",
-      "type": "BELONGS_TO"
-    }
-  ]
-}
-```
-
-### GET /api/stats
-
-Get feedback statistics
-
-**Response:**
-
-```json
-{
-  "total_feedback": 42,
-  "categories": [
-    {
-      "category": "Product",
-      "count": 25
-    }
-  ]
-}
-```
-
-## Feedback Categories
-
-The system classifies feedback into the following categories:
-
-- **Product**: Issues related to product features, functionality, or quality
-  - UI/UX, Performance, Bugs, Feature Request
-- **Service**: Issues related to customer service or support
-  - Response Time, Quality, Accessibility
-- **Pricing**: Issues related to pricing or billing
-  - Cost, Value, Payment Issues
-- **General**: General feedback or suggestions
-  - Suggestion, Complaint, Praise
-
-## Development
-
-### Backend Development
-
-```bash
+# Backend
 cd backend
-source venv/bin/activate
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8003
 
-### Frontend Development
-
-```bash
+# Frontend (new terminal)
 cd frontend
 npm run dev
 ```
 
-### View API Documentation
-
-FastAPI automatically generates interactive API documentation:
-
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
-
-## Project Structure
-
-```
-OpenPermit/
-├── backend/
-│   ├── app/
-│   │   ├── __init__.py
-│   │   ├── main.py           # FastAPI application
-│   │   ├── config.py         # Configuration management
-│   │   ├── models.py         # Pydantic models
-│   │   ├── classifier.py     # OpenAI classification logic
-│   │   └── database.py       # Neo4j database operations
-│   ├── requirements.txt
-│   └── .env.example
-├── frontend/
-│   ├── app/
-│   │   ├── layout.tsx
-│   │   ├── page.tsx          # Main page
-│   │   └── globals.css
-│   ├── components/
-│   │   ├── FeedbackForm.tsx
-│   │   ├── GraphVisualization.tsx
-│   │   └── StatsDisplay.tsx
-│   ├── lib/
-│   │   └── api.ts            # API client
-│   ├── package.json
-│   └── .env.local.example
-└── README.md
-```
-
-## Technologies Used
-
-### Backend
-
-- FastAPI 0.109.0
-- OpenAI API (GPT-3.5-turbo)
-- Neo4j 5.16.0
-- Pydantic 2.5.3
-- Uvicorn
-
-### Frontend
-
-- Next.js 15
-- React 19
-- TypeScript
-- Tailwind CSS
-- Axios
-- React Force Graph 2D
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is open source and available under the MIT License.
-
-## Support
-
-For issues and questions, please open an issue on GitHub.
-
-## Acknowledgments
-
-- OpenAI for the GPT API
-- Neo4j for the graph database
-- The FastAPI and Next.js communities
+Still having issues? Check the individual CMD windows for error messages.
