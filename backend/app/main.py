@@ -1,10 +1,40 @@
 from contextlib import asynccontextmanager
+import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from .models import FeedbackInput, ClassifiedFeedback, GraphData
 from .classifier import classify_feedback
 from .database import db
 from .config import settings
+
+
+# Configure logging
+# Remove any existing handlers (to reset FastAPI's logging)
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+
+# Configure root logger to INFO level (to avoid too much noise)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),  # Console output
+        logging.FileHandler('app.log')  # File output
+    ]
+)
+
+# Set specific loggers for detailed debugging
+# Enable DEBUG for your classifier to see detailed classification logs
+logging.getLogger('app.classifier').setLevel(logging.DEBUG)
+logging.getLogger('app.main').setLevel(logging.INFO)  # Your main app
+
+# Reduce noise from other libraries
+logging.getLogger('neo4j').setLevel(logging.WARNING)  # Reduce Neo4j noise
+logging.getLogger('urllib3').setLevel(logging.WARNING)  # Reduce urllib3 noise
+logging.getLogger('openai').setLevel(logging.INFO)  # Reduce OpenAI noise
+
+logger = logging.getLogger(__name__)
+logger.info("Application logging configured with filtered levels")
 
 
 @asynccontextmanager
@@ -58,15 +88,24 @@ async def submit_feedback(feedback: FeedbackInput):
     Returns:
         ClassifiedFeedback object with categories and subcategories
     """
+    logger.info(f"Received feedback submission: {feedback.text[:100]}...")
+    
     try:
         # Classify the feedback using OpenAI
+        logger.debug("Starting feedback classification...")
         classified = await classify_feedback(feedback.text)
+        logger.info(f"Classification completed. Categories: {classified.categories}")
         
         # Store in Neo4j database
+        logger.debug("Storing feedback in database...")
         feedback_id = db.add_feedback(classified)
+        logger.info(f"Feedback stored successfully. ID: {feedback_id}")
         
         return classified
+        
     except Exception as e:
+        logger.error(f"Error processing feedback submission: {str(e)}")
+        logger.debug(f"Exception type: {type(e).__name__}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

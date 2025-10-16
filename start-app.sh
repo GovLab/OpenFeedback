@@ -10,7 +10,7 @@ pkill -f "next dev" 2>/dev/null
 
 echo "Starting backend server on port 8003..."
 # Start backend in background with normal logging
-cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8003 &
+cd backend && python -m uvicorn app.main:app --host 0.0.0.0 --port 8003 --reload --log-level debug &
 BACKEND_PID=$!
 
 # Wait for backend to start

@@ -19,6 +19,7 @@ class ClassifiedFeedback(BaseModel):
     categories: List[str]
     subcategories: List[str] = []
     sentiment: Optional[str] = None
+    priority: Optional[str] = None
 
 
 class GraphNode(BaseModel):
