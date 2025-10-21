@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     
     # API Keys
     openai_api_key: str
-      # Database Configuration
+    # Database Configuration
     neo4j_uri: str
     neo4j_username: str
     neo4j_password: str

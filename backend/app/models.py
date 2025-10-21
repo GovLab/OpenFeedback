@@ -40,3 +40,12 @@ class GraphData(BaseModel):
     """Model for graph visualization data."""
     nodes: List[GraphNode]
     relationships: List[GraphRelationship]
+
+
+class FileUploadResponse(BaseModel):
+    """Model for file upload response."""
+    message: str
+    text_content: str
+    original_filename: str
+    file_type: str
+    classified_feedback: Optional[ClassifiedFeedback] = None

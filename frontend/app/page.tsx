@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import FeedbackForm from "@/components/FeedbackForm";
+import FileUploadForm from "@/components/FileUploadForm";
 import GraphVisualization from "@/components/GraphVisualization";
 import StatsDisplay from "@/components/StatsDisplay";
 import { api, GraphData, Stats } from "@/lib/api";
@@ -82,6 +83,26 @@ export default function Home() {
           </div>
           <div>
             <StatsDisplay stats={stats} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <div className="lg:col-span-2">
+            <FileUploadForm onFeedbackSubmitted={fetchData} />
+          </div>
+          <div>
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                File Upload Info
+              </h3>
+              <div className="space-y-2 text-sm text-gray-600">
+                <p>• Supported formats: PDF, TXT, DOCX</p>
+                <p>• Maximum file size: 10MB</p>
+                <p>• Text will be extracted and classified</p>
+                <p>• Choose "Process & Store" to save results</p>
+                <p>• Choose "Classify Only" to test without storing</p>
+              </div>
+            </div>
           </div>
         </div>
 

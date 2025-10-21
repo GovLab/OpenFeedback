@@ -1,11 +1,12 @@
 from contextlib import asynccontextmanager
 import logging
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from .models import FeedbackInput, ClassifiedFeedback, GraphData
+from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse
 from .classifier import classify_feedback
 from .database import db
 from .config import settings
+from .file_processor import FileProcessor
 
 
 # Configure logging
@@ -121,6 +122,97 @@ async def get_graph():
         graph_data = db.get_graph_data()
         return graph_data
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/upload-feedback", response_model=FileUploadResponse)
+async def upload_feedback_file(file: UploadFile = File(...)):
+    """
+    Upload a file (PDF, TXT, or DOCX) for feedback processing.
+    
+    Args:
+        file: Uploaded file
+        
+    Returns:
+        FileUploadResponse with extracted text and classification
+    """
+    logger.info(f"Received file upload: {file.filename}")
+    
+    try:
+        # Extract text from the file
+        logger.debug("Extracting text from file...")
+        text_content, file_type = await FileProcessor.extract_text(file)
+        logger.info(f"Text extracted successfully. Length: {len(text_content)} characters")
+        
+        if not text_content.strip():
+            raise HTTPException(
+                status_code=400, 
+                detail="No text content found in the uploaded file"
+            )
+        
+        # Classify the extracted text
+        logger.debug("Starting text classification...")
+        classified = await classify_feedback(text_content)
+        logger.info(f"Classification completed. Categories: {classified.categories}")
+        
+        # Store in Neo4j database
+        logger.debug("Storing feedback in database...")
+        feedback_id = db.add_feedback(classified)
+        logger.info(f"Feedback stored successfully. ID: {feedback_id}")
+        
+        return FileUploadResponse(
+            message="File processed successfully",
+            text_content=text_content,
+            original_filename=file.filename,
+            file_type=file_type,
+            classified_feedback=classified
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error processing file upload: {str(e)}")
+        logger.debug(f"Exception type: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/upload-text", response_model=ClassifiedFeedback)
+async def upload_and_classify_text(file: UploadFile = File(...)):
+    """
+    Upload a file and get classified feedback without storing in database.
+    
+    Args:
+        file: Uploaded file
+        
+    Returns:
+        ClassifiedFeedback object with categories and subcategories
+    """
+    logger.info(f"Received file upload for classification: {file.filename}")
+    
+    try:
+        # Extract text from the file
+        logger.debug("Extracting text from file...")
+        text_content, _ = await FileProcessor.extract_text(file)
+        logger.info(f"Text extracted successfully. Length: {len(text_content)} characters")
+        
+        if not text_content.strip():
+            raise HTTPException(
+                status_code=400, 
+                detail="No text content found in the uploaded file"
+            )
+        
+        # Classify the extracted text
+        logger.debug("Starting text classification...")
+        classified = await classify_feedback(text_content)
+        logger.info(f"Classification completed. Categories: {classified.categories}")
+        
+        return classified
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error processing file upload: {str(e)}")
+        logger.debug(f"Exception type: {type(e).__name__}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

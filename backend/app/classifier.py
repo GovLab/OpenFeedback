@@ -3,7 +3,6 @@ from .config import settings
 from .models import ClassifiedFeedback
 import json
 import logging
-from typing import Optional
 
 # Configure logging for the classifier module
 logger = logging.getLogger(__name__)

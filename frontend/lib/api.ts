@@ -10,6 +10,34 @@ export const api = {
     return response.data;
   },
 
+  uploadFeedbackFile: async (file: File): Promise<FileUploadResponse> => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await axios.post(
+      `${API_URL}/api/upload-feedback`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+    return response.data;
+  },
+
+  uploadAndClassifyText: async (file: File): Promise<ClassifiedFeedback> => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await axios.post(`${API_URL}/api/upload-text`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  },
+
   getGraph: async (): Promise<GraphData> => {
     const response = await axios.get(`${API_URL}/api/graph`);
     return response.data;
@@ -55,4 +83,12 @@ export interface Stats {
     category: string;
     count: number;
   }>;
+}
+
+export interface FileUploadResponse {
+  message: string;
+  text_content: string;
+  original_filename: string;
+  file_type: string;
+  classified_feedback: ClassifiedFeedback;
 }
