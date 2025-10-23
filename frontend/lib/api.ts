@@ -26,15 +26,19 @@ export const api = {
     return response.data;
   },
 
-  uploadAndClassifyText: async (file: File): Promise<ClassifiedFeedback> => {
+  classifyFeedbackFile: async (file: File): Promise<FileUploadResponse> => {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await axios.post(`${API_URL}/api/upload-text`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    const response = await axios.post(
+      `${API_URL}/api/classify-feedback`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
     return response.data;
   },
 
@@ -85,10 +89,14 @@ export interface Stats {
   }>;
 }
 
-export interface FileUploadResponse {
+export interface IndividualResponse {
   message: string;
   text_content: string;
+  classified_feedback?: ClassifiedFeedback;
+}
+
+export interface FileUploadResponse {
+  individual_responses: IndividualResponse[];
   original_filename: string;
   file_type: string;
-  classified_feedback: ClassifiedFeedback;
 }

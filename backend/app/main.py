@@ -127,7 +127,7 @@ async def get_graph():
 
 
 @app.post("/api/upload-feedback", response_model=FileUploadResponse)
-async def upload_feedback_file(file: UploadFile = File(...)):
+async def upload_feedback_file(file: UploadFile = File(...), store_in_database: bool = True):
     """
     Upload a file (PDF, TXT, or DOCX) for feedback processing.
     
@@ -160,14 +160,19 @@ async def upload_feedback_file(file: UploadFile = File(...)):
         
         logger.info(f"All {len(classified_results)} feedback segments classified successfully")
         
-        # Store all feedbacks in Neo4j database sequentially (Neo4j operations are synchronous)
-        logger.debug("Storing all feedbacks in database...")
-        feedback_ids = []
-        for classified in classified_results:
-            feedback_id = db.add_feedback(classified)
-            feedback_ids.append(feedback_id)
+        if store_in_database:
+            # Store all feedbacks in Neo4j database sequentially (Neo4j operations are synchronous)
+            logger.debug("Storing all feedbacks in database...")
+            feedback_ids = []
+            for classified in classified_results:
+                feedback_id = db.add_feedback(classified)
+                feedback_ids.append(feedback_id)
+            
+            logger.info(f"All feedbacks stored successfully. IDs: {feedback_ids}")
         
-        logger.info(f"All feedbacks stored successfully. IDs: {feedback_ids}")
+        logger.info("================================================")
+        logger.info("Not storing feedbacks in database")
+        logger.info("================================================")
         
         # Create individual responses for each feedback
         individual_responses = []
@@ -192,44 +197,21 @@ async def upload_feedback_file(file: UploadFile = File(...)):
         logger.debug(f"Exception type: {type(e).__name__}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
-@app.post("/api/upload-text", response_model=ClassifiedFeedback)
-async def upload_and_classify_text(file: UploadFile = File(...)):
+@app.post("/api/classify-feedback", response_model=FileUploadResponse)
+async def classify_feedback_file(file: UploadFile = File(...)):
     """
-    Upload a file and get classified feedback without storing in database.
+    Classify feedback from an uploaded file.
     
     Args:
-        file: Uploaded file
-        
-    Returns:
-        ClassifiedFeedback object with categories and subcategories
+        file: UploadFile object containing the uploaded file
     """
-    logger.info(f"Received file upload for classification: {file.filename}")
-    
+    logger.info(f"Received file for classification: {file.filename}")
     try:
-        # Extract text from the file
-        logger.debug("Extracting text from file...")
-        text_content, _ = await FileProcessor.extract_text(file)
-        logger.info(f"Text extracted successfully. Length: {len(text_content)} characters")
-        
-        if not text_content.strip():
-            raise HTTPException(
-                status_code=400, 
-                detail="No text content found in the uploaded file"
-            )
-        
-        # Classify the extracted text
-        logger.debug("Starting text classification...")
-        classified = await classify_feedback(text_content)
-        logger.info(f"Classification completed. Categories: {classified.categories}")
-        
-        return classified
-        
-    except HTTPException:
-        raise
+        response = await upload_feedback_file(file, store_in_database=False)
+        logger.info(f"File classified successfully. Response: {response}")
+        return response
     except Exception as e:
-        logger.error(f"Error processing file upload: {str(e)}")
-        logger.debug(f"Exception type: {type(e).__name__}")
+        logger.error(f"Error classifying feedback file: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
