@@ -42,10 +42,15 @@ class GraphData(BaseModel):
     relationships: List[GraphRelationship]
 
 
-class FileUploadResponse(BaseModel):
-    """Model for file upload response."""
+class IndividualResponse(BaseModel):
+    """Model for individual feedback response within a file."""
     message: str
     text_content: str
+    classified_feedback: Optional[ClassifiedFeedback] = None
+
+
+class FileUploadResponse(BaseModel):
+    """Model for file upload response."""
+    individual_responses: List[IndividualResponse]
     original_filename: str
     file_type: str
-    classified_feedback: Optional[ClassifiedFeedback] = None

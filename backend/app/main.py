@@ -1,8 +1,9 @@
 from contextlib import asynccontextmanager
 import logging
+import asyncio
 from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse
+from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse, IndividualResponse
 from .classifier import classify_feedback
 from .database import db
 from .config import settings
@@ -139,33 +140,49 @@ async def upload_feedback_file(file: UploadFile = File(...)):
     logger.info(f"Received file upload: {file.filename}")
     
     try:
-        # Extract text from the file
-        logger.debug("Extracting text from file...")
-        text_content, file_type = await FileProcessor.extract_text(file)
-        logger.info(f"Text extracted successfully. Length: {len(text_content)} characters")
+        # Extract and segment text from the file
+        logger.debug("Extracting and segmenting text from file...")
+        feedback_texts, file_type = await FileProcessor.extract_and_segment_text(file)
+        logger.info(f"Text extracted and segmented successfully. Found {len(feedback_texts)} feedback segments")
         
-        if not text_content.strip():
+        if not feedback_texts or all(not text.strip() for text in feedback_texts):
             raise HTTPException(
                 status_code=400, 
                 detail="No text content found in the uploaded file"
             )
         
-        # Classify the extracted text
-        logger.debug("Starting text classification...")
-        classified = await classify_feedback(text_content)
-        logger.info(f"Classification completed. Categories: {classified.categories}")
+        # Process all feedback segments in parallel
+        logger.debug(f"Starting parallel classification of {len(feedback_texts)} feedback segments...")
         
-        # Store in Neo4j database
-        logger.debug("Storing feedback in database...")
-        feedback_id = db.add_feedback(classified)
-        logger.info(f"Feedback stored successfully. ID: {feedback_id}")
+        # Create tasks for parallel processing
+        classification_tasks = [classify_feedback(text) for text in feedback_texts]
+        classified_results = await asyncio.gather(*classification_tasks)
+        
+        logger.info(f"All {len(classified_results)} feedback segments classified successfully")
+        
+        # Store all feedbacks in Neo4j database sequentially (Neo4j operations are synchronous)
+        logger.debug("Storing all feedbacks in database...")
+        feedback_ids = []
+        for classified in classified_results:
+            feedback_id = db.add_feedback(classified)
+            feedback_ids.append(feedback_id)
+        
+        logger.info(f"All feedbacks stored successfully. IDs: {feedback_ids}")
+        
+        # Create individual responses for each feedback
+        individual_responses = []
+        for i, (text, classified) in enumerate(zip(feedback_texts, classified_results)):
+            individual_response = IndividualResponse(
+                message=f"Feedback segment {i+1} processed successfully",
+                text_content=text,
+                classified_feedback=classified
+            )
+            individual_responses.append(individual_response)
         
         return FileUploadResponse(
-            message="File processed successfully",
-            text_content=text_content,
+            individual_responses=individual_responses,
             original_filename=file.filename,
-            file_type=file_type,
-            classified_feedback=classified
+            file_type=file_type
         )
         
     except HTTPException:
