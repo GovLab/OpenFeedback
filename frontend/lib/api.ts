@@ -59,9 +59,9 @@ export interface FeedbackInput {
 
 export interface ClassifiedFeedback {
   text: string;
-  categories: string[];
-  subcategories: string[];
+  category_map?: { [category: string]: string[] };
   sentiment: string;
+  priority?: string;
 }
 
 export interface GraphNode {

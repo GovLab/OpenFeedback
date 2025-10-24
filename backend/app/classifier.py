@@ -42,11 +42,15 @@ Feedback: {feedback}
 
 Return ONLY a valid JSON object with this exact structure (no additional text):
 {{
-    "categories": ["category1", "category2"],
-    "subcategories": ["subcategory1", "subcategory2"],
+    "category_map": {{
+        "Category Name 1": ["Subcategory 1", "Subcategory 2"],
+        "Category Name 2": ["Subcategory 3"]
+    }},
     "sentiment": "Positive|Negative|Neutral",
     "priority": "High|Medium|Low"
-}}"""
+}}
+
+Each category should map to its relevant subcategories. Only include categories and subcategories that apply to this feedback."""
 
 
 async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
@@ -89,13 +93,13 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
         except Exception as e:
             logger.error(f"Failed to extract JSON from response: {content[:200]}... Error: {str(e)}")
             raise
-        logger.info(f"Successfully classified feedback. Categories: {classification.get('categories', [])}")
+        category_map = classification.get("category_map", {})
+        logger.info(f"Successfully classified feedback. Categories: {list(category_map.keys())}")
         logger.debug(f"Full classification result: {classification}")
         
         return ClassifiedFeedback(
             text=feedback_text,
-            categories=classification.get("categories", []),
-            subcategories=classification.get("subcategories", []),
+            category_map=category_map,
             sentiment=classification.get("sentiment", "Neutral"),
             priority=classification.get("priority", "Medium")
         )
@@ -105,8 +109,7 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
         logger.warning("Falling back to default classification due to JSON parsing error")
         return ClassifiedFeedback(
             text=feedback_text,
-            categories=["Process & Operational Flow Issues"],
-            subcategories=["Unclassified"],
+            category_map={"Process & Operational Flow Issues": ["Unclassified"]},
             sentiment="Neutral",
             priority="Medium"
         )

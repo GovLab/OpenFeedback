@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 
 class FeedbackInput(BaseModel):
@@ -16,8 +16,7 @@ class Category(BaseModel):
 class ClassifiedFeedback(BaseModel):
     """Model for classified feedback."""
     text: str
-    categories: List[str]
-    subcategories: List[str] = []
+    category_map: Dict[str, List[str]]  # Maps categories to their subcategories
     sentiment: Optional[str] = None
     priority: Optional[str] = None
 

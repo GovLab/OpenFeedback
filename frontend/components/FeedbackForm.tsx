@@ -76,9 +76,12 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
       {result && (
         <div className="mt-4 p-4 bg-green-100 border border-green-400 rounded-md">
           <h3 className="font-semibold text-green-800 mb-2">Feedback Classified!</h3>
-          <div className="text-sm text-green-700 space-y-1">
-            <p><strong>Categories:</strong> {result.categories.join(', ')}</p>
-            <p><strong>Subcategories:</strong> {result.subcategories.join(', ')}</p>
+          <div className="text-sm text-green-700 space-y-2">
+            {result.category_map && Object.entries(result.category_map).map(([category, subcategories]) => (
+              <div key={category}>
+                <p><strong>{category}:</strong> {subcategories.join(', ')}</p>
+              </div>
+            ))}
             <p><strong>Sentiment:</strong> {result.sentiment}</p>
           </div>
         </div>

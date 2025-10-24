@@ -49,8 +49,10 @@ class Neo4jDatabase:
                 sentiment=feedback.sentiment
             )
             
-            # Create category nodes and relationships
-            for category in feedback.categories:
+            # Create category nodes and relationships using the category_map
+            # This ensures subcategories are linked only to their parent categories
+            for category, subcategories in feedback.category_map.items():
+                # Create category node and link to feedback
                 session.run(
                     """
                     MERGE (c:Category {name: $category})
@@ -61,30 +63,22 @@ class Neo4jDatabase:
                     category=category,
                     feedback_id=feedback_id
                 )
-            
-            # Create subcategory nodes and relationships
-            for subcategory in feedback.subcategories:
-                session.run(
-                    """
-                    MERGE (s:Subcategory {name: $subcategory})
-                    WITH s
-                    MATCH (f:Feedback {id: $feedback_id})
-                    MERGE (f)-[:TAGGED_AS]->(s)
-                    """,
-                    subcategory=subcategory,
-                    feedback_id=feedback_id
-                )
                 
-                # Link subcategories to their parent categories if applicable
-                for category in feedback.categories:
+                # Create subcategory nodes and link them to their parent category
+                for subcategory in subcategories:
                     session.run(
                         """
+                        MERGE (s:Subcategory {name: $subcategory})
+                        WITH s
+                        MATCH (f:Feedback {id: $feedback_id})
+                        MERGE (f)-[:TAGGED_AS]->(s)
+                        WITH s
                         MATCH (c:Category {name: $category})
-                        MATCH (s:Subcategory {name: $subcategory})
                         MERGE (s)-[:UNDER]->(c)
                         """,
-                        category=category,
-                        subcategory=subcategory
+                        subcategory=subcategory,
+                        feedback_id=feedback_id,
+                        category=category
                     )
         
         return feedback_id

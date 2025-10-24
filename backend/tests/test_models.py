@@ -15,13 +15,12 @@ def test_classified_feedback():
     """Test ClassifiedFeedback model."""
     classified = ClassifiedFeedback(
         text="Test feedback",
-        categories=["Product"],
-        subcategories=["UI/UX"],
+        category_map={"Product": ["UI/UX", "Performance"]},
         sentiment="Positive"
     )
     assert classified.text == "Test feedback"
-    assert "Product" in classified.categories
-    assert "UI/UX" in classified.subcategories
+    assert "Product" in classified.category_map
+    assert "UI/UX" in classified.category_map["Product"]
     assert classified.sentiment == "Positive"
 
 

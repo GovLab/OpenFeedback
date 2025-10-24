@@ -96,7 +96,7 @@ async def submit_feedback(feedback: FeedbackInput):
         # Classify the feedback using OpenAI
         logger.debug("Starting feedback classification...")
         classified = await classify_feedback(feedback.text)
-        logger.info(f"Classification completed. Categories: {classified.categories}")
+        logger.info(f"Classification completed. Categories: {list(classified.category_map.keys())}")
         
         # Store in Neo4j database
         logger.debug("Storing feedback in database...")

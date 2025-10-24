@@ -47,32 +47,29 @@ function IndividualFeedbackModal({ response, isOpen, onClose }: IndividualFeedba
               </p>
             </div>
             
-            {response.classified_feedback && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {response.classified_feedback && response.classified_feedback.category_map && (
+              <div className="grid grid-cols-1 gap-4">
                 <div>
-                  <h4 className="font-medium text-gray-700 mb-2">Categories:</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {response.classified_feedback.categories.map((category, index) => (
-                      <span 
-                        key={index}
-                        className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
-                      >
-                        {category}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-gray-700 mb-2">Subcategories:</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {response.classified_feedback.subcategories.map((subcategory, index) => (
-                      <span 
-                        key={index}
-                        className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full"
-                      >
-                        {subcategory}
-                      </span>
+                  <h4 className="font-medium text-gray-700 mb-2">Categories & Subcategories:</h4>
+                  <div className="space-y-3">
+                    {Object.entries(response.classified_feedback.category_map).map(([category, subcategories]) => (
+                      <div key={category} className="space-y-1">
+                        <div className="flex flex-wrap gap-2">
+                          <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full font-medium">
+                            {category}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 ml-4">
+                          {subcategories.map((subcategory, index) => (
+                            <span 
+                              key={index}
+                              className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full"
+                            >
+                              {subcategory}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -297,7 +294,7 @@ export default function FileUploadForm({
                   </p>
                   {result.individual_responses[0].classified_feedback && (
                     <div className="flex flex-wrap items-center gap-2 mt-3">
-                      {result.individual_responses[0].classified_feedback.categories.map((cat, i) => (
+                      {result.individual_responses[0].classified_feedback.category_map && Object.keys(result.individual_responses[0].classified_feedback.category_map).map((cat, i) => (
                         <span
                           key={i}
                           className="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-200"
@@ -337,7 +334,7 @@ export default function FileUploadForm({
                       </p>
                       {response.classified_feedback && (
                         <div className="flex flex-wrap items-center gap-2 mb-3">
-                          {response.classified_feedback.categories.map((cat, i) => (
+                          {response.classified_feedback.category_map && Object.keys(response.classified_feedback.category_map).map((cat, i) => (
                             <span
                               key={i}
                               className="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-200"
@@ -345,8 +342,8 @@ export default function FileUploadForm({
                               {cat}
                             </span>
                           ))}
-                          {response.classified_feedback.categories.length > 2 && (
-                            <span className="text-xs text-gray-500">+{response.classified_feedback.categories.length - 2}</span>
+                          {response.classified_feedback.category_map && Object.keys(response.classified_feedback.category_map).length > 2 && (
+                            <span className="text-xs text-gray-500">+{Object.keys(response.classified_feedback.category_map).length - 2}</span>
                           )}
                           <span className={`ml-auto px-2.5 py-1 rounded-full text-xs font-medium ${
                                 response.classified_feedback.sentiment.toLowerCase() === 'positive'
