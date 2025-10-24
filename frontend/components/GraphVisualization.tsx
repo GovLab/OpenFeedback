@@ -257,9 +257,26 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
     const subcategoryCircle = arrangeInCircle(subcategoryNodes, 180, 0);
     const feedbackCircle = arrangeInCircle(feedbackNodes, 60, 0);
     
+    // Filter relationships to exclude direct connections between Feedback and Category
+    const filteredRelationships = data.relationships.filter((rel) => {
+      const sourceNode = data.nodes.find(n => n.id === rel.source);
+      const targetNode = data.nodes.find(n => n.id === rel.target);
+      
+      // Exclude direct Feedback -> Category connections
+      if (sourceNode?.type === "Feedback" && targetNode?.type === "Category") {
+        return false;
+      }
+      // Exclude direct Category -> Feedback connections
+      if (sourceNode?.type === "Category" && targetNode?.type === "Feedback") {
+        return false;
+      }
+      
+      return true;
+    });
+    
     return {
       nodes: [...categoryCircle, ...subcategoryCircle, ...feedbackCircle],
-    links: data.relationships.map((rel) => ({
+    links: filteredRelationships.map((rel) => ({
       source: rel.source,
       target: rel.target,
       label: rel.type,
@@ -643,7 +660,7 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
             <button
               onClick={() => {
                 if (graphRef.current) {
-                  graphRef.current.zoomToFit(300, 100);
+                  graphRef.current.zoomToFit(100,100);
                 }
               }}
               className="absolute top-3 right-3 z-10 p-2 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg group"
