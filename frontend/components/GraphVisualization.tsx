@@ -168,6 +168,8 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
   const [selectedNode, setSelectedNode] = useState<any>(null);
   const [hoveredNode, setHoveredNode] = useState<any>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
+  const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set());
+  const [highlightedLinks, setHighlightedLinks] = useState<Set<string>>(new Set());
 
   // Dynamically import ForceGraph2D on client side
   useEffect(() => {
@@ -283,6 +285,94 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
     })),
   };
   }, [data, feedbackCounts]);
+
+  // Calculate highlighted nodes and links based on selected node
+  const getConnectedNodesAndLinks = useCallback((node: any) => {
+    if (!node) return { nodes: new Set<string>(), links: new Set<string>() };
+
+    const connectedNodes = new Set<string>();
+    const connectedLinks = new Set<string>();
+    
+    // Always include the selected node itself
+    connectedNodes.add(node.id);
+
+    if (node.type === "Category") {
+      // For Category: highlight all subcategories that belong to it
+      data.relationships.forEach((rel) => {
+        const sourceNode = data.nodes.find(n => n.id === rel.source);
+        const targetNode = data.nodes.find(n => n.id === rel.target);
+        
+        // Subcategory -> Category relationship
+        if (rel.target === node.id && sourceNode?.type === "Subcategory") {
+          connectedNodes.add(rel.source);
+          connectedLinks.add(`${rel.source}-${rel.target}`);
+          
+          // Now find all feedback connected to this subcategory
+          data.relationships.forEach((feedbackRel) => {
+            const feedbackSource = data.nodes.find(n => n.id === feedbackRel.source);
+            // Feedback -> Subcategory relationship
+            if (feedbackRel.target === rel.source && feedbackSource?.type === "Feedback") {
+              connectedNodes.add(feedbackRel.source);
+              connectedLinks.add(`${feedbackRel.source}-${feedbackRel.target}`);
+            }
+          });
+        }
+      });
+    } else if (node.type === "Subcategory") {
+      // For Subcategory: highlight the category it belongs to and all feedback connected to it
+      data.relationships.forEach((rel) => {
+        const sourceNode = data.nodes.find(n => n.id === rel.source);
+        const targetNode = data.nodes.find(n => n.id === rel.target);
+        
+        // Subcategory -> Category relationship
+        if (rel.source === node.id && targetNode?.type === "Category") {
+          connectedNodes.add(rel.target);
+          connectedLinks.add(`${rel.source}-${rel.target}`);
+        }
+        
+        // Feedback -> Subcategory relationship
+        if (rel.target === node.id && sourceNode?.type === "Feedback") {
+          connectedNodes.add(rel.source);
+          connectedLinks.add(`${rel.source}-${rel.target}`);
+        }
+      });
+    } else if (node.type === "Feedback") {
+      // For Feedback: highlight all subcategories it's connected to and their categories
+      data.relationships.forEach((rel) => {
+        const targetNode = data.nodes.find(n => n.id === rel.target);
+        
+        // Feedback -> Subcategory relationship
+        if (rel.source === node.id && targetNode?.type === "Subcategory") {
+          connectedNodes.add(rel.target);
+          connectedLinks.add(`${rel.source}-${rel.target}`);
+          
+          // Now find the category this subcategory belongs to
+          data.relationships.forEach((catRel) => {
+            const catTarget = data.nodes.find(n => n.id === catRel.target);
+            // Subcategory -> Category relationship
+            if (catRel.source === rel.target && catTarget?.type === "Category") {
+              connectedNodes.add(catRel.target);
+              connectedLinks.add(`${catRel.source}-${catRel.target}`);
+            }
+          });
+        }
+      });
+    }
+
+    return { nodes: connectedNodes, links: connectedLinks };
+  }, [data]);
+
+  // Update highlighted nodes and links when selected node changes
+  useEffect(() => {
+    if (selectedNode) {
+      const { nodes, links } = getConnectedNodesAndLinks(selectedNode);
+      setHighlightedNodes(nodes);
+      setHighlightedLinks(links);
+    } else {
+      setHighlightedNodes(new Set());
+      setHighlightedLinks(new Set());
+    }
+  }, [selectedNode, getConnectedNodesAndLinks]);
 
   function getNodeColor(type: string): string {
     const colors: { [key: string]: string } = {
@@ -511,7 +601,7 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
   }, [data.nodes.length]);
 
   // Render canvas node
-  const renderNode = (
+  const renderNode = useCallback((
     node: any,
     ctx: CanvasRenderingContext2D,
     globalScale: number
@@ -525,15 +615,24 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
     const size = getNodeSize({ ...node, ...enhancedNode });
     const isSelected = selectedNode?.id === node.id;
     const isHovered = hoveredNode?.id === node.id;
+    const isHighlighted = highlightedNodes.has(node.id);
+    const hasSelection = selectedNode !== null;
     
-    // Draw outer glow for selected/hovered nodes
-    if (isSelected || isHovered) {
+    // If there's a selection and this node is not highlighted, fade it out
+    const shouldFade = hasSelection && !isHighlighted;
+    const nodeOpacity = shouldFade ? 0.15 : 1;
+    
+    // Apply opacity for faded nodes
+    ctx.globalAlpha = nodeOpacity;
+    
+    // Draw outer glow for selected/hovered nodes (and highlighted nodes)
+    if ((isSelected || isHovered) || (isHighlighted && hasSelection && !isSelected)) {
       ctx.beginPath();
       ctx.arc(node.x, node.y, size + 6, 0, 2 * Math.PI, false);
       ctx.fillStyle = getNodeColorLight(node.type);
-      ctx.globalAlpha = 0.3;
+      ctx.globalAlpha = nodeOpacity * 0.3;
       ctx.fill();
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = nodeOpacity;
     }
 
     // Draw node circle with gradient effect
@@ -635,7 +734,10 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
       ctx.fillStyle = isSelected || isHovered ? "rgba(255, 255, 255, 0.95)" : "rgba(30, 41, 59, 0.85)";
       ctx.fillText(label, node.x, labelY);
     }
-  };
+    
+    // Reset global alpha
+    ctx.globalAlpha = 1;
+  }, [graphData.nodes, getNodeSize, selectedNode, hoveredNode, highlightedNodes]);
 
   if (data.nodes.length === 0) {
     return <GraphEmptyState />;
@@ -647,7 +749,7 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
             <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-slate-900 mb-1 md:mb-2">Feedback Graph</h2>
             <p className="text-slate-600 text-xs md:text-sm">Circular visualization with Categories (outer), Subcategories (middle), and Feedback (center)</p>
             <p className="text-slate-500 text-xs mt-1 hidden md:block">
-              Node sizes represent feedback volume • Click nodes for details • Drag to pan • Scroll to zoom
+              Node sizes represent feedback volume • Click nodes to highlight connections • Drag to pan • Scroll to zoom
             </p>
           </div>
 
@@ -690,10 +792,30 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
                 linkLabel="label"
                 linkDirectionalArrowLength={6}
                 linkDirectionalArrowRelPos={1}
-                linkColor={() => "#cbd5e1"}
-                linkWidth={2}
-                linkOpacity={0.4}
-                linkDirectionalParticles={2}
+                linkColor={(link: any) => {
+                  if (!selectedNode) return "#cbd5e1";
+                  const linkId = `${link.source.id || link.source}-${link.target.id || link.target}`;
+                  const isHighlighted = highlightedLinks.has(linkId);
+                  return isHighlighted ? "#3b82f6" : "#e2e8f0";
+                }}
+                linkWidth={(link: any) => {
+                  if (!selectedNode) return 2;
+                  const linkId = `${link.source.id || link.source}-${link.target.id || link.target}`;
+                  const isHighlighted = highlightedLinks.has(linkId);
+                  return isHighlighted ? 3 : 1;
+                }}
+                linkOpacity={(link: any) => {
+                  if (!selectedNode) return 0.4;
+                  const linkId = `${link.source.id || link.source}-${link.target.id || link.target}`;
+                  const isHighlighted = highlightedLinks.has(linkId);
+                  return isHighlighted ? 0.8 : 0.1;
+                }}
+                linkDirectionalParticles={(link: any) => {
+                  if (!selectedNode) return 2;
+                  const linkId = `${link.source.id || link.source}-${link.target.id || link.target}`;
+                  const isHighlighted = highlightedLinks.has(linkId);
+                  return isHighlighted ? 4 : 0;
+                }}
                 linkDirectionalParticleWidth={2}
                 linkDirectionalParticleSpeed={0.003}
                 onNodeClick={(node: any) => setSelectedNode(node)}
