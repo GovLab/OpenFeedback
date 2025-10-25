@@ -793,8 +793,14 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
                 nodeLabel={(node: any) => `${node.name} (${node.feedbackCount || 0} feedback)`}
                 nodeColor="color"
                 linkLabel="label"
-                linkDirectionalArrowLength={6}
-                linkDirectionalArrowRelPos={1}
+                linkDirectionalArrowLength={8}
+                linkDirectionalArrowRelPos={0.9}
+                linkDirectionalArrowColor={(link: any) => {
+                  if (!selectedNode) return "#94a3b8";
+                  const linkId = `${link.source.id || link.source}-${link.target.id || link.target}`;
+                  const isHighlighted = highlightedLinks.has(linkId);
+                  return isHighlighted ? "#2563eb" : "#cbd5e1";
+                }}
                 linkColor={(link: any) => {
                   if (!selectedNode) return "#cbd5e1";
                   const linkId = `${link.source.id || link.source}-${link.target.id || link.target}`;
