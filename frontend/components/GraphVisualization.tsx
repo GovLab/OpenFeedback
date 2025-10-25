@@ -199,15 +199,16 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
             data.nodes.find(n => n.id === rel.source && n.type === "Subcategory"))
           .map((rel) => rel.source);
         
-        // Count all feedback nodes connected to these subcategories
-        const totalFeedback = subcategoryIds.reduce((sum, subcatId) => {
-          const feedbackCount = data.relationships.filter(
-            (rel) => rel.target === subcatId && 
-            data.nodes.find(n => n.id === rel.source && n.type === "Feedback")
-          ).length;
-          return sum + feedbackCount;
-        }, 0);
-        counts[node.id] = totalFeedback;
+        // Collect unique feedback IDs connected to any of these subcategories
+        const uniqueFeedbackIds = new Set<string>();
+        subcategoryIds.forEach((subcatId) => {
+          data.relationships
+            .filter((rel) => rel.target === subcatId && 
+              data.nodes.find(n => n.id === rel.source && n.type === "Feedback"))
+            .forEach((rel) => uniqueFeedbackIds.add(rel.source));
+        });
+        
+        counts[node.id] = uniqueFeedbackIds.size;
       }
     });
     
@@ -424,25 +425,27 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
 
       // Count feedback for each subcategory
       const feedbackCounts: { [key: string]: number } = {};
-      let totalFeedback = 0;
+      const uniqueFeedbackIds = new Set<string>();
       
       subcategories.forEach((subcat) => {
         // Find feedback nodes that belong to this subcategory
         // Structure: Feedback (source) -> belongs_to -> Subcategory (target)
-        const feedbackCount = data.relationships.filter(
+        const feedbackForSubcat = data.relationships.filter(
           (rel) => 
             rel.target === subcat.id && 
             data.nodes.find(n => n.id === rel.source && n.type === "Feedback")
-        ).length;
+        );
         
-        feedbackCounts[subcat.label] = feedbackCount;
-        totalFeedback += feedbackCount;
+        feedbackCounts[subcat.label] = feedbackForSubcat.length;
+        
+        // Track unique feedback IDs across all subcategories
+        feedbackForSubcat.forEach((rel) => uniqueFeedbackIds.add(rel.source));
       });
 
       return {
         name: node.name,
         type: node.type,
-        feedbackCount: totalFeedback, // Use calculated total
+        feedbackCount: uniqueFeedbackIds.size, // Count unique feedback only
         totalSubcategories: subcategories.length,
         feedbackBySubcategory: feedbackCounts,
       };
