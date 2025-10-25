@@ -703,7 +703,18 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
       
       const labelY = node.y + size + bckgHeight / 2 + 8;
 
-      // Draw label background with shadow and transparency
+      // Get type-specific colors for background and text
+      const getLabelBackgroundColor = (type: string) => {
+        const colors: { [key: string]: string } = {
+          Feedback: "rgba(147, 197, 253, 0.2)", // blue-300 with 20% opacity
+          Category: "rgba(110, 231, 183, 0.2)", // green-300 with 20% opacity
+          Subcategory: "rgba(252, 211, 77, 0.2)", // amber-300 with 20% opacity
+          Unknown: "rgba(255, 255, 255, 0.75)",
+        };
+        return colors[type] || colors.Unknown;
+      };
+
+      // Draw label background with shadow and type-based color
                   ctx.shadowColor = "rgba(0, 0, 0, 0.1)";
       ctx.shadowBlur = 6 / globalScale;
                   ctx.shadowOffsetX = 0;
@@ -711,7 +722,7 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
       
       ctx.fillStyle = isSelected || isHovered 
         ? "rgba(30, 41, 59, 0.85)" 
-        : "rgba(255, 255, 255, 0.75)"; // More transparent
+        : getLabelBackgroundColor(node.type);
       ctx.beginPath();
       ctx.roundRect(
         node.x - bckgWidth / 2,
@@ -722,19 +733,19 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
       );
       ctx.fill();
 
-      // Optional: border for non-selected labels with transparency
+      // Optional: border for non-selected labels with type color
       if (!isSelected && !isHovered) {
-        ctx.strokeStyle = "rgba(203, 213, 225, 0.5)"; // More transparent border
+        ctx.strokeStyle = node.color ? `${node.color}40` : "rgba(203, 213, 225, 0.5)"; // Type color with transparency
         ctx.lineWidth = 1 / globalScale;
         ctx.stroke();
       }
 
                   ctx.shadowColor = "transparent";
 
-      // Draw label text with slight transparency
+      // Draw label text with type color
                   ctx.textAlign = "center";
                   ctx.textBaseline = "middle";
-      ctx.fillStyle = isSelected || isHovered ? "rgba(255, 255, 255, 0.95)" : "rgba(30, 41, 59, 0.85)";
+      ctx.fillStyle = isSelected || isHovered ? "rgba(255, 255, 255, 0.95)" : node.color;
       ctx.fillText(label, node.x, labelY);
     }
     
