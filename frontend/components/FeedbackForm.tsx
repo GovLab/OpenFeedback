@@ -37,42 +37,49 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
     setResult(null);
 
     try {
-      // First, classify the feedback (without storing to DB)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8003'}/api/classify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: feedback })
-      });
-      
-      if (!response.ok) throw new Error('Classification failed');
-      const classified: ClassifiedFeedback = await response.json();
-      
-      // Check if follow-up questions are needed (only if not already enhanced)
-      const followupResponse = !hasBeenEnhanced 
-        ? await api.getFollowupQuestions(classified)
-        : { questions: [] };
-      
-      if (followupResponse.questions && followupResponse.questions.length > 0 && !hasBeenEnhanced) {
-        // Show chatbot sidebar for low-quality feedback
-        setOriginalFeedback(feedback);
-        setClassifiedData(classified);
-        setConversationHistory([{
-          role: 'assistant',
-          content: followupResponse.questions[0]
-        }]);
-        setQuestionCount(1);
-        setCanSkip(false);
-        setShowChatbot(true);
-        setLoading(false);
-      } else {
-        // No follow-up needed or already enhanced, submit directly to DB
-        const submitted = await api.submitFeedback({ text: feedback });
-        setResult(submitted);
-        setFeedback('');
-        setHasBeenEnhanced(false); // Reset for next submission
-        onFeedbackSubmitted();
-        setLoading(false);
+      // Use intelligent agent to check feedback quality (only if not already enhanced)
+      if (!hasBeenEnhanced) {
+        const agentResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8003'}/api/feedback-agent`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            original_feedback: feedback,
+            category_map: {},
+            conversation_history: []
+          })
+        });
+        
+        if (!agentResponse.ok) throw new Error('Agent check failed');
+        const agentData = await agentResponse.json();
+        
+        if (agentData.needs_followup) {
+          // Low quality - show chatbot sidebar with agent's first question
+          setOriginalFeedback(feedback);
+          setClassifiedData({
+            text: feedback,
+            category_map: {},
+            sentiment: 'Neutral',
+            priority: 'Medium'
+          });
+          setConversationHistory([{
+            role: 'assistant',
+            content: agentData.message
+          }]);
+          setQuestionCount(1);
+          setCanSkip(false);
+          setShowChatbot(true);
+          setLoading(false);
+          return;
+        }
       }
+      
+      // High quality or already enhanced - classify and submit to DB
+      const submitted = await api.submitFeedback({ text: feedback });
+      setResult(submitted);
+      setFeedback('');
+      setHasBeenEnhanced(false); // Reset for next submission
+      onFeedbackSubmitted();
+      setLoading(false);
     } catch (err) {
       setError('Failed to submit feedback. Please try again.');
       console.error(err);
@@ -81,7 +88,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
   };
   
   const handleChatSubmit = async () => {
-    if (!userInput.trim() || !classifiedData) return;
+    if (!userInput.trim()) return;
     
     setChatLoading(true);
     
@@ -97,78 +104,46 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
       const newQuestionCount = questionCount + 1;
       setQuestionCount(newQuestionCount);
       
-      // Check feedback quality after every answer (starting from question 2)
-      if (newQuestionCount >= 2) {
-        await checkFeedbackQuality(newHistory);
-      }
-      
       // Stop after 5 questions max
       if (newQuestionCount >= 5) {
         await finishConversation();
         return;
       }
       
-      // Get chatbot response
-      const response = await api.chatbot({
-        original_feedback: originalFeedback,
-        category_map: classifiedData.category_map || {},
-        conversation_history: newHistory
+      // Call intelligent agent with full conversation history
+      const agentResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8003'}/api/feedback-agent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          original_feedback: originalFeedback,
+          category_map: {},
+          conversation_history: newHistory
+        })
       });
       
-      // Add assistant message to history
+      if (!agentResponse.ok) throw new Error('Agent error');
+      const agentData = await agentResponse.json();
+      
+      // Add agent's response to history
       const updatedHistory = [
         ...newHistory,
-        { role: 'assistant', content: response.message }
+        { role: 'assistant', content: agentData.message }
       ];
       setConversationHistory(updatedHistory);
       
-      if (response.is_complete) {
-        // Conversation complete, submit to DB
-        await finishConversation();
+      // Update skip button based on agent's quality assessment
+      if (newQuestionCount >= 2) {
+        setCanSkip(!agentData.needs_followup);
+      }
+      
+      // If agent says quality is sufficient, finish conversation
+      if (!agentData.needs_followup) {
+        setTimeout(() => finishConversation(), 1500);
       }
     } catch (err) {
       console.error('Chat error:', err);
     } finally {
       setChatLoading(false);
-    }
-  };
-
-  const checkFeedbackQuality = async (history: ConversationMessage[]) => {
-    try {
-      // Build enhanced feedback from current conversation
-      const conversationText = history
-        .filter(msg => msg.role === 'user')
-        .map(msg => msg.content)
-        .join(' ');
-      
-      const currentEnhancedFeedback = `${originalFeedback}\n\nAdditional details: ${conversationText}`;
-      
-      // Check if this enhanced feedback would still trigger follow-up questions
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8003'}/api/classify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: currentEnhancedFeedback })
-      });
-      
-      if (!response.ok) {
-        // On error, allow skip anyway
-        setCanSkip(true);
-        return;
-      }
-      
-      const classified: ClassifiedFeedback = await response.json();
-      const followupResponse = await api.getFollowupQuestions(classified);
-      
-      // Enable/disable skip based on whether feedback quality is now good
-      if (!followupResponse.questions || followupResponse.questions.length === 0) {
-        setCanSkip(true);
-      } else {
-        setCanSkip(false); // Disable skip if still low quality
-      }
-    } catch (err) {
-      console.error('Error checking feedback quality:', err);
-      // On error, allow skip anyway after 2 questions
-      setCanSkip(true);
     }
   };
 

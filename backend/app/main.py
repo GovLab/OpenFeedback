@@ -4,7 +4,7 @@ import asyncio
 from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse, IndividualResponse, ConversationInput, ConversationResponse
-from .classifier import classify_feedback, generate_followup_questions, chatbot_conversation
+from .classifier import classify_feedback, chatbot_agent
 from .database import db
 from .file_processor import FileProcessor
 
@@ -68,9 +68,10 @@ app.add_middleware(
 async def root():
     """Root endpoint."""
     return {
-        "message": "Feedback Classification API",
-        "version": "1.0.0",
+        "message": "Feedback Classification API with Intelligent Agent",
+        "version": "3.0.0",
         "endpoints": {
+            "feedback_agent": "/api/feedback-agent",
             "submit_feedback": "/api/feedback",
             "get_graph": "/api/graph",
             "get_stats": "/api/stats"
@@ -78,30 +79,32 @@ async def root():
     }
 
 
-@app.post("/api/classify", response_model=ClassifiedFeedback)
-async def classify_feedback_only(feedback: FeedbackInput):
+@app.post("/api/feedback-agent")
+async def feedback_agent(conversation: ConversationInput):
     """
-    Classify feedback without storing to database.
+    Unified intelligent agent that handles feedback quality checking and dynamic questioning.
     
     Args:
-        feedback: FeedbackInput object containing the feedback text
+        conversation: ConversationInput with original feedback and conversation history
         
     Returns:
-        ClassifiedFeedback object with categories and subcategories
+        Agent response with next question or completion status
     """
-    logger.info(f"Received feedback classification request: {feedback.text[:100]}...")
+    logger.info(f"Agent processing feedback: {conversation.original_feedback[:100]}...")
     
     try:
-        # Classify the feedback using OpenAI
-        logger.debug("Starting feedback classification...")
-        classified = await classify_feedback(feedback.text)
-        logger.info(f"Classification completed. Categories: {list(classified.category_map.keys())}")
+        # Call the unified chatbot agent
+        result = chatbot_agent(
+            conversation.original_feedback,
+            conversation.conversation_history
+        )
         
-        return classified
+        logger.info(f"Agent decision: needs_followup={result['needs_followup']}, quality_score={result.get('quality_score', 'N/A')}")
+        
+        return result
         
     except Exception as e:
-        logger.error(f"Error classifying feedback: {str(e)}")
-        logger.debug(f"Exception type: {type(e).__name__}")
+        logger.error(f"Error in feedback agent: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -261,56 +264,5 @@ async def get_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/followup-questions")
-async def get_followup_questions(classified: ClassifiedFeedback):
-    """
-    Generate intelligent follow-up questions for vague feedback.
-    
-    Args:
-        classified: ClassifiedFeedback object with text and classifications
-        
-    Returns:
-        List of follow-up questions
-    """
-    logger.info(f"Generating follow-up questions for feedback: {classified.text[:100]}...")
-    
-    try:
-        questions = generate_followup_questions(classified.text, classified.category_map)
-        logger.info(f"Generated {len(questions)} follow-up questions")
-        
-        return {"questions": questions}
-        
-    except Exception as e:
-        logger.error(f"Error generating follow-up questions: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/chatbot", response_model=ConversationResponse)
-async def chat(conversation: ConversationInput):
-    """
-    Handle conversational AI follow-up with the user.
-    
-    Args:
-        conversation: ConversationInput with original feedback, classifications, and conversation history
-        
-    Returns:
-        ConversationResponse with the AI's next message and completion status
-    """
-    logger.info(f"Processing chatbot conversation for feedback: {conversation.original_feedback[:100]}...")
-    
-    try:
-        response = chatbot_conversation(
-            conversation.original_feedback,
-            conversation.category_map,
-            conversation.conversation_history
-        )
-        logger.info(f"Chatbot response generated. Complete: {response.get('is_complete', False)}")
-        
-        return ConversationResponse(
-            message=response["message"],
-            is_complete=response["is_complete"]
-        )
-        
-    except Exception as e:
-        logger.error(f"Error in chatbot conversation: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))

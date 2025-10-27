@@ -64,7 +64,7 @@ class ConversationMessage(BaseModel):
 class ConversationInput(BaseModel):
     """Model for chatbot conversation input."""
     original_feedback: str
-    category_map: Dict[str, List[str]]
+    category_map: Optional[Dict[str, List[str]]] = {}
     conversation_history: List[ConversationMessage]
 
 
