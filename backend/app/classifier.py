@@ -1,6 +1,7 @@
 from openai import OpenAI
 from .config import settings
 from .models import ClassifiedFeedback
+from .prompts import prompt_builder
 import json
 import logging
 import re
@@ -10,49 +11,6 @@ from typing import List
 logger = logging.getLogger(__name__)
 
 client = OpenAI(api_key=settings.openai_api_key)
-
-
-CLASSIFICATION_PROMPT = """You are a government permit system feedback classification system. Analyze the following citizen feedback and classify it into relevant categories and subcategories based on core friction points in the permit process.
-
-Available Categories and Subcategories:
-
-1. Economic & Equity Concerns:
-   - High or Unexpected Costs
-   - Access or Fairness Barriers
-
-2. Communication & Service Problems:
-   - Poor Communication / Experience
-   - Service Responsiveness & Transparency
-
-3. Technology & Access Barriers:
-   - Technical / Portal Problems
-   - Digital Access & Portal Problems
-
-4. Process & Operational Flow Issues:
-   - Confusion or Missing Guidance
-   - Delays or Waiting Too Long
-   - Conflicting Departments / Redundant Steps
-   - Procedural & Coordination Issues
-
-5. Policy & Rules Clarity:
-   - Outdated or Unclear Rules
-   - Rules & Policy Gaps
-
-Also determine the sentiment (Positive, Negative, or Neutral) and priority level (High, Medium, Low) based on impact to permit process.
-
-Feedback: {feedback}
-
-Return ONLY a valid JSON object with this exact structure (no additional text):
-{{
-    "category_map": {{
-        "Category Name 1": ["Subcategory 1", "Subcategory 2"],
-        "Category Name 2": ["Subcategory 3"]
-    }},
-    "sentiment": "Positive|Negative|Neutral",
-    "priority": "High|Medium|Low"
-}}
-
-Each category should map to its relevant subcategories. Only include categories and subcategories that apply to this feedback."""
 
 
 async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
@@ -72,8 +30,8 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a feedback classification assistant that returns only valid JSON."},
-                {"role": "user", "content": CLASSIFICATION_PROMPT.format(feedback=feedback_text)}
+                {"role": "system", "content": prompt_builder.build_classification_system_message()},
+                {"role": "user", "content": prompt_builder.build_classification_prompt(feedback=feedback_text)}
             ],
             temperature=0.3,
             max_tokens=200
@@ -149,49 +107,18 @@ def chatbot_agent(original_feedback: str, conversation_history: List) -> dict:
     
     context = "\n".join(context_parts)
     
-    # Create the prompt for the AI agent
-    prompt = f"""You are an intelligent feedback quality assistant for Boston city government permit processes.
-
-{context}
-
-Your task is to determine if the feedback has enough actionable detail, and if not, ask ONE follow-up question.
-
-DECISION CRITERIA:
-- Feedback NEEDS more detail if it's vague, lacks specifics about: which permit, timeline, location, what happened, error messages, etc.
-- Feedback is SUFFICIENT when you can understand: what the issue is, when/where it occurred, and what the user tried to do
-- Examples of INSUFFICIENT: "this is slow", "broken", "confusing", "doesn't work"
-- Examples of SUFFICIENT: "Building permit application has been pending for 3 weeks", "Website crashed when uploading documents on Chrome yesterday"
-
-IF MORE DETAIL NEEDED:
-- Ask ONE quick, easy question that builds on previous answers
-- Make it EASY to answer (yes/no, single word, or short phrase)
-- Be conversational and friendly
-- Focus on: what, when, where, which permit, what step, what error
-- Acknowledge their previous answer if relevant
-
-IF ENOUGH DETAIL:
-- Set needs_followup to false
-- Thank them briefly
-
-Respond in this JSON format:
-{{
-  "needs_followup": true/false,
-  "message": "your question or thank you message",
-  "quality_score": 1-10
-}}
-
-Quality score explanation:
-- 1-3: Very vague, missing critical details
-- 4-6: Some detail but still needs more context
-- 7-8: Good detail, mostly actionable
-- 9-10: Excellent detail, fully actionable
-"""
+    # Create the prompt for the AI agent using the prompt builder
+    system_message = prompt_builder.build_chatbot_agent_system_message()
+    prompt = prompt_builder.build_chatbot_agent_prompt(context=context)
     
     # Get AI response
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         temperature=0.7,
-        messages=[{"role": "user", "content": prompt}],
+        messages=[
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": prompt}
+        ],
         response_format={"type": "json_object"}
     )
     

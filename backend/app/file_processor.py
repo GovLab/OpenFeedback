@@ -8,6 +8,7 @@ from PyPDF2 import PdfReader
 import docx
 from openai import OpenAI
 from .config import settings
+from .prompts import prompt_builder
 import json
 
 logger = logging.getLogger(__name__)
@@ -120,30 +121,15 @@ class FileProcessor:
         """
         try:
             logger.debug("Starting AI-based text segmentation...")
-            segmentation_prompt = f"""You are a text analysis system that identifies individual feedback items within a larger text document.
-
-Analyze the following text and break it down into individual, distinct feedback items. Each feedback should be a complete thought or complaint from a citizen about government permits/services.
-Presume there are multiple feedbacks in the text and in rare cases there may be only one feedback.
-Rules:
-1. If the text contains multiple distinct feedback items, separate them. Usually a named person or business will precede a feedback.
-2. If the text is one cohesive feedback, return it as a single item.
-5. Each feedback should be substantial enough to be meaningful (at least a sentence).
-6. If the feedbacks have a repeating structure (e.g., "Feedback: ...", "Issue: ...", "Complaint: ..."), use that structure to split them.
-7. Preserve any mentioned business names, person names, or other identifying attributes exactly as they appear; they are part of the feedback context.
-
-IMPORTANT: You must respond with ONLY a valid JSON array. Do not include any explanations, markdown formatting, or other text. Just the JSON array.
-
-Format: ["feedback1", "feedback2", "feedback3"]
-If there's only one feedback: ["single_feedback"]
-
-Text to analyze:
-{text}"""
+            
+            # Use the prompt builder to generate the prompt
+            formatted_prompt = prompt_builder.build_segmentation_prompt(text=text)
 
             response = client.chat.completions.create(
                 model="gpt-4o",
                 messages=[
-                    {"role": "system", "content": "You are a text segmentation expert. Return only valid JSON arrays."},
-                    {"role": "user", "content": segmentation_prompt}
+                    {"role": "system", "content": prompt_builder.build_segmentation_system_message()},
+                    {"role": "user", "content": formatted_prompt}
                 ],
                 temperature=0.1,
                 max_tokens=4000            )
