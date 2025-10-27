@@ -6,7 +6,7 @@ export const api = {
   submitFeedback: async (
     feedback: FeedbackInput
   ): Promise<ClassifiedFeedback> => {
-    const response = await axios.post(`${API_URL}/api/feedback`, feedback);
+    const response = await axios.post(`${API_URL}api/submit-feedback`, feedback);
     return response.data;
   },
 

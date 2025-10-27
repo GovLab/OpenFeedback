@@ -72,7 +72,7 @@ async def root():
         "version": "3.0.0",
         "endpoints": {
             "feedback_agent": "/api/feedback-agent",
-            "submit_feedback": "/api/feedback",
+            "submit_feedback": "api/submit-feedback",
             "get_graph": "/api/graph",
             "get_stats": "/api/stats"
         }
@@ -108,7 +108,7 @@ async def feedback_agent(conversation: ConversationInput):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/feedback", response_model=ClassifiedFeedback)
+@app.post("api/submit-feedback", response_model=ClassifiedFeedback)
 async def submit_feedback(feedback: FeedbackInput):
     """
     Submit feedback for classification and storage.
