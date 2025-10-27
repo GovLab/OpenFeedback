@@ -53,3 +53,22 @@ class FileUploadResponse(BaseModel):
     individual_responses: List[IndividualResponse]
     original_filename: str
     file_type: str
+
+
+class ConversationMessage(BaseModel):
+    """Model for a message in chatbot conversation."""
+    role: str  # "user" or "assistant"
+    content: str
+
+
+class ConversationInput(BaseModel):
+    """Model for chatbot conversation input."""
+    original_feedback: str
+    category_map: Dict[str, List[str]]
+    conversation_history: List[ConversationMessage]
+
+
+class ConversationResponse(BaseModel):
+    """Model for chatbot conversation response."""
+    message: str
+    is_complete: bool

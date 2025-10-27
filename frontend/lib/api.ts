@@ -51,6 +51,23 @@ export const api = {
     const response = await axios.get(`${API_URL}/api/stats`);
     return response.data;
   },
+
+  getFollowupQuestions: async (
+    classified: ClassifiedFeedback
+  ): Promise<{ questions: string[] }> => {
+    const response = await axios.post(
+      `${API_URL}/api/followup-questions`,
+      classified
+    );
+    return response.data;
+  },
+
+  chatbot: async (
+    input: ConversationInput
+  ): Promise<ConversationResponse> => {
+    const response = await axios.post(`${API_URL}/api/chatbot`, input);
+    return response.data;
+  },
 };
 
 export interface FeedbackInput {
@@ -99,4 +116,20 @@ export interface FileUploadResponse {
   individual_responses: IndividualResponse[];
   original_filename: string;
   file_type: string;
+}
+
+export interface ConversationMessage {
+  role: string;
+  content: string;
+}
+
+export interface ConversationInput {
+  original_feedback: string;
+  category_map: { [category: string]: string[] };
+  conversation_history: ConversationMessage[];
+}
+
+export interface ConversationResponse {
+  message: string;
+  is_complete: boolean;
 }
