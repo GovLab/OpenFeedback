@@ -290,7 +290,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
           </div>
 
           {/* Original Feedback */}
-          <div className="p-3 bg-gray-50 border-b border-gray-200">
+          <div className="m-3 rounded-lg shadow-md p-3 bg-gray-50 border-b border-gray-200 max-h-24 overflow-y-auto">
             <p className="text-xs text-gray-500 mb-1">Your feedback:</p>
             <p className="text-sm text-gray-700 italic">&quot;{originalFeedback}&quot;</p>
           </div>
