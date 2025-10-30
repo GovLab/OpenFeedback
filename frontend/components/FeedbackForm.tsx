@@ -186,9 +186,9 @@ export default function FeedbackForm({ onFeedbackSubmitted, showClassificationRe
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-4 w-full">
+    <div className="flex flex-col md:flex-row gap-4 w-full min-w-[280px]">
       {/* Main Feedback Form */}
-      <div className={`flex-1 bg-white rounded-lg shadow-md p-6 transition-opacity duration-300 ${showChatbot ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
+      <div className={`flex-1 bg-white rounded-lg shadow-md p-4 sm:p-6 transition-opacity duration-300 min-w-[280px] ${showChatbot ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
         <h2 className="text-2xl font-bold mb-4 text-gray-800">Submit Feedback</h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -210,7 +210,7 @@ export default function FeedbackForm({ onFeedbackSubmitted, showClassificationRe
                 setFeedback(e.target.value);
                 // If user manually edits enhanced feedback, keep the flag but allow changes
               }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 resize-y max-h-96"
               rows={hasBeenEnhanced ? 6 : 4}
               placeholder="Enter your feedback here..."
               disabled={loading || showChatbot}
@@ -225,7 +225,7 @@ export default function FeedbackForm({ onFeedbackSubmitted, showClassificationRe
           <button
             type="submit"
             disabled={loading || showChatbot}
-            className={`w-full py-2 px-4 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors ${
+            className={`w-full min-w-[200px] py-2 px-4 rounded-md disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors ${
               hasBeenEnhanced 
                 ? 'bg-green-600 hover:bg-green-700 text-white' 
                 : 'bg-blue-600 hover:bg-blue-700 text-white'
