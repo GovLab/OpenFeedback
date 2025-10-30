@@ -108,7 +108,7 @@ async def feedback_agent(conversation: ConversationInput):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("api/submit-feedback", response_model=ClassifiedFeedback)
+@app.post("/api/submit-feedback", response_model=ClassifiedFeedback)
 async def submit_feedback(feedback: FeedbackInput):
     """
     Submit feedback for classification and storage.

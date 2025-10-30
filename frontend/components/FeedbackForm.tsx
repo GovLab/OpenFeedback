@@ -5,9 +5,10 @@ import { api, ClassifiedFeedback, ConversationMessage } from '@/lib/api';
 
 interface FeedbackFormProps {
   onFeedbackSubmitted: () => void;
+  showClassificationResult?: boolean;
 }
 
-export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
+export default function FeedbackForm({ onFeedbackSubmitted, showClassificationResult = true }: FeedbackFormProps) {
   const [feedback, setFeedback] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ClassifiedFeedback | null>(null);
@@ -240,7 +241,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
           </div>
         )}
 
-        {result && (
+        {showClassificationResult && result && (
           <div className="mt-4 p-4 bg-green-100 border border-green-400 rounded-md">
             <h3 className="font-semibold text-green-800 mb-2">Feedback Classified!</h3>
             <div className="text-sm text-green-700 space-y-2">

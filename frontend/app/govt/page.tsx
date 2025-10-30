@@ -1,0 +1,179 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import FileUploadForm from "@/components/FileUploadForm";
+import GraphVisualization from "@/components/GraphVisualization";
+import StatsDisplay from "@/components/StatsDisplay";
+import Navigation from "@/components/Navigation";
+import { api, GraphData, Stats } from "@/lib/api";
+
+export default function GovtDashboard() {
+  const [graphData, setGraphData] = useState<GraphData>({
+    nodes: [],
+    relationships: [],
+  });
+  const [stats, setStats] = useState<Stats>({
+    total_feedback: 0,
+    categories: [],
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      console.log("Starting to fetch data from backend...");
+
+      const [graph, statsData] = await Promise.all([
+        api.getGraph(),
+        api.getStats(),
+      ]);
+
+      console.log("Graph data received:", graph);
+      console.log("Stats data received:", statsData);
+
+      setGraphData(graph);
+      setStats(statsData);
+      setError(null);
+    } catch (err: any) {
+      console.error("Error fetching data:", {
+        message: err.message,
+        response: err.response?.data,
+        request: err.request,
+        config: err.config,
+      });
+
+      const errorMessage =
+        err.response?.data?.detail ||
+        err.message ||
+        "Failed to load data. Make sure the backend is running.";
+      setError(`Error: ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-gradient-to-r from-slate-800 to-slate-700 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">
+                Government Dashboard
+              </h1>
+              <p className="text-slate-200">
+                Feedback analytics, visualization, and batch data management
+              </p>
+            </div>
+            <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span className="text-white text-sm font-medium">Live Data</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {error && (
+          <div className="mb-6 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-md shadow-sm">
+            <div className="flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="font-medium">{error}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Stats Overview */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Overview</h2>
+          <StatsDisplay stats={stats} />
+        </div>
+
+        {/* File Upload Section */}
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Batch Data Upload</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <FileUploadForm onFeedbackSubmitted={fetchData} />
+            </div>
+            <div>
+              <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  File Upload Guide
+                </h3>
+                <div className="space-y-3 text-sm text-gray-600">
+                  <div className="flex items-start gap-2">
+                    <svg className="w-4 h-4 mt-0.5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <p>Supported: PDF, TXT, DOCX</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <svg className="w-4 h-4 mt-0.5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <p>Maximum size: 10MB per file</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <svg className="w-4 h-4 mt-0.5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <p>Automated text extraction and classification</p>
+                  </div>
+                  <div className="border-t border-gray-200 pt-3 mt-3">
+                    <p className="font-medium text-gray-800 mb-2">Processing Options:</p>
+                    <ul className="space-y-1.5 ml-2">
+                      <li className="flex items-start gap-2">
+                        <span className="text-blue-600 font-bold">•</span>
+                        <span><strong>Process & Store:</strong> Save results to database</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-blue-600 font-bold">•</span>
+                        <span><strong>Classify Only:</strong> Test without storing</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Graph Visualization */}
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Feedback Network Graph</h2>
+          {loading ? (
+            <div className="bg-white rounded-lg shadow-md p-12 text-center border border-gray-200">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+              <p className="text-gray-600 font-medium">Loading graph data...</p>
+            </div>
+          ) : (
+            <GraphVisualization data={graphData} />
+          )}
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="mt-16 bg-white border-t border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 py-6 text-center text-sm text-gray-600">
+          <p>Government Dashboard - Feedback Management System</p>
+        </div>
+      </footer>
+
+      {/* Navigation */}
+      <Navigation />
+    </div>
+  );
+}
+

@@ -1,121 +1,107 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import FeedbackForm from "@/components/FeedbackForm";
-import FileUploadForm from "@/components/FileUploadForm";
-import GraphVisualization from "@/components/GraphVisualization";
-import StatsDisplay from "@/components/StatsDisplay";
-import { api, GraphData, Stats } from "@/lib/api";
+import SuccessMessage from "@/components/SuccessMessage";
+import Navigation from "@/components/Navigation";
 
 export default function Home() {
-  const [graphData, setGraphData] = useState<GraphData>({
-    nodes: [],
-    relationships: [],
-  });
-  const [stats, setStats] = useState<Stats>({
-    total_feedback: 0,
-    categories: [],
-  });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      console.log("Starting to fetch data from backend...");
-
-      const [graph, statsData] = await Promise.all([
-        api.getGraph(),
-        api.getStats(),
-      ]);
-
-      console.log("Graph data received:", graph);
-      console.log("Stats data received:", statsData);
-
-      setGraphData(graph);
-      setStats(statsData);
-      setError(null);
-    } catch (err: any) {
-      console.error("Error fetching data:", {
-        message: err.message,
-        response: err.response?.data,
-        request: err.request,
-        config: err.config,
-      });
-
-      const errorMessage =
-        err.response?.data?.detail ||
-        err.message ||
-        "Failed to load data. Make sure the backend is running.";
-      setError(`Error: ${errorMessage}`);
-    } finally {
-      setLoading(false);
-    }
+  const handleFeedbackSubmitted = () => {
+    setShowSuccess(true);
+    // Auto-hide success message after 10 seconds
+    setTimeout(() => {
+      setShowSuccess(false);
+    }, 10000);
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   return (
-    <div className="min-h-screen bg-gray-100">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Feedback Classification System
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          <h1 className="text-4xl font-bold text-gray-900 mb-3">
+            Share Your Feedback
           </h1>
-          <p className="text-gray-600 mt-2">
-            Submit feedback to see it classified and visualized in real-time
+          <p className="text-lg text-gray-600">
+            We value your input and want to hear from you. Your feedback helps us improve our services and better serve the community.
           </p>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {error && (
-          <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
-            {error}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2">
-            <FeedbackForm onFeedbackSubmitted={fetchData} />
-          </div>
-          <div>
-            <StatsDisplay stats={stats} />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <div className="lg:col-span-2">
-            <FileUploadForm onFeedbackSubmitted={fetchData} />
-          </div>
-          <div>
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                File Upload Info
-              </h3>
-              <div className="space-y-2 text-sm text-gray-600">
-                <p>• Supported formats: PDF, TXT, DOCX</p>
-                <p>• Maximum file size: 10MB</p>
-                <p>• Text will be extracted and classified</p>
-                <p>• Choose "Process & Store" to save results</p>
-                <p>• Choose "Classify Only" to test without storing</p>
+      {/* Main Content */}
+      <main className="max-w-4xl mx-auto px-4 py-12">
+        {/* Instructions Section */}
+        <div className="bg-white rounded-xl shadow-md p-8 mb-8 border border-gray-200">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            How to Submit Feedback
+          </h2>
+          <div className="space-y-4 text-gray-700">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">
+                1
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">Write your feedback</h3>
+                <p className="text-sm">
+                  Share your thoughts, suggestions, concerns, or compliments about our services. Be as specific as possible to help us understand your needs.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">
+                2
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">Answer follow-up questions (if any)</h3>
+                <p className="text-sm">
+                  Our system may ask you a few clarifying questions to better understand your feedback. This helps us categorize and address your input more effectively.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold">
+                3
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">Submit and we'll take it from there</h3>
+                <p className="text-sm">
+                  Once submitted, your feedback will be reviewed by our team. We read every submission and use your input to guide our improvements.
+                </p>
               </div>
             </div>
           </div>
         </div>
 
-        <div>
-          {loading ? (
-            <div className="bg-white rounded-lg shadow-md p-6 text-center">
-              <p className="text-gray-600">Loading graph data...</p>
-            </div>
-          ) : (
-            <GraphVisualization data={graphData} />
-          )}
+        {/* Feedback Form */}
+        <FeedbackForm 
+          onFeedbackSubmitted={handleFeedbackSubmitted} 
+          showClassificationResult={false}
+        />
+
+        {/* Success Message */}
+        {showSuccess && <SuccessMessage onClose={() => setShowSuccess(false)} />}
+
+        {/* Additional Info */}
+        <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="font-semibold text-blue-900 mb-2">Privacy Notice</h3>
+          <p className="text-sm text-blue-800">
+            Your feedback is important to us. All submissions are reviewed and help inform our decision-making process. 
+            We respect your privacy and handle all feedback confidentially.
+          </p>
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="mt-16 bg-white border-t border-gray-200">
+        <div className="max-w-4xl mx-auto px-4 py-6 text-center text-sm text-gray-600">
+          <p>Thank you for taking the time to share your feedback with us.</p>
+        </div>
+      </footer>
+
+      {/* Navigation */}
+      <Navigation />
     </div>
   );
 }
