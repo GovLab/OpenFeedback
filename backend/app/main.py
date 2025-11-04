@@ -1,11 +1,13 @@
 from contextlib import asynccontextmanager
 import logging
 import asyncio
+from datetime import datetime
 from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse, IndividualResponse, ConversationInput, ConversationResponse
 from .classifier import classify_feedback, chatbot_agent
 from .database import db
+from .postgres_db import postgres_db
 from .file_processor import FileProcessor
 
 
@@ -33,16 +35,32 @@ logging.getLogger('app.main').setLevel(logging.INFO)  # Your main app
 logging.getLogger('neo4j').setLevel(logging.WARNING)  # Reduce Neo4j noise
 logging.getLogger('urllib3').setLevel(logging.WARNING)  # Reduce urllib3 noise
 logging.getLogger('openai').setLevel(logging.INFO)  # Reduce OpenAI noise
+logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)  # Reduce SQLAlchemy noise
 
 logger = logging.getLogger(__name__)
 logger.info("Application logging configured with filtered levels")
+
+
+# Helper function to convert sentiment to numeric score
+def sentiment_to_score(sentiment: str) -> float:
+    """Convert sentiment string to numeric score."""
+    sentiment_map = {
+        "positive": 0.7,
+        "negative": -0.7,
+        "neutral": 0.0,
+        "very positive": 1.0,
+        "very negative": -1.0
+    }
+    return sentiment_map.get(sentiment.lower() if sentiment else "", 0.0)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan events."""
     yield
+    # Close both database connections
     db.close()
+    postgres_db.close()
 
 
 app = FastAPI(
@@ -111,7 +129,7 @@ async def feedback_agent(conversation: ConversationInput):
 @app.post("/api/submit-feedback", response_model=ClassifiedFeedback)
 async def submit_feedback(feedback: FeedbackInput):
     """
-    Submit feedback for classification and storage.
+    Submit feedback for classification and storage in both PostgreSQL and Neo4j.
     
     Args:
         feedback: FeedbackInput object containing the feedback text
@@ -127,10 +145,25 @@ async def submit_feedback(feedback: FeedbackInput):
         classified = await classify_feedback(feedback.text)
         logger.info(f"Classification completed. Categories: {list(classified.category_map.keys())}")
         
-        # Store in Neo4j database
-        logger.debug("Storing feedback in database...")
-        feedback_id = db.add_feedback(classified)
-        logger.info(f"Feedback stored successfully. ID: {feedback_id}")
+        # 1. Store FULL data in PostgreSQL
+        logger.debug("Storing feedback in PostgreSQL...")
+        postgres_data = {
+            "issue_description": feedback.text,
+            "category": list(classified.category_map.keys())[0] if classified.category_map else None,
+            "subcategory": list(classified.category_map.values())[0][0] if classified.category_map and list(classified.category_map.values())[0] else None,
+            "ai_summary": feedback.text[:500],  # Can be enhanced later
+            "sentiment_score": sentiment_to_score(classified.sentiment) if classified.sentiment else None,
+            "status": "New",
+            "feedback_source": "OpenPermit",
+            "timestamp_processed": datetime.now()
+        }
+        postgres_id = postgres_db.add_feedback(postgres_data)
+        logger.info(f"Feedback stored in PostgreSQL. ID: {postgres_id}")
+        
+        # 2. Store graph relationships in Neo4j
+        logger.debug("Storing feedback relationships in Neo4j...")
+        neo4j_id = db.add_feedback(classified)
+        logger.info(f"Feedback relationships stored in Neo4j. ID: {neo4j_id}")
         
         return classified
         
@@ -138,22 +171,6 @@ async def submit_feedback(feedback: FeedbackInput):
         logger.error(f"Error processing feedback submission: {str(e)}")
         logger.debug(f"Exception type: {type(e).__name__}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.get("/api/graph", response_model=GraphData)
-async def get_graph():
-    """
-    Retrieve graph data for visualization.
-    
-    Returns:
-        GraphData object containing nodes and relationships
-    """
-    try:
-        graph_data = db.get_graph_data()
-        return graph_data
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 
 @app.post("/api/upload-feedback", response_model=FileUploadResponse)
 async def upload_feedback_file(file: UploadFile = File(...), store_in_database: bool = True):
@@ -190,14 +207,28 @@ async def upload_feedback_file(file: UploadFile = File(...), store_in_database: 
         logger.info(f"All {len(classified_results)} feedback segments classified successfully")
         
         if store_in_database:
-            # Store all feedbacks in Neo4j database sequentially (Neo4j operations are synchronous)
-            logger.debug("Storing all feedbacks in database...")
+            # Store all feedbacks in both databases
+            logger.debug("Storing all feedbacks in databases...")
             feedback_ids = []
-            for classified in classified_results:
-                feedback_id = db.add_feedback(classified)
-                feedback_ids.append(feedback_id)
+            for i, (text, classified) in enumerate(zip(feedback_texts, classified_results)):
+                # Store in PostgreSQL
+                postgres_data = {
+                    "issue_description": text,
+                    "category": list(classified.category_map.keys())[0] if classified.category_map else None,
+                    "subcategory": list(classified.category_map.values())[0][0] if classified.category_map and list(classified.category_map.values())[0] else None,
+                    "ai_summary": text[:500],
+                    "sentiment_score": sentiment_to_score(classified.sentiment) if classified.sentiment else None,
+                    "status": "New",
+                    "feedback_source": "OpenPermit",
+                    "timestamp_processed": datetime.now()
+                }
+                postgres_id = postgres_db.add_feedback(postgres_data)
+                
+                # Store in Neo4j
+                neo4j_id = db.add_feedback(classified)
+                feedback_ids.append({"postgres": postgres_id, "neo4j": neo4j_id})
             
-            logger.info(f"All feedbacks stored successfully. IDs: {feedback_ids}")
+            logger.info(f"All feedbacks stored successfully. Count: {len(feedback_ids)}")
         
         logger.info("================================================")
         logger.info("Not storing feedbacks in database")
@@ -243,6 +274,19 @@ async def classify_feedback_file(file: UploadFile = File(...)):
         logger.error(f"Error classifying feedback file: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/graph", response_model=GraphData)
+async def get_graph():
+    """
+    Retrieve graph data for visualization.
+    
+    Returns:
+        GraphData object containing nodes and relationships
+    """
+    try:
+        graph_data = db.get_graph_data()
+        return graph_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/stats")
 async def get_stats():
