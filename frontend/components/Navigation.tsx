@@ -8,7 +8,6 @@ export default function Navigation() {
 
   const links = [
     { href: '/', label: 'Public Feedback', icon: '🏠' },
-    { href: '/demo', label: 'Demo', icon: '🔬' },
     { href: '/govt', label: 'Dashboard', icon: '📊' },
   ];
 
