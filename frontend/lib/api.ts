@@ -52,20 +52,10 @@ export const api = {
     return response.data;
   },
 
-  getFollowupQuestions: async (
-    classified: ClassifiedFeedback
-  ): Promise<{ questions: string[] }> => {
-    const response = await axios.post(
-      `${API_URL}/api/followup-questions`,
-      classified
-    );
-    return response.data;
-  },
-
-  chatbot: async (
+  feedbackAgent: async (
     input: ConversationInput
   ): Promise<ConversationResponse> => {
-    const response = await axios.post(`${API_URL}/api/chatbot`, input);
+    const response = await axios.post(`${API_URL}/api/feedback-agent`, input);
     return response.data;
   },
 

@@ -195,7 +195,8 @@ class FileProcessor:
         elif extension == '.docx':
             text = await FileProcessor.extract_text_from_docx(content)
             return text, 'docx'
-        else:            raise HTTPException(
+        else:            
+            raise HTTPException(
                 status_code=400, 
                 detail=f"Unsupported file type: {extension}"
             )
