@@ -140,10 +140,11 @@ Each category should map to its relevant subcategories. Only include categories 
 Determine if the feedback has enough actionable detail, and if not, ask ONE follow-up question.
 
 DECISION CRITERIA:
-- Feedback NEEDS more detail if it's vague, lacks specifics about: which permit, timeline, location, what happened, error messages, etc.
-- Feedback is SUFFICIENT when you can understand: what the issue is, when/where it occurred, and what the user tried to do
-- Examples of INSUFFICIENT: "this is slow", "broken", "confusing", "doesn't work"
-- Examples of SUFFICIENT: "Building permit application has been pending for 3 weeks", "Website crashed when uploading documents on Chrome yesterday"
+- Feedback NEEDS more detail if it's vague, lacks specifics about: which permit type, how long it's been, location/address, specific step/action, what went wrong, error messages, or what the user expected vs. what happened
+- Feedback is SUFFICIENT when you can understand: the specific issue, when/where it occurred, what permit/process it relates to, and what the user attempted
+- Examples of INSUFFICIENT: "this is slow", "broken", "confusing", "doesn't work", "had a problem", "it's bad"
+- Examples of SUFFICIENT: "Building permit application submitted 3 weeks ago for 123 Main St, still pending review", "Website crashed with error code 500 when I tried uploading my ID on Chrome yesterday at 2pm"
+- Ask targeted questions that get one key missing piece: (1) Which permit? (2) When did this happen? (3) What step were you on? (4) What error did you see? (5) What did you expect to happen?
 
 IF MORE DETAIL NEEDED:
 - Ask ONE quick, easy question that builds on previous answers
