@@ -308,5 +308,30 @@ async def get_stats():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/postgres/feedback")
+async def get_all_postgres_feedback(limit: int = 100, offset: int = 0):
+    """
+    Get all feedback from PostgreSQL with pagination.
+    
+    Args:
+        limit: Maximum number of records to return (default 100)
+        offset: Number of records to skip (default 0)
+        
+    Returns:
+        List of feedback records
+    """
+    try:
+        feedbacks = postgres_db.get_all_feedback(limit=limit, offset=offset)
+        return {
+            "feedbacks": feedbacks,
+            "count": len(feedbacks),
+            "limit": limit,
+            "offset": offset
+        }
+    except Exception as e:
+        logger.error(f"Error fetching PostgreSQL feedback: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 

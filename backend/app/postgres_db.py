@@ -116,6 +116,32 @@ class PostgresDB:
                 "status": feedback.status,
                 "feedback_source": feedback.feedback_source,
             }
+    
+    def get_all_feedback(self, limit: int = 100, offset: int = 0):
+        """Get all feedback with pagination."""
+        with self.get_session() as session:
+            feedbacks = session.query(FeedbackDB).order_by(
+                FeedbackDB.timestamp_submitted.desc()
+            ).limit(limit).offset(offset).all()
+            
+            return [
+                {
+                    "feedback_id": str(f.feedback_id),
+                    "timestamp_submitted": f.timestamp_submitted.isoformat() if f.timestamp_submitted else None,
+                    "timestamp_processed": f.timestamp_processed.isoformat() if f.timestamp_processed else None,
+                    "permit_type": f.permit_type,
+                    "category": f.category,
+                    "subcategory": f.subcategory,
+                    "issue_description": f.issue_description,
+                    "ai_summary": f.ai_summary,
+                    "sentiment_score": f.sentiment_score,
+                    "urgency_level": f.urgency_level,
+                    "status": f.status,
+                    "feedback_source": f.feedback_source,
+                    "department_predicted": f.department_predicted,
+                }
+                for f in feedbacks
+            ]
     def delete_feedback(self, feedback_id: str) -> bool:
         """
         Delete feedback by ID.

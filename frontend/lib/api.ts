@@ -68,6 +68,13 @@ export const api = {
     const response = await axios.post(`${API_URL}/api/chatbot`, input);
     return response.data;
   },
+
+  getAllFeedback: async (limit: number = 100, offset: number = 0): Promise<FeedbackListResponse> => {
+    const response = await axios.get(`${API_URL}/api/postgres/feedback`, {
+      params: { limit, offset }
+    });
+    return response.data;
+  },
 };
 
 export interface FeedbackInput {
@@ -132,4 +139,27 @@ export interface ConversationInput {
 export interface ConversationResponse {
   message: string;
   is_complete: boolean;
+}
+
+export interface FeedbackRecord {
+  feedback_id: string;
+  timestamp_submitted: string | null;
+  timestamp_processed: string | null;
+  permit_type: string | null;
+  category: string | null;
+  subcategory: string | null;
+  issue_description: string;
+  ai_summary: string | null;
+  sentiment_score: number | null;
+  urgency_level: string | null;
+  status: string;
+  feedback_source: string;
+  department_predicted: string | null;
+}
+
+export interface FeedbackListResponse {
+  feedbacks: FeedbackRecord[];
+  count: number;
+  limit: number;
+  offset: number;
 }

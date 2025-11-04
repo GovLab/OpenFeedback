@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import FileUploadForm from "@/components/FileUploadForm";
 import GraphVisualization from "@/components/GraphVisualization";
 import StatsDisplay from "@/components/StatsDisplay";
+import FeedbackTable from "@/components/FeedbackTable";
 import Navigation from "@/components/Navigation";
 import { api, GraphData, Stats } from "@/lib/api";
 
@@ -18,6 +19,7 @@ export default function GovtDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const fetchData = async () => {
     try {
@@ -35,6 +37,7 @@ export default function GovtDashboard() {
       setGraphData(graph);
       setStats(statsData);
       setError(null);
+      setRefreshTrigger(prev => prev + 1);
     } catch (err: any) {
       console.error("Error fetching data:", {
         message: err.message,
@@ -151,7 +154,7 @@ export default function GovtDashboard() {
         </div>
 
         {/* Graph Visualization */}
-        <div>
+        <div className="mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Feedback Network Graph</h2>
           {loading ? (
             <div className="bg-white rounded-lg shadow-md p-12 text-center border border-gray-200">
@@ -161,6 +164,12 @@ export default function GovtDashboard() {
           ) : (
             <GraphVisualization data={graphData} />
           )}
+        </div>
+
+        {/* Feedback Table */}
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Feedback</h2>
+          <FeedbackTable refreshTrigger={refreshTrigger} />
         </div>
       </main>
 
