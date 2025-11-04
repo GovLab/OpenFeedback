@@ -145,14 +145,19 @@ async def submit_feedback(feedback: FeedbackInput):
         classified = await classify_feedback(feedback.text)
         logger.info(f"Classification completed. Categories: {list(classified.category_map.keys())}")
         
-        # 1. Store FULL data in PostgreSQL
+        # 1. Store FULL data in PostgreSQL (with AI-generated fields)
         logger.debug("Storing feedback in PostgreSQL...")
         postgres_data = {
             "issue_description": feedback.text,
+            "permit_type": classified.permit_type,
             "category": list(classified.category_map.keys())[0] if classified.category_map else None,
             "subcategory": list(classified.category_map.values())[0][0] if classified.category_map and list(classified.category_map.values())[0] else None,
-            "ai_summary": feedback.text[:500],  # Can be enhanced later
+            "ai_summary": classified.ai_summary,
+            "department_predicted": classified.department_predicted,
             "sentiment_score": sentiment_to_score(classified.sentiment) if classified.sentiment else None,
+            "urgency_level": classified.urgency_level,
+            "impact_type": classified.impact_type,
+            "language": classified.language,
             "status": "New",
             "feedback_source": "OpenPermit",
             "timestamp_processed": datetime.now()
@@ -211,13 +216,18 @@ async def upload_feedback_file(file: UploadFile = File(...), store_in_database: 
             logger.debug("Storing all feedbacks in databases...")
             feedback_ids = []
             for i, (text, classified) in enumerate(zip(feedback_texts, classified_results)):
-                # Store in PostgreSQL
+                # Store in PostgreSQL with all AI-generated fields
                 postgres_data = {
                     "issue_description": text,
+                    "permit_type": classified.permit_type,
                     "category": list(classified.category_map.keys())[0] if classified.category_map else None,
                     "subcategory": list(classified.category_map.values())[0][0] if classified.category_map and list(classified.category_map.values())[0] else None,
-                    "ai_summary": text[:500],
+                    "ai_summary": classified.ai_summary,
+                    "department_predicted": classified.department_predicted,
                     "sentiment_score": sentiment_to_score(classified.sentiment) if classified.sentiment else None,
+                    "urgency_level": classified.urgency_level,
+                    "impact_type": classified.impact_type,
+                    "language": classified.language,
                     "status": "New",
                     "feedback_source": "OpenPermit",
                     "timestamp_processed": datetime.now()

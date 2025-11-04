@@ -155,6 +155,8 @@ export interface FeedbackRecord {
   status: string;
   feedback_source: string;
   department_predicted: string | null;
+  impact_type: string[] | null;
+  language: string | null;
 }
 
 export interface FeedbackListResponse {

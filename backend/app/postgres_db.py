@@ -139,6 +139,8 @@ class PostgresDB:
                     "status": f.status,
                     "feedback_source": f.feedback_source,
                     "department_predicted": f.department_predicted,
+                    "impact_type": f.impact_type,
+                    "language": f.language,
                 }
                 for f in feedbacks
             ]

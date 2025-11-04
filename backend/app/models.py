@@ -14,11 +14,19 @@ class Category(BaseModel):
 
 
 class ClassifiedFeedback(BaseModel):
-    """Model for classified feedback."""
+    """Model for classified feedback with AI-generated fields."""
     text: str
     category_map: Dict[str, List[str]]  # Maps categories to their subcategories
     sentiment: Optional[str] = None
     priority: Optional[str] = None
+    
+    # Enhanced AI outputs
+    permit_type: Optional[str] = None  # Type of Boston permit
+    ai_summary: Optional[str] = None  # Condensed version (1-2 sentences)
+    department_predicted: Optional[str] = None  # Target agency
+    urgency_level: Optional[str] = None  # Low, Medium, High
+    impact_type: Optional[List[str]] = None  # ["Time lost", "Financial cost", etc.]
+    language: Optional[str] = "en"  # Detected language code
 
 
 class GraphNode(BaseModel):

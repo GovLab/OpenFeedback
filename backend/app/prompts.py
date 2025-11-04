@@ -96,18 +96,32 @@ Available Categories and Subcategories:
    - Outdated or Unclear Rules
    - Rules & Policy Gaps
 
-Also determine the sentiment (Positive, Negative, or Neutral) and priority level (High, Medium, Low) based on impact to permit process.
+Also determine:
+- Permit Type: Which Boston permit this relates to (choose most relevant from: "Building - Short Form", "Building - Long Form", "Use of Premises", "Liquor License", "Common Victualler (Food Service)", "Entertainment License", "Street Occupancy", "Resident Parking", "Business Parking", "Fire Prevention", "Fire Alarm", "Place of Assembly", "Hot Work", "Tent Permit", "Food Truck", "Dumpster", "Excavation", "Driveway", "Sign Permit", "Electrical", "Plumbing", "Gas", "Other")
+- Sentiment (Positive, Negative, or Neutral)
+- Priority level (High, Medium, Low)
+- Summary: 1-2 sentence condensed version
+- Department: Which Boston city department should handle this (e.g., "Inspectional Services", "Licensing Board", "Public Works", "Fire Department", "Building Department", etc.)
+- Urgency: Low, Medium, or High (based on time-sensitivity and impact)
+- Impact Types: What types of impact this has (select from: "Time Lost", "Financial Cost", "Business Impact", "Safety Concern", "Legal/Compliance", "Customer Experience", "Project Delay")
+- Language: Detected language code (e.g., "en", "es", "zh", etc.)
 
 Feedback: {feedback}
 
 Return ONLY a valid JSON object with this exact structure (no additional text):
 {{
+    "permit_type": "Permit Type Name",
     "category_map": {{
         "Category Name 1": ["Subcategory 1", "Subcategory 2"],
         "Category Name 2": ["Subcategory 3"]
     }},
     "sentiment": "Positive|Negative|Neutral",
-    "priority": "High|Medium|Low"
+    "priority": "High|Medium|Low",
+    "ai_summary": "Brief 1-2 sentence summary of the core issue",
+    "department_predicted": "Department Name",
+    "urgency_level": "Low|Medium|High",
+    "impact_type": ["Impact Type 1", "Impact Type 2"],
+    "language": "en"
 }}
 
 Each category should map to its relevant subcategories. Only include categories and subcategories that apply to this feedback."""

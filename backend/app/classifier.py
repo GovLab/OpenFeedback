@@ -34,7 +34,7 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
                 {"role": "user", "content": prompt_builder.build_classification_prompt(feedback=feedback_text)}
             ],
             temperature=0.3,
-            max_tokens=200
+            max_tokens=500  # Increased for additional AI-generated fields
         )
         
         logger.debug(f"Received response from OpenAI")
@@ -61,7 +61,13 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
             text=feedback_text,
             category_map=category_map,
             sentiment=classification.get("sentiment", "Neutral"),
-            priority=classification.get("priority", "Medium")
+            priority=classification.get("priority", "Medium"),
+            permit_type=classification.get("permit_type"),
+            ai_summary=classification.get("ai_summary"),
+            department_predicted=classification.get("department_predicted"),
+            urgency_level=classification.get("urgency_level", "Medium"),
+            impact_type=classification.get("impact_type", []),
+            language=classification.get("language", "en")
         )
     
     except json.JSONDecodeError as e:
@@ -71,7 +77,13 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
             text=feedback_text,
             category_map={"Process & Operational Flow Issues": ["Unclassified"]},
             sentiment="Neutral",
-            priority="Medium"
+            priority="Medium",
+            permit_type=None,
+            ai_summary=feedback_text[:200] if len(feedback_text) > 200 else feedback_text,
+            department_predicted=None,
+            urgency_level="Medium",
+            impact_type=[],
+            language="en"
         )
     except Exception as e:
         logger.error(f"Error classifying feedback: {str(e)}")
