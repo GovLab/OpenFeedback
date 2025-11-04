@@ -9,7 +9,7 @@ interface FeedbackFormProps {
   showClassificationResult?: boolean;
 }
 
-export default function FeedbackForm({ onFeedbackSubmitted, showClassificationResult = true }: FeedbackFormProps) {
+export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
   const [feedback, setFeedback] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ClassifiedFeedback | null>(null);
@@ -80,20 +80,13 @@ export default function FeedbackForm({ onFeedbackSubmitted, showClassificationRe
     try {
       // Use intelligent agent to check feedback quality (only if not already enhanced)
       if (!hasBeenEnhanced) {
-        const agentResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8003'}/api/feedback-agent`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            original_feedback: feedback,
-            category_map: {},
-            conversation_history: []
-          })
+        const agentData = await api.feedbackAgent({ 
+          original_feedback: feedback,
+          category_map: {},
+          conversation_history: []
         });
         
-        if (!agentResponse.ok) throw new Error('Agent check failed');
-        const agentData = await agentResponse.json();
-        
-        if (agentData.needs_followup) {
+        if (!agentData.is_complete) {
           // Low quality - show chatbot sidebar with agent's first question
           setOriginalFeedback(feedback);
           setConversationHistory([{
@@ -165,18 +158,11 @@ export default function FeedbackForm({ onFeedbackSubmitted, showClassificationRe
       }
       
       // Call intelligent agent with full conversation history
-      const agentResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8003'}/api/feedback-agent`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          original_feedback: originalFeedback,
-          category_map: {},
-          conversation_history: newHistory
-        })
+      const agentData = await api.feedbackAgent({
+        original_feedback: originalFeedback,
+        category_map: {},
+        conversation_history: newHistory
       });
-      
-      if (!agentResponse.ok) throw new Error('Agent error');
-      const agentData = await agentResponse.json();
       
       // Add agent's response to history
       const updatedHistory = [
@@ -187,11 +173,11 @@ export default function FeedbackForm({ onFeedbackSubmitted, showClassificationRe
       
       // Update skip button based on agent's quality assessment
       if (newQuestionCount >= 2) {
-        setCanSkip(!agentData.needs_followup);
+        setCanSkip(agentData.is_complete);
       }
       
       // If agent says quality is sufficient, finish conversation
-      if (!agentData.needs_followup) {
+      if (agentData.is_complete) {
         setTimeout(() => finishConversation(), 1500);
       }
     } catch (err) {
@@ -458,29 +444,6 @@ export default function FeedbackForm({ onFeedbackSubmitted, showClassificationRe
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span className="text-sm font-medium">{error}</span>
-            </div>
-          </div>
-        )}
-
-        {showClassificationResult && result && (
-          <div className="mt-5 p-5 bg-emerald-50 border-l-4 border-emerald-500 rounded-r-lg">
-            <div className="flex items-start gap-3 mb-3">
-              <svg className="w-6 h-6 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h3 className="font-semibold text-emerald-900 text-lg">Feedback Received!</h3>
-            </div>
-            <div className="text-sm text-emerald-800 space-y-2 ml-9">
-              {result.category_map && Object.entries(result.category_map).map(([category, subcategories]) => (
-                <div key={category} className="flex gap-2">
-                  <span className="font-semibold">{category}:</span>
-                  <span className="text-emerald-700">{subcategories.join(', ')}</span>
-                </div>
-              ))}
-              <div className="flex gap-2 pt-1">
-                <span className="font-semibold">Sentiment:</span>
-                <span className="text-emerald-700 capitalize">{result.sentiment}</span>
-              </div>
             </div>
           </div>
         )}
