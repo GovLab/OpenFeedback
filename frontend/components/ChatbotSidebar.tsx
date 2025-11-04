@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ConversationMessage } from '@/lib/api';
 
 interface ChatbotSidebarProps {
@@ -29,6 +29,25 @@ export default function ChatbotSidebar({
   chatLoading
 }: ChatbotSidebarProps) {
   const [userInput, setUserInput] = useState('');
+  const chatbotRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to chatbot on mobile when it opens
+  useEffect(() => {
+    if (isOpen && chatbotRef.current) {
+      // Check if it's a mobile device (viewport width < 768px)
+      const isMobile = window.innerWidth < 768;
+      
+      if (isMobile) {
+        // Small delay to ensure the component has fully rendered
+        setTimeout(() => {
+          chatbotRef.current?.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+          });
+        }, 100);
+      }
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -47,7 +66,7 @@ export default function ChatbotSidebar({
   };
 
   return (
-    <div className="w-full md:w-96 bg-white rounded-xl shadow-2xl flex flex-col animate-slide-in h-[500px] md:h-[600px] border border-gray-200">
+    <div ref={chatbotRef} className="w-full md:w-96 bg-white rounded-xl shadow-2xl flex flex-col animate-slide-in h-[500px] md:h-[600px] border border-gray-200">
       {/* Header - Compact */}
       <div className="px-4 py-3 border-b border-gray-200 bg-white rounded-t-xl">
         <div className="flex justify-between items-start">
