@@ -65,6 +65,13 @@ export const api = {
     });
     return response.data;
   },
+
+  augmentFeedback: async (
+    input: AugmentationInput
+  ): Promise<AugmentationResponse> => {
+    const response = await axios.post(`${API_URL}/api/augment-feedback`, input);
+    return response.data;
+  },
 };
 
 export interface FeedbackInput {
@@ -154,4 +161,13 @@ export interface FeedbackListResponse {
   count: number;
   limit: number;
   offset: number;
+}
+
+export interface AugmentationInput {
+  original_feedback: string;
+  conversation_history: ConversationMessage[];
+}
+
+export interface AugmentationResponse {
+  additional_note: string;
 }

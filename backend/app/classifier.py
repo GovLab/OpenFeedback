@@ -141,3 +141,54 @@ def chatbot_agent(original_feedback: str, conversation_history: List) -> dict:
     result["quality_score"] = int(result.get("quality_score", 5))
     
     return result
+
+
+def augment_feedback(original_feedback: str, conversation_history: List) -> str:
+    """
+    Use AI to generate an additional note from conversation details.
+    
+    Args:
+        original_feedback: The original feedback text
+        conversation_history: List of conversation messages with role and content
+        
+    Returns:
+        Just the additional note text (not the full feedback)
+    """
+    logger.info("Generating additional note from conversation")
+    
+    if not settings.openai_api_key:
+        raise Exception("OpenAI API key not configured")
+    
+    if not conversation_history:
+        # No conversation, return empty string
+        return ""
+    
+    try:
+        # Build the augmentation prompt
+        system_message = prompt_builder.build_augmentation_system_message()
+        prompt = prompt_builder.build_augmentation_prompt(
+            original_feedback=original_feedback,
+            conversation_history=conversation_history
+        )
+        
+        # Call OpenAI with cheap model (gpt-4o-mini)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            temperature=0.5,
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=400
+        )
+        
+        additional_note = response.choices[0].message.content.strip()
+        logger.info(f"Successfully generated additional note. Length: {len(additional_note)}")
+        
+        return additional_note
+        
+    except Exception as e:
+        logger.error(f"Error generating additional note: {str(e)}")
+        # Fallback to simple concatenation if AI fails
+        user_responses = [msg.content for msg in conversation_history if msg.role == "user"]
+        return ' '.join(user_responses)

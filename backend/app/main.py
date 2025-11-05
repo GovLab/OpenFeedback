@@ -4,8 +4,8 @@ import asyncio
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse, IndividualResponse, ConversationInput, ConversationResponse
-from .classifier import classify_feedback, chatbot_agent
+from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse, IndividualResponse, ConversationInput, ConversationResponse, AugmentationInput, AugmentationResponse
+from .classifier import classify_feedback, chatbot_agent, augment_feedback
 from .database import db
 from .postgres_db import postgres_db
 from .file_processor import FileProcessor
@@ -123,6 +123,35 @@ async def feedback_agent(conversation: ConversationInput):
         
     except Exception as e:
         logger.error(f"Error in feedback agent: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/augment-feedback", response_model=AugmentationResponse)
+async def augment_feedback_endpoint(input_data: AugmentationInput):
+    """
+    Use AI to generate an additional note from conversation details.
+    
+    Args:
+        input_data: AugmentationInput with original feedback and conversation history
+        
+    Returns:
+        AugmentationResponse with the additional note text
+    """
+    logger.info(f"Generating additional note for feedback: {input_data.original_feedback[:100]}...")
+    
+    try:
+        # Call the augmentation function
+        additional_note_text = augment_feedback(
+            input_data.original_feedback,
+            input_data.conversation_history
+        )
+        
+        logger.info(f"Additional note generated successfully. Length: {len(additional_note_text)}")
+        
+        return AugmentationResponse(additional_note=additional_note_text)
+        
+    except Exception as e:
+        logger.error(f"Error generating additional note: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

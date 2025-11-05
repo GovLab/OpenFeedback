@@ -239,6 +239,62 @@ Text to analyze:
             System message string
         """
         return "You are a text analysis system that identifies and segments individual feedback items within documents. You return only valid JSON arrays."
+    
+    @staticmethod
+    def build_augmentation_prompt(original_feedback: str, conversation_history: list) -> str:
+        """
+        Build a prompt for augmenting feedback with conversation details.
+        
+        Args:
+            original_feedback: The original feedback text
+            conversation_history: List of conversation messages with role and content
+            
+        Returns:
+            Formatted prompt string
+        """
+        # Format conversation history
+        conversation_text = []
+        for msg in conversation_history:
+            if msg.role == "assistant":
+                conversation_text.append(f"Question: {msg.content}")
+            else:  # user
+                conversation_text.append(f"Answer: {msg.content}")
+        
+        conversation_formatted = "\n".join(conversation_text)
+        
+        template = """Summarize the following chatbot conversation into a brief, coherent additional note.
+
+Original Feedback:
+{original_feedback}
+
+Chatbot Conversation:
+{conversation}
+
+Task: Summarize the conversation answers into a concise note (2-4 sentences) that captures the key additional details provided.
+
+Requirements:
+- Write ONLY the summary of what was discussed in the conversation
+- DO NOT repeat or reference the original feedback
+- Present it as a natural, flowing note with the additional context
+- Focus on key specifics: timing, location, steps taken, errors, expectations, permit types, etc.
+- Don't mention "questions", "conversation", or "the user said" - just state the facts
+
+Return ONLY the augmented feedback text. No JSON, no explanations, just the enhanced feedback message."""
+        
+        return template.format(
+            original_feedback=original_feedback,
+            conversation=conversation_formatted
+        )
+    
+    @staticmethod
+    def build_augmentation_system_message() -> str:
+        """
+        Build the system message for feedback augmentation tasks.
+        
+        Returns:
+            System message string
+        """
+        return "You are a professional writing assistant that specializes in synthesizing information from multiple sources into coherent, well-structured feedback messages."
 
 
 # Create a singleton instance for easy access

@@ -73,3 +73,14 @@ class ConversationResponse(BaseModel):
     """Model for chatbot conversation response."""
     message: str
     is_complete: bool
+
+
+class AugmentationInput(BaseModel):
+    """Model for feedback augmentation input."""
+    original_feedback: str
+    conversation_history: List[ConversationMessage]
+
+
+class AugmentationResponse(BaseModel):
+    """Model for feedback augmentation response."""
+    additional_note: str

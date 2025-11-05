@@ -188,18 +188,32 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
   };
 
   const finishConversation = async () => {
-    // Build enhanced feedback text from conversation
-    const conversationText = conversationHistory
-      .filter(msg => msg.role === 'user') // Only user responses
-      .map(msg => msg.content)
-      .join(' ');
-    
-    const enhancedFeedback = `${originalFeedback}\n\nAdditional details: ${conversationText}`;
-    
+    try {
+      // Use AI to generate an additional note from the conversation
+      const augmentationResult = await api.augmentFeedback({
+        original_feedback: originalFeedback,
+        conversation_history: conversationHistory
+      });
+      
+      const additionalNote = augmentationResult.additional_note;
+      // Keep original feedback and append AI-generated note
+      const enhancedFeedback = `${originalFeedback}\n\nAdditional note: ${additionalNote}`;
+      setFeedback(enhancedFeedback);      
+    } catch (error) {
+      console.error('Error augmenting feedback:', error);
+      // Fallback to simple concatenation if AI fails
+      const conversationText = conversationHistory
+        .filter(msg => msg.role === 'user')
+        .map(msg => msg.content)
+        .join(' ');
+      
+      const enhancedFeedback = `${originalFeedback}\n\nAdditional note: ${conversationText}`;
+      setFeedback(enhancedFeedback);
+    }
+
     // Close chatbot and put enhanced text back in textarea
     setShowChatbot(false);
-    setFeedback(enhancedFeedback);
-    setHasBeenEnhanced(true); // Mark as enhanced to skip chatbot on resubmit
+    setHasBeenEnhanced(true);
     
     // Reset chatbot state
     setConversationHistory([]);
