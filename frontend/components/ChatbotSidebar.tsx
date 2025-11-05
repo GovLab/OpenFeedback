@@ -5,7 +5,6 @@ import { ConversationMessage } from '@/lib/api';
 
 interface ChatbotSidebarProps {
   isOpen: boolean;
-  originalFeedback: string;
   conversationHistory: ConversationMessage[];
   questionCount: number;
   canSkip: boolean;
@@ -18,7 +17,6 @@ interface ChatbotSidebarProps {
 
 export default function ChatbotSidebar({
   isOpen,
-  originalFeedback,
   conversationHistory,
   questionCount,
   canSkip,

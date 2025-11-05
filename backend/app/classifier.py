@@ -140,6 +140,12 @@ def chatbot_agent(original_feedback: str, conversation_history: List) -> dict:
     result["needs_followup"] = bool(result.get("needs_followup", True))
     result["quality_score"] = int(result.get("quality_score", 5))
     
+    # This provides a safety net even if the AI suggests follow-up
+    if result["quality_score"] >= 6:
+        logger.info(f"Quality score {result['quality_score']} >= 6, marking as complete (no follow-up needed)")
+        result["needs_followup"] = False
+        result["message"] = "Thank you for your feedback!"
+    
     return result
 
 

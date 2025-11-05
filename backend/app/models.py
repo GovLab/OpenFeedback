@@ -73,7 +73,8 @@ class ConversationInput(BaseModel):
 class ConversationResponse(BaseModel):
     """Model for chatbot conversation response."""
     message: str
-    is_complete: bool
+    needs_followup: bool
+    quality_score: Optional[int] = None
 
 
 class AugmentationInput(BaseModel):

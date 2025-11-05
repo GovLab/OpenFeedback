@@ -86,7 +86,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
           conversation_history: []
         });
         
-        if (!agentData.is_complete) {
+        if (agentData.needs_followup) {
           // Low quality - show chatbot sidebar with agent's first question
           setOriginalFeedback(feedback);
           setConversationHistory([{
@@ -173,11 +173,11 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
       
       // Update skip button based on agent's quality assessment
       if (newQuestionCount >= 2) {
-        setCanSkip(agentData.is_complete);
+        setCanSkip(!agentData.needs_followup);
       }
       
       // If agent says quality is sufficient, finish conversation
-      if (agentData.is_complete) {
+      if (!agentData.needs_followup) {
         setTimeout(() => finishConversation(), 1500);
       }
     } catch (err) {

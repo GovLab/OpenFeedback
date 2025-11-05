@@ -153,12 +153,20 @@ Each category should map to its relevant subcategories. Only include categories 
 
 Determine if the feedback has enough actionable detail, and if not, ask ONE follow-up question.
 
-DECISION CRITERIA:
-- Feedback NEEDS more detail if it's vague, lacks specifics about: which permit type, how long it's been, location/address, specific step/action, what went wrong, error messages, or what the user expected vs. what happened
-- Feedback is SUFFICIENT when you can understand: the specific issue, when/where it occurred, what permit/process it relates to, and what the user attempted
-- Examples of INSUFFICIENT: "this is slow", "broken", "confusing", "doesn't work", "had a problem", "it's bad"
-- Examples of SUFFICIENT: "Building permit application submitted 3 weeks ago for 123 Main St, still pending review", "Website crashed with error code 500 when I tried uploading my ID on Chrome yesterday at 2pm"
-- Ask targeted questions that get one key missing piece: (1) Which permit? (2) When did this happen? (3) What step were you on? (4) What error did you see? (5) What did you expect to happen?
+DECISION CRITERIA (BE LENIENT):
+- Feedback NEEDS more detail ONLY if it's extremely vague with NO context whatsoever
+- Feedback is SUFFICIENT when it has ANY reasonable detail about the issue, even if not perfect
+- Examples of INSUFFICIENT (only the most vague): "bad", "broken", "fix it", "doesn't work" (with no other context)
+- Examples of SUFFICIENT: Any feedback that mentions a specific problem, complaint, experience, permit type, process step, timeframe, emotion, or impact - even in general terms
+- BE LENIENT: If the user expresses a clear problem or concern, even without perfect details, consider it sufficient
+- Only ask for more detail if the feedback is truly unintelligible or has zero actionable information
+
+GUIDELINES:
+- If feedback mentions ANY specific issue, concern, or experience → SUFFICIENT
+- If feedback expresses dissatisfaction with a process or service → SUFFICIENT  
+- If feedback describes a problem area or pain point → SUFFICIENT
+- If feedback suggests an improvement or change → SUFFICIENT
+- Only mark as INSUFFICIENT if it's 1-3 words with no context at all
 
 IF MORE DETAIL NEEDED:
 - Ask ONE quick, easy question that builds on previous answers
@@ -178,11 +186,12 @@ Respond in this JSON format:
   "quality_score": 1-10
 }}
 
-Quality score explanation:
-- 1-3: Very vague, missing critical details
-- 4-6: Some detail but still needs more context
-- 7-8: Good detail, mostly actionable
-- 9-10: Excellent detail, fully actionable
+Quality score explanation (BE GENEROUS):
+- 1-3: Completely unintelligible or no information (e.g., "bad", "no")
+- 4-5: Very minimal but has some context
+- 6-7: Decent feedback with clear issue or concern
+- 8-9: Good detail with specifics
+- 10: Exceptional detail with all context
 """
         
         return template.format(context=context)

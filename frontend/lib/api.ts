@@ -135,7 +135,8 @@ export interface ConversationInput {
 
 export interface ConversationResponse {
   message: string;
-  is_complete: boolean;
+  needs_followup: boolean;
+  quality_score?: number;
 }
 
 export interface FeedbackRecord {
