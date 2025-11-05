@@ -155,6 +155,13 @@ export interface FeedbackRecord {
   department_predicted: string | null;
   impact_type: string[] | null;
   language: string | null;
+  followup_opt_in: boolean | null;
+  user_contact_info: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    location?: string;
+  } | null;
 }
 
 export interface FeedbackListResponse {

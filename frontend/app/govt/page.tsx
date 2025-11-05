@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import FileUploadForm from "@/components/FileUploadForm";
 import GraphVisualization from "@/components/GraphVisualization";
 import StatsDisplay from "@/components/StatsDisplay";
-import FeedbackTable from "@/components/FeedbackTable";
+import FeedbackTable from "@/components/TableVisualization";
 import Navigation from "@/components/Navigation";
 import { api, GraphData, Stats } from "@/lib/api";
 
