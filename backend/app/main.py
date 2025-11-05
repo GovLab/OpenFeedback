@@ -176,6 +176,28 @@ async def submit_feedback(feedback: FeedbackInput):
         
         # 1. Store FULL data in PostgreSQL (with AI-generated fields)
         logger.debug("Storing feedback in PostgreSQL...")
+        
+        # Process contact information if provided
+        followup_opt_in = False
+        user_contact_info = None
+        if feedback.contact_info:
+            followup_opt_in = feedback.contact_info.get('opted_in', False)
+            if followup_opt_in:
+                # Store contact details in JSONB format (name is optional, others are required)
+                user_contact_info = {
+                    "email": feedback.contact_info.get('email'),
+                    "phone": feedback.contact_info.get('phone'),
+                    "location": feedback.contact_info.get('location')
+                }
+                # Only add name if it's provided and not empty
+                name = feedback.contact_info.get('name', '').strip()
+                if name:
+                    user_contact_info['name'] = name
+                    
+                logger.info(f"User opted in for follow-up. Email: {user_contact_info.get('email')}, Name provided: {bool(name)}")
+            else:
+                logger.info("User opted out of follow-up contact")
+        
         postgres_data = {
             "issue_description": feedback.text,
             "permit_type": classified.permit_type,
@@ -189,7 +211,9 @@ async def submit_feedback(feedback: FeedbackInput):
             "language": classified.language,
             "status": "New",
             "feedback_source": "OpenPermit",
-            "timestamp_processed": datetime.now()
+            "timestamp_processed": datetime.now(),
+            "followup_opt_in": followup_opt_in,
+            "user_contact_info": user_contact_info
         }
         postgres_id = postgres_db.add_feedback(postgres_data)
         logger.info(f"Feedback stored in PostgreSQL. ID: {postgres_id}")

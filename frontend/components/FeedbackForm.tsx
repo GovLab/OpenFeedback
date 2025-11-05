@@ -466,7 +466,6 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
       {/* Chatbot Sidebar */}
       <ChatbotSidebar
         isOpen={showChatbot}
-        originalFeedback={originalFeedback}
         conversationHistory={conversationHistory}
         questionCount={questionCount}
         canSkip={canSkip}

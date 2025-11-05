@@ -141,6 +141,8 @@ class PostgresDB:
                     "department_predicted": f.department_predicted,
                     "impact_type": f.impact_type,
                     "language": f.language,
+                    "followup_opt_in": f.followup_opt_in,
+                    "user_contact_info": f.user_contact_info,
                 }
                 for f in feedbacks
             ]

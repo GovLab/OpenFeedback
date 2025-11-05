@@ -5,6 +5,7 @@ from typing import List, Optional, Dict
 class FeedbackInput(BaseModel):
     """Model for feedback input from user."""
     text: str
+    contact_info: Optional[Dict] = None  # User contact information if opted in
 
 class ClassifiedFeedback(BaseModel):
     """Model for classified feedback with AI-generated fields."""
