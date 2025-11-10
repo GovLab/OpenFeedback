@@ -21,17 +21,19 @@ class Neo4jDatabase:
         """Close the database connection."""
         self.driver.close()
     
-    def add_feedback(self, feedback: ClassifiedFeedback) -> str:
+    def add_feedback(self, feedback: ClassifiedFeedback, feedback_id: str = None) -> str:
         """
         Add classified feedback to the graph database.
         
         Args:
             feedback: ClassifiedFeedback object
+            feedback_id: Optional UUID string to use (if None, will auto-generate)
             
         Returns:
             feedback_id: Unique identifier for the feedback
         """
-        feedback_id = str(uuid.uuid4())
+        if not feedback_id:
+            feedback_id = str(uuid.uuid4())
         
         with self.driver.session() as session:
             # Create feedback node

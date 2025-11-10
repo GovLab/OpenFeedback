@@ -204,6 +204,11 @@ async def submit_feedback(feedback: FeedbackInput):
         classified = await classify_feedback(feedback.text)
         logger.info(f"Classification completed. Categories: {list(classified.category_map.keys())}")
         
+        # Generate a single UUID for both databases
+        import uuid as uuid_module
+        shared_feedback_id = str(uuid_module.uuid4())
+        logger.info(f"Generated shared feedback ID: {shared_feedback_id}")
+        
         # 1. Store FULL data in PostgreSQL (with AI-generated fields)
         logger.debug("Storing feedback in PostgreSQL...")
         
@@ -245,13 +250,14 @@ async def submit_feedback(feedback: FeedbackInput):
             "followup_opt_in": followup_opt_in,
             "user_contact_info": user_contact_info
         }
-        postgres_id = postgres_db.add_feedback(postgres_data)
+        postgres_id = postgres_db.add_feedback(postgres_data, feedback_id=shared_feedback_id)
         logger.info(f"Feedback stored in PostgreSQL. ID: {postgres_id}")
         
         # 2. Store graph relationships in Neo4j
         logger.debug("Storing feedback relationships in Neo4j...")
-        neo4j_id = db.add_feedback(classified)
+        neo4j_id = db.add_feedback(classified, feedback_id=shared_feedback_id)
         logger.info(f"Feedback relationships stored in Neo4j. ID: {neo4j_id}")
+        logger.info(f"Verified: Both databases using same ID: {postgres_id == neo4j_id}")
         
         return classified
         
@@ -299,6 +305,10 @@ async def upload_feedback_file(file: UploadFile = File(...), store_in_database: 
             logger.debug("Storing all feedbacks in databases...")
             feedback_ids = []
             for i, (text, classified) in enumerate(zip(feedback_texts, classified_results)):
+                # Generate a single UUID for both databases
+                import uuid as uuid_module
+                shared_feedback_id = str(uuid_module.uuid4())
+                
                 # Store in PostgreSQL with all AI-generated fields
                 postgres_data = {
                     "issue_description": text,
@@ -315,11 +325,11 @@ async def upload_feedback_file(file: UploadFile = File(...), store_in_database: 
                     "feedback_source": "OpenPermit",
                     "timestamp_processed": datetime.now()
                 }
-                postgres_id = postgres_db.add_feedback(postgres_data)
+                postgres_id = postgres_db.add_feedback(postgres_data, feedback_id=shared_feedback_id)
                 
                 # Store in Neo4j
-                neo4j_id = db.add_feedback(classified)
-                feedback_ids.append({"postgres": postgres_id, "neo4j": neo4j_id})
+                neo4j_id = db.add_feedback(classified, feedback_id=shared_feedback_id)
+                feedback_ids.append({"postgres": postgres_id, "neo4j": neo4j_id, "shared_id": shared_feedback_id})
             
             logger.info(f"All feedbacks stored successfully. Count: {len(feedback_ids)}")
         

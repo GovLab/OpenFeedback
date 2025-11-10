@@ -73,17 +73,22 @@ class PostgresDB:
         finally:
             session.close()
     
-    def add_feedback(self, feedback_data: Dict[str, Any]) -> str:
+    def add_feedback(self, feedback_data: Dict[str, Any], feedback_id: str = None) -> str:
         """
         Add feedback to PostgreSQL.
         
         Args:
             feedback_data: Dictionary with feedback fields
+            feedback_id: Optional UUID string to use (if None, will auto-generate)
             
         Returns:
             feedback_id: UUID as string
         """
         with self.get_session() as session:
+            # If feedback_id is provided, add it to the data
+            if feedback_id:
+                feedback_data['feedback_id'] = uuid.UUID(feedback_id)
+            
             feedback = FeedbackDB(**feedback_data)
             session.add(feedback)
             session.flush()
