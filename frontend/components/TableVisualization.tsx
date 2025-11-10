@@ -539,19 +539,6 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
                                       <span className="font-medium text-gray-900 text-xs group-hover:text-emerald-700 group-hover:underline transition-colors truncate block">{feedback.user_contact_info.phone}</span>
                                     </a>
                                   )}
-                                  
-                                  {feedback.user_contact_info.location && (
-                                    <div className="bg-white/80 backdrop-blur-sm px-2 py-1.5 rounded border border-emerald-200 shadow-sm">
-                                      <div className="flex items-center gap-1 mb-1">
-                                        <svg className="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        </svg>
-                                        <span className="text-[10px] text-emerald-700 font-semibold">Location</span>
-                                      </div>
-                                      <span className="font-medium text-gray-900 text-xs truncate block">{feedback.user_contact_info.location}</span>
-                                    </div>
-                                  )}
                                 </div>
                               </div>
                             </div>

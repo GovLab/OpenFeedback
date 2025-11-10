@@ -160,7 +160,6 @@ export interface FeedbackRecord {
     name?: string;
     email?: string;
     phone?: string;
-    location?: string;
   } | null;
 }
 

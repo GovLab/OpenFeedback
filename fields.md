@@ -11,8 +11,6 @@
 | ai_clarification_needed | BOOLEAN          | Whether chatbot follow-up occurred                | AI         |
 | ai_followup_notes       | TEXT             | Extracted clarifications                          | AI         |
 | department_predicted    | ENUM             | Target agency (Licensing, ISD, Fire, etc.)        | AI         |
-| location_text           | TEXT             | Neighborhood or address                           | User       |
-| location_geocoded       | JSON             | lat/lon + district (for mapping)                  | AI/API     |
 | sentiment_score         | FLOAT (-1 → +1) | Emotional tone                                    | AI         |
 | impact_type             | ARRAY            | ["Time lost", "Financial cost", etc.]             | User or AI |
 | urgency_level           | ENUM             | Low / Medium / High                               | AI or User |

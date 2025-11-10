@@ -30,8 +30,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
   const [contactInfo, setContactInfo] = useState({
     name: '',
     email: '',
-    phone: '',
-    location: ''
+    phone: ''
   });
 
   // Suggestion prompts to help users
@@ -59,16 +58,12 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
 
     // Validate required contact fields if user opted in
     if (contactOptIn === 'yes') {
-      if (!contactInfo.email.trim()) {
-        setError('Please provide your email address');
+      if (!contactInfo.name.trim()) {
+        setError('Please provide your name');
         return;
       }
-      if (!contactInfo.phone.trim()) {
-        setError('Please provide your phone number');
-        return;
-      }
-      if (!contactInfo.location.trim()) {
-        setError('Please provide your location');
+      if (!contactInfo.email.trim() && !contactInfo.phone.trim()) {
+        setError('Please provide at least one contact method (email or phone number)');
         return;
       }
     }
@@ -110,8 +105,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
           opted_in: true,
           name: contactInfo.name || null,
           email: contactInfo.email || null,
-          phone: contactInfo.phone || null,
-          location: contactInfo.location || null
+          phone: contactInfo.phone || null
         };
       } else {
         feedbackData.contact_info = {
@@ -125,7 +119,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
       setHasBeenEnhanced(false); // Reset for next submission
       setShowSuggestions(true); // Show suggestions for next feedback
       setContactOptIn(null); // Reset contact opt-in
-      setContactInfo({ name: '', email: '', phone: '', location: '' }); // Reset contact fields
+      setContactInfo({ name: '', email: '', phone: '' }); // Reset contact fields
       onFeedbackSubmitted();
       setLoading(false);
     } catch (err) {
@@ -351,14 +345,14 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <p className="text-sm text-slate-600">
-                    Please provide your contact details. Name is optional.
+                    Please provide your name and at least one contact method (email or phone).
                   </p>
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="group">
+                  <div className="group sm:col-span-2">
                     <label htmlFor="contactName" className="block text-sm font-medium text-slate-700 mb-2">
-                      Name
+                      Name <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -367,13 +361,14 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
                       onChange={(e) => setContactInfo({ ...contactInfo, name: e.target.value })}
                       disabled={loading || showChatbot}
                       placeholder="Your name"
+                      required
                       className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm text-slate-900 transition-all duration-200 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed placeholder:text-slate-400"
                     />
                   </div>
 
                   <div className="group">
                     <label htmlFor="contactEmail" className="block text-sm font-medium text-slate-700 mb-2">
-                      Email <span className="text-red-500">*</span>
+                      Email
                     </label>
                     <input
                       type="email"
@@ -382,14 +377,13 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
                       onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })}
                       disabled={loading || showChatbot}
                       placeholder="your.email@example.com"
-                      required
                       className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm text-slate-900 transition-all duration-200 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed placeholder:text-slate-400"
                     />
                   </div>
 
                   <div className="group">
                     <label htmlFor="contactPhone" className="block text-sm font-medium text-slate-700 mb-2">
-                      Phone Number <span className="text-red-500">*</span>
+                      Phone Number
                     </label>
                     <input
                       type="tel"
@@ -398,23 +392,6 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
                       onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })}
                       disabled={loading || showChatbot}
                       placeholder="(555) 123-4567"
-                      required
-                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm text-slate-900 transition-all duration-200 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed placeholder:text-slate-400"
-                    />
-                  </div>
-
-                  <div className="group">
-                    <label htmlFor="contactLocation" className="block text-sm font-medium text-slate-700 mb-2">
-                      Location <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="contactLocation"
-                      value={contactInfo.location}
-                      onChange={(e) => setContactInfo({ ...contactInfo, location: e.target.value })}
-                      disabled={loading || showChatbot}
-                      placeholder="City / Neighborhood / Zipcode"
-                      required
                       className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm text-slate-900 transition-all duration-200 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed placeholder:text-slate-400"
                     />
                   </div>

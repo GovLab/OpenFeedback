@@ -215,9 +215,9 @@ async def submit_feedback(feedback: FeedbackInput):
             if followup_opt_in:
                 # Store contact details in JSONB format (name is optional, others are required)
                 user_contact_info = {
+                    "name": feedback.contact_info.get('name', ''),
                     "email": feedback.contact_info.get('email'),
-                    "phone": feedback.contact_info.get('phone'),
-                    "location": feedback.contact_info.get('location')
+                    "phone": feedback.contact_info.get('phone')
                 }
                 # Only add name if it's provided and not empty
                 name = feedback.contact_info.get('name', '').strip()

@@ -34,10 +34,6 @@ class FeedbackDB(Base):
     ai_followup_notes = Column(Text, nullable=True)
     department_predicted = Column(String(100), nullable=True)
     
-    # Location
-    location_text = Column(Text, nullable=True)
-    location_geocoded = Column(JSONB, nullable=True)
-    
     # Scoring
     sentiment_score = Column(Float, nullable=True)
     impact_type = Column(ARRAY(Text), nullable=True)

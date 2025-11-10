@@ -56,10 +56,6 @@ CREATE TABLE feedback (
     ai_followup_notes TEXT,
     department_predicted VARCHAR(100),
     
-    -- Location
-    location_text TEXT,
-    location_geocoded JSONB,
-    
     -- Scoring & priority
     sentiment_score FLOAT CHECK (sentiment_score BETWEEN -1 AND 1),
     impact_type TEXT[],
