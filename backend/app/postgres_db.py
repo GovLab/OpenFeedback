@@ -9,7 +9,7 @@ import uuid
 from .config import settings
 
 # Create database engine
-engine = create_engine(settings.postgres_url, echo=settings.debug)
+engine = create_engine(settings.postgres_url, echo=False)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

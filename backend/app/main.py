@@ -5,7 +5,7 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse, IndividualResponse, ConversationInput, ConversationResponse, AugmentationInput, AugmentationResponse
-from .classifier import classify_feedback, chatbot_agent, augment_feedback
+from .classifier import classify_feedback, chatbot_agent, augment_feedback, determine_permit_context
 from .database import db
 from .postgres_db import postgres_db
 from .file_processor import FileProcessor
@@ -17,13 +17,22 @@ for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
 # Configure root logger to INFO level (to avoid too much noise)
+# Use UTF-8 encoding to support emojis in logs
+import sys
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setLevel(logging.INFO)
+stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+# Force UTF-8 encoding on the stream
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
+file_handler = logging.FileHandler('app.log', encoding='utf-8')
+file_handler.setLevel(logging.INFO)
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),  # Console output
-        logging.FileHandler('app.log')  # File output
-    ]
+    handlers=[stream_handler, file_handler]
 )
 
 # Set specific loggers for detailed debugging
@@ -35,7 +44,6 @@ logging.getLogger('app.main').setLevel(logging.INFO)  # Your main app
 logging.getLogger('neo4j').setLevel(logging.WARNING)  # Reduce Neo4j noise
 logging.getLogger('urllib3').setLevel(logging.WARNING)  # Reduce urllib3 noise
 logging.getLogger('openai').setLevel(logging.INFO)  # Reduce OpenAI noise
-logging.getLogger('sqlalchemy.engine').setLevel(logging.WARNING)  # Reduce SQLAlchemy noise
 
 logger = logging.getLogger(__name__)
 logger.info("Application logging configured with filtered levels")
@@ -108,21 +116,43 @@ async def feedback_agent(conversation: ConversationInput):
     Returns:
         Agent response with next question or completion status
     """
-    logger.info(f"Agent processing feedback: {conversation.original_feedback[:100]}...")
+    logger.info("=" * 70)
+    logger.info("==== FEEDBACK AGENT ENDPOINT CALLED ====")
+    logger.info("=" * 70)
+    logger.info(f"Feedback: {conversation.original_feedback[:100]}...")
+    logger.info(f"Conversation turn: {len(conversation.conversation_history) + 1}")
     
     try:
-        # Call the unified chatbot agent
+        # Determine permit context only on first call (empty conversation history)
+        permit_context = ""
+        if not conversation.conversation_history:
+            logger.info("📍 FIRST TURN: Will determine permit context")
+            permit_context = determine_permit_context(
+                conversation.original_feedback,
+                conversation.category_map
+            )
+        else:
+            logger.info("📍 SUBSEQUENT TURN: Skipping permit context (already loaded)")
+            logger.info("=" * 60)
+        
+        # Call the chatbot agent with permit context
         result = chatbot_agent(
             conversation.original_feedback,
-            conversation.conversation_history
+            conversation.conversation_history,
+            permit_context
         )
         
-        logger.info(f"Agent decision: needs_followup={result['needs_followup']}, quality_score={result.get('quality_score', 'N/A')}")
+        logger.info("\n" + "=" * 70)
+        logger.info("==== FINAL RESULT ====")
+        logger.info(f"Needs followup: {result['needs_followup']}")
+        logger.info(f"Quality score: {result.get('quality_score', 'N/A')}/10")
+        logger.info(f"Response message: {result.get('message', '')[:100]}...")
+        logger.info("=" * 70 + "\n")
         
         return result
         
     except Exception as e:
-        logger.error(f"Error in feedback agent: {str(e)}")
+        logger.error(f"❌ Error in feedback agent: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

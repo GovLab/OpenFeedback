@@ -1,0 +1,221 @@
+CONSTRUCTION & CONTRACTOR PERMITS - BOSTON
+For contractors, builders, and construction companies
+
+=== COMMON CONSTRUCTION PERMITS ===
+
+1. HOT WORK PERMIT
+   - For: Welding, cutting, brazing, or any fire-producing work
+   - Apply: Fire Prevention Portal
+   - Contact: Fire Prevention 617-343-3628
+   - Duration: Typically short-term or single job
+   - Requirements: Fire watch, fire extinguisher on site, clear area
+   - Common issues: Forgetting to get permit before starting, not having fire safety equipment
+   - Timeline: Usually quick approval (same day to 1-2 days)
+
+2. TEMPORARY DUMPSTER
+   - For: Construction dumpsters on street or property
+   - Apply: Fire Prevention Portal
+   - Duration: Specified time period
+   - Requirements: Location that doesn't block fire access
+   - Renewal: Can extend if needed
+   - Common issues: Placement blocking hydrants or emergency access, overfilling
+
+3. CONSTRUCTION FIRE SAFETY
+   - For: Active construction sites
+   - Apply: Fire Prevention Portal
+   - Requirements: Fire extinguishers, access for emergency vehicles, hot work compliance
+   - Ongoing: Throughout construction period
+   - Inspections: May have periodic checks
+
+4. TEMPORARY ELECTRICAL SERVICE
+   - For: Construction site power before permanent service
+   - Apply: ISD Portal (licensed electrician applies)
+   - Examples: Job site trailers, temporary lighting, power tools
+   - Must: Meet same safety standards as permanent
+   - Common issues: Proper grounding, weatherproof equipment, overloading circuits
+
+5. SCAFFOLDING & STAGING
+   - For: Exterior scaffolding on buildings
+   - Requirements: Sidewalk protection, proper engineering for large scaffolds
+   - May need: Street occupancy permit if encroaching on sidewalk
+   - Safety: Regular inspections required, fall protection
+
+=== WORKING IN BOSTON ===
+
+Contractor License Requirements:
+- Massachusetts Construction Supervisor License (CSL) for contractors
+- Specific trade licenses: Electrician (required), Plumber (required), Gas Fitter (required)
+- Home Improvement Contractor registration
+- Proof of insurance required for all permits
+
+Worker Requirements:
+- OSHA certifications for certain work
+- Proper safety equipment
+- Current photo ID on job sites
+
+=== STREET & SIDEWALK WORK ===
+
+Street Occupancy Permit:
+- For: Work that encroaches on street or sidewalk
+- Examples: Scaffolding, dumpsters, material storage, equipment
+- Contact: Public Works Department
+- Requirements: Traffic control plan, insurance, signage
+- Fees: Based on area and duration
+- Common issues: Blocking sidewalk accessibility, not maintaining safe pedestrian path
+
+Excavation Permit:
+- For: Digging in streets, sidewalks, or public property
+- Examples: Utility work, foundation work affecting public way
+- Requirements: Restoration plan, traffic control, dig safe notifications
+- Must call: Dig Safe (811) before excavating
+
+=== COORDINATION & TIMING ===
+
+Multiple Permits for One Job:
+Most construction projects need several permits:
+- Building permit (main structural work)
+- Electrical permit (wiring, panels, service)
+- Plumbing permit (pipes, fixtures)
+- Gas permit (gas lines)
+- Hot work permit (welding/cutting)
+- Dumpster permit (waste management)
+- Street occupancy (if needed)
+
+Inspection Sequencing:
+1. Start work only after permits obtained
+2. Rough inspections (before covering work): 
+   - Framing
+   - Electrical rough
+   - Plumbing rough
+   - Gas rough
+3. Insulation inspection (before covering)
+4. Final inspections (all trades)
+5. Certificate of occupancy (if required)
+
+Critical: Don't cover up rough work before inspection!
+
+=== COMMON CONTRACTOR ISSUES ===
+
+1. Starting Before Permits
+   - Problem: Work done before permit issued
+   - Result: Stop work order, fines, may need to expose work for inspection
+   - Solution: Always wait for permit approval
+
+2. Missing Inspections
+   - Problem: Covered up work without calling for rough inspection
+   - Result: May need to open walls to inspect, major delays
+   - Solution: Call for inspections before covering ANY work
+
+3. Failed Inspections
+   - Problem: Work doesn't meet code
+   - Result: Stop work order, must fix issues, re-inspection required
+   - Common failures: Improper framing, electrical code violations, plumbing issues
+   - Solution: Know current Boston building codes, hire qualified workers
+
+4. Wrong Permit Type
+   - Problem: Applied for short form when long form needed (or vice versa)
+   - Result: Permit rejection, restart application process
+   - Solution: Call ISD first to verify correct permit type
+
+5. License & Insurance Issues
+   - Problem: Expired license or lack of insurance
+   - Result: Can't pull permits, legal liability
+   - Solution: Keep all licenses and insurance current, have proof ready
+
+=== WORKING IN HISTORIC DISTRICTS ===
+
+Additional Requirements:
+- Landmarks Commission approval needed
+- Exterior work has design restrictions
+- Takes additional time (add 4-8 weeks)
+- More documentation required
+- Even minor changes (windows, doors, siding) need approval
+
+Boston Historic Districts:
+- Beacon Hill, Back Bay, South End, and others
+- Check if property is in historic district before planning work
+- Contact Landmarks Commission early in process
+
+=== EMERGENCY WORK ===
+
+When Permit Can't Wait:
+- Life safety issues (structural collapse, fire damage)
+- Emergency repairs (burst pipes, electrical hazards)
+
+Process:
+- Make emergency safe first
+- Contact ISD immediately
+- Get permit after emergency stabilization
+- May still need to expose work for inspection
+
+=== BEST PRACTICES ===
+
+Before Starting:
+1. Verify ALL required permits for the job
+2. Check contractor licenses are current
+3. Confirm insurance certificates
+4. Pull permits BEFORE ordering materials or starting work
+5. Post permits visibly at job site
+6. Have emergency contact available
+
+During Construction:
+1. Keep permits posted at site
+2. Schedule inspections in advance (24-48 hours notice)
+3. Don't cover work before inspection
+4. Document progress with photos
+5. Keep job site safe and clean
+6. Respect noise ordinances (typically 7am-6pm weekdays)
+
+After Work:
+1. Call for final inspections
+2. Get signed off permits
+3. Provide copies to property owner
+4. Remove dumpsters and clean site
+5. Close out permits properly
+
+=== TIMELINE PLANNING ===
+
+Typical Permit Timelines:
+- Hot work permit: Same day to 2 days
+- Dumpster permit: 1-3 days
+- Short form building permit: 1-2 weeks
+- Long form building permit: 2-6 weeks
+- Complex projects: 8-12+ weeks
+- Trade permits (electrical/plumbing/gas): 1-3 days to 1 week
+
+Add Buffer Time:
+- Always add 2-4 weeks buffer to timeline
+- Inspections can delay if failed
+- Weather delays
+- Material delivery delays
+- Other trades' coordination
+
+=== VIOLATIONS & PENALTIES ===
+
+Common Violations:
+- Working without permit
+- Work not matching approved plans
+- Missing inspections
+- Unsafe conditions
+- Blocking fire access
+- Noise violations
+
+Consequences:
+- Stop work orders
+- Fines ($100-$1000+ per day)
+- Must fix violations
+- Potential license suspension
+- Legal liability if injury occurs
+
+=== HELPFUL TIPS ===
+
+- Build relationship with ISD and Fire Prevention staff
+- Call ahead with questions rather than assuming
+- Keep copies of all permits and approvals
+- Take photos before, during, and after work
+- Communicate with property owners about permit requirements
+- Schedule inspections as early as possible
+- Have backup plans for inspection failures
+- Know current year's building code amendments
+- Join contractor associations for support and updates
+

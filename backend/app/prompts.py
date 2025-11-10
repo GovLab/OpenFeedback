@@ -153,27 +153,41 @@ Each category should map to its relevant subcategories. Only include categories 
 
 Determine if the feedback has enough actionable detail, and if not, ask ONE follow-up question.
 
-DECISION CRITERIA (BE LENIENT):
-- Feedback NEEDS more detail ONLY if it's extremely vague with NO context whatsoever
-- Feedback is SUFFICIENT when it has ANY reasonable detail about the issue, even if not perfect
-- Examples of INSUFFICIENT (only the most vague): "bad", "broken", "fix it", "doesn't work" (with no other context)
-- Examples of SUFFICIENT: Any feedback that mentions a specific problem, complaint, experience, permit type, process step, timeframe, emotion, or impact - even in general terms
-- BE LENIENT: If the user expresses a clear problem or concern, even without perfect details, consider it sufficient
-- Only ask for more detail if the feedback is truly unintelligible or has zero actionable information
+DECISION CRITERIA (HIGHER THRESHOLD):
+- Feedback NEEDS more detail unless it includes specific information about the issue
+- Feedback is SUFFICIENT when it has CLEAR, SPECIFIC details: concrete problem description, timeframe, measurable impact, or specific process step
+- Examples of INSUFFICIENT: "bad", "broken", "fix it", "doesn't work", "slow process", generic complaints without specifics
+- Examples of SUFFICIENT: "The residential renovation permit took 6 weeks", "I couldn't find the application form", "The online portal doesn't show my application status", "I waited 2 hours at the permit office"
+- Require SPECIFICITY: If the user expresses concern but lacks concrete details, ask for them
+- Only mark as SUFFICIENT if feedback includes at least ONE specific element (timeframe, location, process step, error message, concrete problem description, etc.)
 
 GUIDELINES:
-- If feedback mentions ANY specific issue, concern, or experience → SUFFICIENT
-- If feedback expresses dissatisfaction with a process or service → SUFFICIENT  
-- If feedback describes a problem area or pain point → SUFFICIENT
-- If feedback suggests an improvement or change → SUFFICIENT
-- Only mark as INSUFFICIENT if it's 1-3 words with no context at all
+- Generic complaints about processes → INSUFFICIENT (need specifics)
+- Vague emotional statements → INSUFFICIENT (need concrete details)
+- Mention of specific problem + timeframe → SUFFICIENT
+- Specific location or process step mentioned → SUFFICIENT
+- Concrete error or impact described → SUFFICIENT
+- Only 1-3 words or purely emotional → INSUFFICIENT
 
 IF MORE DETAIL NEEDED:
-- Ask ONE quick, easy question that builds on previous answers
+- Ask ONE focused question that targets missing specifics
 - Make it EASY to answer (yes/no, single word, or short phrase)
 - Be conversational and friendly
-- Focus on: what, when, where, which permit, what step, what error
-- Acknowledge their previous answer if relevant
+- Ask about: when/how long, what specific step, what error happened, what was the outcome
+- Don't ask about things we should already know (permit costs, standard fees, application requirements, standard processing times)
+- Don't ask them which permit they need - figure it out and confirm with them
+- If this isn't their first answer, acknowledge what they just told you
+    
+TONE & LANGUAGE GUIDELINES (Boston City Government):
+- Write as you'd talk to a friend - use natural contractions (don't, can't, didn't)
+- Keep it short: 15-20 words per sentence max
+- Use active voice (you experienced this, not "this was experienced")
+- Say "we" for the City and "you" for the resident
+- Spell out everything - no symbols or acronyms
+- Use strong, clear words: say "must" not "may" or "shall"
+- Be helpful and solution-focused
+- Plain language only - if you use a technical term, explain it right away
+- Keep questions tactical and specific to what happened
 
 IF ENOUGH DETAIL:
 - Set needs_followup to false
@@ -186,12 +200,12 @@ Respond in this JSON format:
   "quality_score": 1-10
 }}
 
-Quality score explanation (BE GENEROUS):
+Quality score explanation (HIGHER STANDARDS):
 - 1-3: Completely unintelligible or no information (e.g., "bad", "no")
-- 4-5: Very minimal but has some context
-- 6-7: Decent feedback with clear issue or concern
-- 8-9: Good detail with specifics
-- 10: Exceptional detail with all context
+- 4-5: Very minimal context, mostly vague
+- 6-7: Some context but lacks specific details needed for action
+- 8-9: Good detail with specific information (timeframe, process step, concrete problem, etc.)
+- 10: Exceptional detail with multiple specific elements and clear context
 """
         
         return template.format(context=context)
@@ -204,7 +218,18 @@ Quality score explanation (BE GENEROUS):
         Returns:
             System message string
         """
-        return "You are an intelligent feedback quality assistant for Boston city government permit processes. You evaluate feedback and ask follow-up questions to improve detail quality. You always respond with valid JSON."
+        return """You are an intelligent feedback quality assistant for Boston city government permit processes. 
+
+You can look up permit details using the get_boston_permit_context tool. Use it when you need info about permit types, processes, requirements, or common issues.
+
+Available context categories:
+- general_info: Boston permit contacts, portals, overview
+- home_renovations: Kitchen, bathroom, basement, residential permits
+- events_entertainment: Parties, venues, clubs, entertainment licenses
+- restaurants_bars: Food businesses, liquor licenses, commercial kitchens
+- construction_contractors: Hot work, dumpsters, contractor permits
+
+You evaluate feedback and ask follow-up questions to improve detail quality. You always respond with valid JSON."""
     
     @staticmethod
     def build_segmentation_prompt(text: str) -> str:
@@ -287,6 +312,8 @@ Requirements:
 - Present it as a natural, flowing note with the additional context
 - Focus on key specifics: timing, location, steps taken, errors, expectations, permit types, etc.
 - Don't mention "questions", "conversation", or "the user said" - just state the facts
+- NEVER assume or make up any information not explicitly stated in the conversation
+- Only include details that were directly provided by the user
 
 Return ONLY the augmented feedback text. No JSON, no explanations, just the enhanced feedback message."""
         
