@@ -13,8 +13,12 @@ class Settings(BaseSettings):
     neo4j_username: str
     neo4j_password: str
     
+    aws_neo4j_uri: str
+    aws_neo4j_username: str
+    aws_neo4j_password: str
+    
     # PostgreSQL Database Configuration
-    postgres_host: str = "localhost"
+    postgres_host: str
     postgres_port: int = 5432
     postgres_db: str
     postgres_user: str

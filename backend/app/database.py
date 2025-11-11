@@ -14,12 +14,21 @@ class Neo4jDatabase:
         PASSWORD = settings.neo4j_password
         AUTH = (USER, PASSWORD)
 
-        self.driver = GraphDatabase.driver(URI, auth=AUTH)
-        self.driver.verify_connectivity()
+        AWS_URI = settings.aws_neo4j_uri
+        AWS_USER = settings.aws_neo4j_username
+        AWS_PASSWORD = settings.aws_neo4j_password
+        AWS_AUTH = (AWS_USER, AWS_PASSWORD)
+        
+        self.aws_driver = GraphDatabase.driver(URI, auth=AUTH)
+        self.aws_driver = GraphDatabase.driver(AWS_URI, auth=AWS_AUTH)
+        
+        self.aws_driver.verify_connectivity()
+        self.aws_driver.verify_connectivity()
     
     def close(self):
         """Close the database connection."""
-        self.driver.close()
+        self.aws_driver.close()
+        self.aws_driver.close()
     
     def add_feedback(self, feedback: ClassifiedFeedback, feedback_id: str = None) -> str:
         """
@@ -35,7 +44,7 @@ class Neo4jDatabase:
         if not feedback_id:
             feedback_id = str(uuid.uuid4())
         
-        with self.driver.session() as session:
+        with self.aws_driver.session() as session:
             # Create feedback node
             session.run(
                 """
@@ -95,7 +104,7 @@ class Neo4jDatabase:
         nodes = []
         relationships = []
         
-        with self.driver.session() as session:
+        with self.aws_driver.session() as session:
             # Get all nodes
             result = session.run(
                 """
@@ -140,14 +149,14 @@ class Neo4jDatabase:
     
     def get_feedback_count(self) -> int:
         """Get total number of feedback entries."""
-        with self.driver.session() as session:
+        with self.aws_driver.session() as session:
             result = session.run("MATCH (f:Feedback) RETURN count(f) as count")
             record = result.single()
             return record["count"] if record else 0
     
     def get_categories_summary(self) -> List[dict]:
         """Get summary of categories with feedback counts."""
-        with self.driver.session() as session:
+        with self.aws_driver.session() as session:
             result = session.run(
                 """
                 MATCH (c:Category)<-[:BELONGS_TO]-(f:Feedback)
