@@ -17,7 +17,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen min-w-[320px] bg-slate-50">
+    <div className="min-h-screen min-w-[320px] bg-white">
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-8 sm:py-10 min-w-[320px]">
         {/* Minimal Header - centered and clean */}

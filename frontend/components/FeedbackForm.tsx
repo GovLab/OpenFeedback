@@ -233,7 +233,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
   return (
     <div className="flex flex-col md:flex-row gap-6 w-full min-w-[280px]">
       {/* Main Feedback Form */}
-      <div className={`flex-1 bg-white rounded-xl shadow-lg border border-slate-200 p-6 sm:p-8 transition-opacity duration-300 min-w-[280px] ${showChatbot ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
+      <div className={`flex-1 bg-white rounded-xl shadow-lg border p-6 sm:p-8 transition-opacity duration-300 min-w-[280px] ${showChatbot ? 'opacity-60 pointer-events-none' : 'opacity-100'}`} style={{ borderColor: 'var(--boston-gray-medium)' }}>
         <div className="mb-5">
           <label htmlFor="feedback" className="block text-lg font-semibold mb-1 text-slate-900">
             How would you improve permitting?
@@ -266,7 +266,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
             />
             
             {hasBeenEnhanced && (
-              <div className="mt-3 flex items-start gap-2 text-sm text-slate-600">
+              <div className="mt-3 flex items-start gap-2 text-sm" style={{ color: 'var(--boston-gray-dark)' }}>
                 <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--boston-optimistic-blue)' }}>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -277,14 +277,15 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
             {/* Suggestion prompts */}
             {showSuggestions && !hasBeenEnhanced && (
               <div className="mt-3 space-y-1">
-                <p className="text-xs italic text-slate-500 mb-1.5">
+                <p className="text-xs italic mb-1.5" style={{ color: 'var(--boston-gray-dark)', opacity: 0.8 }}>
                   Need help? Try answering:
                 </p>
                 <div className="space-y-0.5 pl-1">
                   {suggestionPrompts.map((prompt, index) => (
                     <p
                       key={index}
-                      className="text-xs italic text-slate-500 leading-relaxed"
+                      className="text-xs italic leading-relaxed"
+                      style={{ color: 'var(--boston-gray-dark)', opacity: 0.8 }}
                     >
                       • {prompt}
                     </p>
@@ -295,7 +296,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
           </div>
 
           {/* Contact Opt-in Section */}
-          <div className="border-t border-slate-200 pt-5">
+          <div className="border-t pt-5" style={{ borderColor: 'var(--boston-gray-medium)' }}>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <p className="text-sm font-medium text-slate-900">
                 Can we contact you with questions about your feedback?
@@ -422,10 +423,12 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
           <button
             type="submit"
             disabled={loading || showChatbot || contactOptIn === null}
-            className={`w-full py-3.5 px-6 rounded-lg font-semibold text-base disabled:bg-slate-300 disabled:cursor-not-allowed disabled:text-slate-500 transition-all duration-200 shadow-sm hover:shadow-md text-white`}
+            className={`w-full py-3.5 px-6 rounded-lg font-semibold text-base text-white disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md`}
             style={{ 
-              backgroundColor: hasBeenEnhanced ? 'var(--boston-optimistic-blue)' : 'var(--boston-optimistic-blue)',
-              '--hover-bg': 'var(--boston-charles-blue)'
+              backgroundColor: (loading || showChatbot || contactOptIn === null) 
+                ? 'var(--boston-gray-medium-dark)' 
+                : 'var(--boston-optimistic-blue)',
+              opacity: (loading || showChatbot || contactOptIn === null) ? 0.7 : 1
             } as React.CSSProperties}
             onMouseEnter={(e) => {
               if (!loading && !showChatbot && contactOptIn !== null) {
@@ -433,7 +436,9 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
               }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--boston-optimistic-blue)';
+              if (!loading && !showChatbot && contactOptIn !== null) {
+                e.currentTarget.style.backgroundColor = 'var(--boston-optimistic-blue)';
+              }
             }}
           >
             {loading ? (
