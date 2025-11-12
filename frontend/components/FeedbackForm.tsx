@@ -244,7 +244,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             {hasBeenEnhanced && (
-              <div className="mb-3 inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg text-sm font-medium border border-emerald-200">
+              <div className="mb-3 inline-flex items-center gap-2 bg-blue-50 text-boston-optimistic-blue px-3 py-1.5 rounded-lg text-sm font-medium border border-blue-200" style={{ backgroundColor: 'rgba(24, 113, 189, 0.1)', borderColor: 'rgba(24, 113, 189, 0.2)' }}>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -267,7 +267,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
             
             {hasBeenEnhanced && (
               <div className="mt-3 flex items-start gap-2 text-sm text-slate-600">
-                <svg className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--boston-optimistic-blue)' }}>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span>We've enhanced your feedback with details to guide us in helping you! Review and submit when ready!</span>
@@ -309,11 +309,24 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
                   disabled={loading || showChatbot}
                   className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200 border-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                     contactOptIn === 'yes'
-                      ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-md'
-                      : 'bg-white border-slate-300 text-slate-700 hover:border-emerald-400 hover:bg-emerald-50'
+                      ? 'shadow-md'
+                      : 'bg-white border-slate-300 text-slate-700'
                   }`}
+                  onMouseEnter={(e) => {
+                    if (contactOptIn !== 'yes' && !e.currentTarget.disabled) {
+                      e.currentTarget.style.borderColor = 'var(--boston-optimistic-blue)';
+                      e.currentTarget.style.backgroundColor = 'rgba(24, 113, 189, 0.1)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (contactOptIn !== 'yes') {
+                      e.currentTarget.style.borderColor = '';
+                      e.currentTarget.style.backgroundColor = '';
+                    }
+                  }}
+                  style={contactOptIn === 'yes' ? { backgroundColor: 'rgba(24, 113, 189, 0.1)', borderColor: 'var(--boston-optimistic-blue)', color: 'var(--boston-optimistic-blue)' } : {}}
                 >
-                  <svg className={`w-5 h-5 ${contactOptIn === 'yes' ? 'text-emerald-600' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className={`w-5 h-5 ${contactOptIn === 'yes' ? '' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" style={contactOptIn === 'yes' ? { color: 'var(--boston-optimistic-blue)' } : {}}>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                   </svg>
                   Yes
@@ -341,7 +354,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
             {contactOptIn === 'yes' && (
               <div className="space-y-5 p-5 mt-2">
                 <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--boston-optimistic-blue)' }}>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <p className="text-sm text-slate-600">
@@ -409,11 +422,19 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
           <button
             type="submit"
             disabled={loading || showChatbot || contactOptIn === null}
-            className={`w-full py-3.5 px-6 rounded-lg font-semibold text-base disabled:bg-slate-300 disabled:cursor-not-allowed disabled:text-slate-500 transition-all duration-200 shadow-sm hover:shadow-md ${
-              hasBeenEnhanced 
-                ? 'bg-emerald-600 hover:bg-emerald-700 text-white' 
-                : 'bg-[#007A33] hover:bg-[#005A25] text-white'
-            }`}
+            className={`w-full py-3.5 px-6 rounded-lg font-semibold text-base disabled:bg-slate-300 disabled:cursor-not-allowed disabled:text-slate-500 transition-all duration-200 shadow-sm hover:shadow-md text-white`}
+            style={{ 
+              backgroundColor: hasBeenEnhanced ? 'var(--boston-optimistic-blue)' : 'var(--boston-optimistic-blue)',
+              '--hover-bg': 'var(--boston-charles-blue)'
+            } as React.CSSProperties}
+            onMouseEnter={(e) => {
+              if (!loading && !showChatbot && contactOptIn !== null) {
+                e.currentTarget.style.backgroundColor = 'var(--boston-charles-blue)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--boston-optimistic-blue)';
+            }}
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">

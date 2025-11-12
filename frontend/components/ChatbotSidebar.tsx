@@ -69,7 +69,7 @@ export default function ChatbotSidebar({
       <div className="px-4 py-3 border-b border-gray-200 bg-white rounded-t-xl">
         <div className="flex justify-between items-start">
           <div className="flex items-start gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#007A33] to-[#005A25] flex items-center justify-center shadow-md flex-shrink-0">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-md flex-shrink-0" style={{ background: 'linear-gradient(to bottom right, var(--boston-optimistic-blue), var(--boston-charles-blue))' }}>
               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
               </svg>
@@ -94,12 +94,12 @@ export default function ChatbotSidebar({
         <div className="mt-2.5">
           <div className="flex justify-between text-xs mb-1.5 text-gray-600">
             <span className="font-medium">Question {questionCount}/5</span>
-            <span className="font-semibold text-[#007A33]">{Math.round((questionCount / 5) * 100)}%</span>
+            <span className="font-semibold" style={{ color: 'var(--boston-optimistic-blue)' }}>{Math.round((questionCount / 5) * 100)}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-1.5">
             <div
-              className="bg-[#007A33] h-1.5 rounded-full transition-all duration-500"
-              style={{ width: `${(questionCount / 5) * 100}%` }}
+              className="h-1.5 rounded-full transition-all duration-500"
+              style={{ backgroundColor: 'var(--boston-optimistic-blue)', width: `${(questionCount / 5) * 100}%` }}
             ></div>
           </div>
         </div>
@@ -121,7 +121,7 @@ export default function ChatbotSidebar({
             >
               {msg.role === 'assistant' && (
                 <div className="flex items-center gap-1.5 mb-1.5 pb-1.5 border-b border-gray-200">
-                  <div className="w-4 h-4 rounded bg-[#007A33] flex items-center justify-center">
+                  <div className="w-4 h-4 rounded flex items-center justify-center" style={{ backgroundColor: 'var(--boston-optimistic-blue)' }}>
                     <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                     </svg>
@@ -138,9 +138,9 @@ export default function ChatbotSidebar({
             <div className="bg-white text-gray-800 rounded-lg rounded-bl-sm px-3.5 py-2.5 border border-gray-200 shadow-sm">
               <div className="flex items-center gap-2">
                 <div className="flex gap-1">
-                  <span className="w-1.5 h-1.5 bg-[#007A33] rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                  <span className="w-1.5 h-1.5 bg-[#007A33] rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                  <span className="w-1.5 h-1.5 bg-[#007A33] rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                  <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ animationDelay: '0ms', backgroundColor: 'var(--boston-optimistic-blue)' }}></span>
+                  <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ animationDelay: '150ms', backgroundColor: 'var(--boston-optimistic-blue)' }}></span>
+                  <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ animationDelay: '300ms', backgroundColor: 'var(--boston-optimistic-blue)' }}></span>
                 </div>
                 <span className="text-sm text-gray-600">Processing...</span>
               </div>
@@ -162,7 +162,10 @@ export default function ChatbotSidebar({
               </button>
               <button
                 onClick={onSkip}
-                className="flex-1 text-sm px-3 py-2 bg-[#007A33] text-white rounded-lg hover:bg-[#005A25] transition-all shadow-sm font-semibold"
+                className="flex-1 text-sm px-3 py-2 text-white rounded-lg transition-all shadow-sm font-semibold"
+                style={{ backgroundColor: 'var(--boston-optimistic-blue)' }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--boston-charles-blue)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--boston-optimistic-blue)'}
               >
                 Continue →
               </button>
@@ -191,13 +194,31 @@ export default function ChatbotSidebar({
             onChange={(e) => setUserInput(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Type your response..."
-            className="flex-1 px-3 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#007A33] focus:border-[#007A33] text-gray-900 placeholder-gray-400 text-sm transition-all"
+            className="flex-1 px-3 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 text-gray-900 placeholder-gray-400 text-sm transition-all"
+            style={{ '--tw-ring-color': 'var(--boston-optimistic-blue)', '--tw-border-color': 'var(--boston-optimistic-blue)' } as React.CSSProperties}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = 'var(--boston-optimistic-blue)';
+              e.currentTarget.style.boxShadow = '0 0 0 2px rgba(24, 113, 189, 0.2)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = '';
+              e.currentTarget.style.boxShadow = '';
+            }}
             disabled={chatLoading}
           />
           <button
             onClick={handleSubmit}
             disabled={chatLoading || !userInput.trim()}
-            className="bg-[#007A33] text-white px-5 py-2.5 rounded-lg hover:bg-[#005A25] disabled:bg-gray-300 disabled:cursor-not-allowed transition-all text-sm font-semibold shadow-sm"
+            className="text-white px-5 py-2.5 rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-all text-sm font-semibold shadow-sm"
+            style={{ backgroundColor: 'var(--boston-optimistic-blue)' }}
+            onMouseEnter={(e) => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.backgroundColor = 'var(--boston-charles-blue)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--boston-optimistic-blue)';
+            }}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />

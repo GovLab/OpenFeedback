@@ -3,6 +3,24 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  
+  /* Boston Brand Colors - Primary Colors */
+  /* Source: https://www.boston.gov/government/cabinets/innovation-and-technology/brand-guidelines */
+  --boston-charles-blue: #091F2F;        /* Primary dark blue for headers and official content */
+  --boston-optimistic-blue: #1871bd;      /* Primary bright blue for links, buttons, and backgrounds */
+  --boston-freedom-trail-red: #FB4D42;    /* Brick-red, use minimally for important notifications */
+  
+  /* Boston Brand Colors - Supporting Blues */
+  --boston-blue-darkest: #061622;        /* Use very rarely, when you need something that resembles black */
+  --boston-blue-dark: #0C2639;           /* Used for footer background */
+  --boston-blue-desaturated: #45789C;      /* Use when you need text to visually recede */
+  --boston-blue-bright: #51ACFF;          /* Substitute for primary bright blue on dark backgrounds */
+  
+  /* Boston Brand Colors - Supporting Grays */
+  --boston-gray-dark: #58585B;           /* Used for body copy */
+  --boston-gray-medium-dark: #D2D2D2;     /* Used for horizontal rules and borders */
+  --boston-gray-medium: #E0E0E0;           /* Used for miscellaneous borders */
+  --boston-gray-light: #F2F2F2;          /* Used as background color */
 }
 
 @theme inline {
@@ -10,6 +28,19 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  
+  /* Boston Brand Colors - Available as Tailwind utilities */
+  --color-boston-charles-blue: var(--boston-charles-blue);
+  --color-boston-optimistic-blue: var(--boston-optimistic-blue);
+  --color-boston-freedom-trail-red: var(--boston-freedom-trail-red);
+  --color-boston-blue-darkest: var(--boston-blue-darkest);
+  --color-boston-blue-dark: var(--boston-blue-dark);
+  --color-boston-blue-desaturated: var(--boston-blue-desaturated);
+  --color-boston-blue-bright: var(--boston-blue-bright);
+  --color-boston-gray-dark: var(--boston-gray-dark);
+  --color-boston-gray-medium-dark: var(--boston-gray-medium-dark);
+  --color-boston-gray-medium: var(--boston-gray-medium);
+  --color-boston-gray-light: var(--boston-gray-light);
 }
 
 @media (prefers-color-scheme: dark) {
