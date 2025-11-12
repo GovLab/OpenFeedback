@@ -236,9 +236,9 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
       <div className={`flex-1 bg-white rounded-xl shadow-lg border border-slate-200 p-6 sm:p-8 transition-opacity duration-300 min-w-[280px] ${showChatbot ? 'opacity-60 pointer-events-none' : 'opacity-100'}`}>
         <div className="mb-5">
           <label htmlFor="feedback" className="block text-lg font-semibold mb-1 text-slate-900">
-            Your Input
+            How would you improve permitting?
           </label>
-          <p className="text-sm text-slate-600">Share what's on your mind</p>
+          <p className="text-sm text-slate-600">Frustrated by permitting? Want to share your experiences? Have ideas to make it better?</p>
         </div>
         
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -261,7 +261,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
               }}
               onFocus={() => setShowSuggestions(true)}
               className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-[#007A33] focus:border-[#007A33] text-slate-900 resize-y placeholder:text-slate-400 text-base leading-relaxed min-h-[120px] max-h-[400px]"
-              placeholder="Type your message here..."
+              placeholder="Share feedback on your experience!"
               disabled={loading || showChatbot}
             />
             
@@ -270,7 +270,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
                 <svg className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>Enhanced with additional details. Review and submit when ready.</span>
+                <span>We've enhanced your feedback with details to guide us in helping you! Review and submit when ready!</span>
               </div>
             )}
             
@@ -298,7 +298,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
           <div className="border-t border-slate-200 pt-5">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <p className="text-sm font-medium text-slate-900">
-                Would you like to be contacted regarding updates or follow-ups about this feedback?
+                Can we contact you with questions about your feedback?
                 <span className="text-red-500 ml-1">*</span>
               </p>
               
@@ -346,6 +346,12 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
                   </svg>
                   <p className="text-sm text-slate-600">
                     Please provide your name and at least one contact method (email or phone).
+                  </p>
+                </div>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-slate-700">
+                    We respect your privacy. We will only use your contact information to respond to your feedback.
                   </p>
                 </div>
                 

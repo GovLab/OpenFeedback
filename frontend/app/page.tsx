@@ -23,10 +23,10 @@ export default function Home() {
         {/* Minimal Header - centered and clean */}
         <div className="text-center mb-6">
           <h1 className="text-3xl sm:text-4xl font-semibold text-slate-900 mb-2 tracking-tight">
-            Share Your Thoughts
+            Boston's Permit Feedback Portal
           </h1>
           <p className="text-base text-slate-600">
-            Help us improve our services
+            We want to hear from you!
           </p>
         </div>
 

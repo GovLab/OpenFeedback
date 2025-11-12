@@ -75,9 +75,9 @@ export default function ChatbotSidebar({
               </svg>
             </div>
             <div>
-              <h3 className="text-base font-bold text-gray-900 tracking-tight">Feedback Assistant</h3>
+              <h3 className="text-base font-bold text-gray-900 tracking-tight">Your personal feedback assistant</h3>
               <p className="text-xs text-gray-600 mt-0.5 leading-snug">
-Quality feedback drives better solutions.Let's dig deeper together!
+                We need more information about your feedback!
               </p>
             </div>
           </div>
