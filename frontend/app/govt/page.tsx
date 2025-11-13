@@ -20,6 +20,19 @@ export default function GovtDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [expandedCards, setExpandedCards] = useState<{ [key: string]: boolean }>({
+    overview: false,
+    batchUpload: false,
+    networkGraph: false,
+    publicFeedback: false,
+  });
+
+  const toggleCard = (cardId: string) => {
+    setExpandedCards(prev => ({
+      ...prev,
+      [cardId]: !prev[cardId]
+    }));
+  };
 
   const fetchData = async () => {
     try {
@@ -68,10 +81,10 @@ export default function GovtDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">
-                Government Dashboard
+                Permit Feedback Analytics
               </h1>
               <p className="text-slate-200">
-                Feedback analytics, visualization, and batch data management
+                Analyze submissions, identify recurring issues, and coordinate agency responses.
               </p>
             </div>
             <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg">
@@ -96,13 +109,71 @@ export default function GovtDashboard() {
 
         {/* Stats Overview */}
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Overview</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Overview</h2>
+            <button
+              onClick={() => toggleCard('overview')}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+            >
+              <svg className={`w-4 h-4 transition-transform ${expandedCards.overview ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+              {expandedCards.overview ? 'Hide Guide' : 'Show Guide'}
+            </button>
+          </div>
+          {expandedCards.overview && (
+            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="font-semibold text-blue-900 mb-2">How to use Overview</h3>
+              <ul className="space-y-2 text-sm text-blue-800">
+                <li>• View the total number of feedback submissions received.</li>
+                <li>• Check how many items fall under each category (e.g., Process Issues, Communication Problems, Equity Concerns).</li>
+                <li>• Use this section to understand high-level trends and where most feedback is coming from.</li>
+              </ul>
+            </div>
+          )}
           <StatsDisplay stats={stats} />
         </div>
 
         {/* File Upload Section */}
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Batch Data Upload</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Batch Data Upload</h2>
+            <button
+              onClick={() => toggleCard('batchUpload')}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+            >
+              <svg className={`w-4 h-4 transition-transform ${expandedCards.batchUpload ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+              {expandedCards.batchUpload ? 'Hide Guide' : 'Show Guide'}
+            </button>
+          </div>
+          {expandedCards.batchUpload && (
+            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="font-semibold text-blue-900 mb-3">How to use Batch Data Upload</h3>
+              <p className="text-sm text-blue-800 mb-3">Use this tool when you need to import feedback in bulk from reports, emails, or other sources.</p>
+              <div className="space-y-3 text-sm text-blue-800">
+                <div>
+                  <p className="font-medium mb-1">Steps:</p>
+                  <ol className="list-decimal list-inside space-y-1 ml-2">
+                    <li>Choose a file (PDF, TXT, or DOCX — up to 10 MB).</li>
+                    <li>Select a processing option:
+                      <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
+                        <li><strong>Process & Store</strong> → Uploads and saves data to the system.</li>
+                        <li><strong>Classify Only</strong> → Tests the file without storing results.</li>
+                      </ul>
+                    </li>
+                    <li>Wait for confirmation that classification is complete.</li>
+                    <li>The data will appear automatically in your statistics and graphs.</li>
+                  </ol>
+                </div>
+                <div className="mt-3 pt-3 border-t border-blue-300">
+                  <p className="font-medium">💡 Tip:</p>
+                  <p>Files are automatically analyzed by AI to identify feedback categories and themes.</p>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <FileUploadForm onFeedbackSubmitted={fetchData} />
@@ -155,7 +226,42 @@ export default function GovtDashboard() {
 
         {/* Graph Visualization */}
         <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Feedback Network Graph</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Feedback Network Graph</h2>
+            <button
+              onClick={() => toggleCard('networkGraph')}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+            >
+              <svg className={`w-4 h-4 transition-transform ${expandedCards.networkGraph ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+              {expandedCards.networkGraph ? 'Hide Guide' : 'Show Guide'}
+            </button>
+          </div>
+          {expandedCards.networkGraph && (
+            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="font-semibold text-blue-900 mb-3">How to use Feedback Network Graph</h3>
+              <p className="text-sm text-blue-800 mb-3">Explore how feedback connects across categories and subtopics.</p>
+              <div className="space-y-3 text-sm text-blue-800">
+                <div>
+                  <p className="font-medium mb-2">How to read it:</p>
+                  <ul className="space-y-1 ml-2">
+                    <li>• <strong>Blue nodes</strong> = Individual feedback items</li>
+                    <li>• <strong>Green nodes</strong> = Categories</li>
+                    <li>• <strong>Orange nodes</strong> = Subcategories</li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-medium mb-2">You can:</p>
+                  <ul className="space-y-1 ml-2">
+                    <li>• Click a node to highlight its connections.</li>
+                    <li>• Drag to pan across the visualization.</li>
+                    <li>• Use the zoom control to see more or less detail.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
           {loading ? (
             <div className="bg-white rounded-lg shadow-md p-12 text-center border border-gray-200">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
@@ -167,9 +273,35 @@ export default function GovtDashboard() {
         </div>
 
         {/* Feedback Table */}
-        <div>
+        <div className="mb-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Feedback</h2>
           <FeedbackTable refreshTrigger={refreshTrigger} />
+        </div>
+
+        {/* Public Feedback Switch Guide */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Navigation Guide</h2>
+            <button
+              onClick={() => toggleCard('publicFeedback')}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+            >
+              <svg className={`w-4 h-4 transition-transform ${expandedCards.publicFeedback ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+              {expandedCards.publicFeedback ? 'Hide Guide' : 'Show Guide'}
+            </button>
+          </div>
+          {expandedCards.publicFeedback && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="font-semibold text-blue-900 mb-3">Public Feedback Switch</h3>
+              <p className="text-sm text-blue-800 mb-2">Use the navigation at the bottom to switch between:</p>
+              <ul className="space-y-2 text-sm text-blue-800 ml-2">
+                <li>• <strong>Public Feedback</strong> → What residents submit</li>
+                <li>• <strong>Dashboard View</strong> → Internal analytics and management tools</li>
+              </ul>
+            </div>
+          )}
         </div>
       </main>
 

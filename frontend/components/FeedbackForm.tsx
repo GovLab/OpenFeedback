@@ -37,10 +37,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
   const suggestionPrompts = [
     "What specific feature or service would you like to see improved?",
     "Can you describe a problem you encountered?",
-    "What was your experience with [specific process/feature]?",
-    "How could we make [service/process] easier or faster?",
     "What frustrated you about your recent interaction?",
-    "What did you really like that we should keep doing?",
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
