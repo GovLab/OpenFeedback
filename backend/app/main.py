@@ -79,6 +79,10 @@ app = FastAPI(
 )
 
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
 # Configure CORS to allow frontend communication
 app.add_middleware(
     CORSMiddleware,
@@ -434,7 +438,3 @@ async def get_all_postgres_feedback(limit: int = 100, offset: int = 0):
     except Exception as e:
         logger.error(f"Error fetching PostgreSQL feedback: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
-
-
