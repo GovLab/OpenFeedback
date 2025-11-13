@@ -9,20 +9,13 @@ class Neo4jDatabase:
     """Neo4j database handler for feedback storage and retrieval."""
     def __init__(self):
         """Initialize the database connection."""
-        URI = settings.neo4j_uri
-        USER = settings.neo4j_username
-        PASSWORD = settings.neo4j_password
-        AUTH = (USER, PASSWORD)
 
         AWS_URI = settings.aws_neo4j_uri
         AWS_USER = settings.aws_neo4j_username
         AWS_PASSWORD = settings.aws_neo4j_password
         AWS_AUTH = (AWS_USER, AWS_PASSWORD)
         
-        self.aws_driver = GraphDatabase.driver(URI, auth=AUTH)
         self.aws_driver = GraphDatabase.driver(AWS_URI, auth=AWS_AUTH)
-        
-        self.aws_driver.verify_connectivity()
         self.aws_driver.verify_connectivity()
     
     def close(self):

@@ -9,10 +9,6 @@ class Settings(BaseSettings):
     openai_api_key: str
     
     # Neo4j Database Configuration
-    neo4j_uri: str
-    neo4j_username: str
-    neo4j_password: str
-    
     aws_neo4j_uri: str
     aws_neo4j_username: str
     aws_neo4j_password: str
@@ -36,9 +32,12 @@ class Settings(BaseSettings):
         return f"postgresql://{quote(self.postgres_user, safe='')}:{quote(self.postgres_password, safe='')}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
     
     class Config:
+        # Don't require .env file - AWS App Runner uses environment variables
         env_file = ".env"
-        case_sensitive = False
         env_file_encoding = "utf-8"
+        case_sensitive = False
+        # This is crucial - don't error if .env file doesn't exist
+        extra = "ignore"
 
 
 settings = Settings()
