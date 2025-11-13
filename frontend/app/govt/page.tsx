@@ -153,9 +153,23 @@ export default function GovtDashboard() {
         </div>
 
         {/* File Upload Section */}
-        <div className="mb-8" onMouseEnter={() => handleMouseEnter('batchUpload')} onMouseLeave={() => handleMouseLeave('batchUpload')}>
+        <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Batch Data Upload</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-gray-900">Batch Data Upload</h2>
+              <div 
+                className="relative"
+                onMouseEnter={() => handleMouseEnter('batchUpload')}
+                onMouseLeave={() => handleMouseLeave('batchUpload')}
+              >
+                <button
+                  className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center text-xs font-semibold transition-colors cursor-help"
+                  aria-label="Show guide"
+                >
+                  ?
+                </button>
+              </div>
+            </div>
             <button
               onClick={() => toggleCard('batchUpload')}
               className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
@@ -243,9 +257,23 @@ export default function GovtDashboard() {
         </div>
 
         {/* Graph Visualization */}
-        <div className="mb-8" onMouseEnter={() => handleMouseEnter('networkGraph')} onMouseLeave={() => handleMouseLeave('networkGraph')}>
+        <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Feedback Network Graph</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-xl font-bold text-gray-900">Feedback Network Graph</h2>
+              <div 
+                className="relative"
+                onMouseEnter={() => handleMouseEnter('networkGraph')}
+                onMouseLeave={() => handleMouseLeave('networkGraph')}
+              >
+                <button
+                  className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center text-xs font-semibold transition-colors cursor-help"
+                  aria-label="Show guide"
+                >
+                  ?
+                </button>
+              </div>
+            </div>
             <button
               onClick={() => toggleCard('networkGraph')}
               className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
