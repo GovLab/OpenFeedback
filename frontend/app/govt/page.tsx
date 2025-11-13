@@ -21,16 +21,34 @@ export default function GovtDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [expandedCards, setExpandedCards] = useState<{ [key: string]: boolean }>({
-    overview: false,
+    overview: true,  // Show Overview guide by default
     batchUpload: false,
     networkGraph: false,
     publicFeedback: false,
+  });
+  const [hoveredCards, setHoveredCards] = useState<{ [key: string]: boolean }>({
+    batchUpload: false,
+    networkGraph: false,
   });
 
   const toggleCard = (cardId: string) => {
     setExpandedCards(prev => ({
       ...prev,
       [cardId]: !prev[cardId]
+    }));
+  };
+
+  const handleMouseEnter = (cardId: string) => {
+    setHoveredCards(prev => ({
+      ...prev,
+      [cardId]: true
+    }));
+  };
+
+  const handleMouseLeave = (cardId: string) => {
+    setHoveredCards(prev => ({
+      ...prev,
+      [cardId]: false
     }));
   };
 
@@ -135,7 +153,7 @@ export default function GovtDashboard() {
         </div>
 
         {/* File Upload Section */}
-        <div className="mb-8">
+        <div className="mb-8" onMouseEnter={() => handleMouseEnter('batchUpload')} onMouseLeave={() => handleMouseLeave('batchUpload')}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900">Batch Data Upload</h2>
             <button
@@ -148,7 +166,7 @@ export default function GovtDashboard() {
               {expandedCards.batchUpload ? 'Hide Guide' : 'Show Guide'}
             </button>
           </div>
-          {expandedCards.batchUpload && (
+          {(expandedCards.batchUpload || hoveredCards.batchUpload) && (
             <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="font-semibold text-blue-900 mb-3">How to use Batch Data Upload</h3>
               <p className="text-sm text-blue-800 mb-3">Use this tool when you need to import feedback in bulk from reports, emails, or other sources.</p>
@@ -225,7 +243,7 @@ export default function GovtDashboard() {
         </div>
 
         {/* Graph Visualization */}
-        <div className="mb-8">
+        <div className="mb-8" onMouseEnter={() => handleMouseEnter('networkGraph')} onMouseLeave={() => handleMouseLeave('networkGraph')}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900">Feedback Network Graph</h2>
             <button
@@ -238,7 +256,7 @@ export default function GovtDashboard() {
               {expandedCards.networkGraph ? 'Hide Guide' : 'Show Guide'}
             </button>
           </div>
-          {expandedCards.networkGraph && (
+          {(expandedCards.networkGraph || hoveredCards.networkGraph) && (
             <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="font-semibold text-blue-900 mb-3">How to use Feedback Network Graph</h3>
               <p className="text-sm text-blue-800 mb-3">Explore how feedback connects across categories and subtopics.</p>
