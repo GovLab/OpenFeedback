@@ -64,9 +64,16 @@ export default function ChatbotSidebar({
   };
 
   return (
-    <div ref={chatbotRef} className="w-full md:w-96 bg-white rounded-xl shadow-2xl flex flex-col animate-slide-in h-[500px] md:h-[600px] border border-gray-200">
+    <div ref={chatbotRef} className="w-full md:w-96 rounded-xl shadow-2xl flex flex-col animate-slide-in h-[500px] md:h-[600px] border" style={{
+      backgroundColor: 'rgba(255, 255, 255, 0.98)',
+      borderColor: 'var(--boston-blue-desaturated)',
+      boxShadow: '0 10px 15px -3px rgba(24, 113, 189, 0.15), 0 4px 6px -2px rgba(24, 113, 189, 0.1)'
+    }}>
       {/* Header - Compact */}
-      <div className="px-4 py-3 border-b border-gray-200 bg-white rounded-t-xl">
+      <div className="px-4 py-3 border-b rounded-t-xl" style={{
+        backgroundColor: 'rgba(24, 113, 189, 0.05)',
+        borderColor: 'var(--boston-blue-desaturated)'
+      }}>
         <div className="flex justify-between items-start">
           <div className="flex items-start gap-2.5">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center shadow-md flex-shrink-0" style={{ background: 'linear-gradient(to bottom right, var(--boston-optimistic-blue), var(--boston-charles-blue))' }}>
@@ -106,7 +113,7 @@ export default function ChatbotSidebar({
       </div>
 
       {/* Chat Messages - Maximized Space */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2.5 bg-gray-50">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2.5" style={{ backgroundColor: 'rgba(242, 242, 242, 0.5)' }}>
         {conversationHistory.map((msg, idx) => (
           <div
             key={idx}
@@ -186,7 +193,10 @@ export default function ChatbotSidebar({
       )}
 
       {/* Input Area - Compact */}
-      <div className="p-3 border-t border-gray-200 bg-white rounded-b-xl">
+      <div className="p-3 border-t rounded-b-xl" style={{
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderColor: 'var(--boston-blue-desaturated)'
+      }}>
         <div className="flex gap-2">
           <input
             type="text"

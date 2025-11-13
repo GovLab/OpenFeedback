@@ -26,8 +26,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-montserrat: var(--font-montserrat);
+  --font-lora: var(--font-lora);
   
   /* Boston Brand Colors - Available as Tailwind utilities */
   --color-boston-charles-blue: var(--boston-charles-blue);
@@ -53,7 +53,34 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-lora), serif;
+}
+
+/* Montserrat for headers, navigation, and buttons - UPPERCASE BOLD per Boston guidelines */
+h1, h2, h3, h4, h5, h6,
+.font-montserrat {
+  font-family: var(--font-montserrat), sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* Montserrat for buttons (but not forced uppercase for button text content) */
+button {
+  font-family: var(--font-montserrat), sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* Lora for body text - polite, poetic, and warm */
+body, p, span, div, input, textarea, label, .font-lora {
+  font-family: var(--font-lora), serif;
+}
+
+/* Lora italic for quotes or special secondary text */
+.font-lora-italic {
+  font-family: var(--font-lora), serif;
+  font-style: italic;
 }
 
 @keyframes slide-in {

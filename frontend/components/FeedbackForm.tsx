@@ -233,7 +233,12 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
   return (
     <div className="flex flex-col md:flex-row gap-6 w-full min-w-[280px]">
       {/* Main Feedback Form */}
-      <div className={`flex-1 bg-white rounded-xl shadow-lg border p-6 sm:p-8 transition-opacity duration-300 min-w-[280px] ${showChatbot ? 'opacity-60 pointer-events-none' : 'opacity-100'}`} style={{ borderColor: 'var(--boston-gray-medium)' }}>
+      <div className={`flex-1 rounded-xl shadow-lg border p-6 sm:p-8 transition-opacity duration-300 min-w-[280px] ${showChatbot ? 'opacity-60 pointer-events-none' : 'opacity-100'}`} style={{ 
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+        borderColor: 'var(--boston-blue-desaturated)',
+        borderWidth: '1px',
+        boxShadow: '0 4px 6px -1px rgba(24, 113, 189, 0.1), 0 2px 4px -1px rgba(24, 113, 189, 0.06)'
+      }}>
         <div className="mb-5">
           <label htmlFor="feedback" className="block text-lg font-semibold mb-1 text-slate-900">
             How would you improve permitting?
@@ -244,7 +249,12 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
             {hasBeenEnhanced && (
-              <div className="mb-3 inline-flex items-center gap-2 bg-blue-50 text-boston-optimistic-blue px-3 py-1.5 rounded-lg text-sm font-medium border border-blue-200" style={{ backgroundColor: 'rgba(24, 113, 189, 0.1)', borderColor: 'rgba(24, 113, 189, 0.2)' }}>
+              <div className="mb-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium" style={{ 
+                backgroundColor: 'rgba(24, 113, 189, 0.12)', 
+                borderColor: 'var(--boston-optimistic-blue)',
+                borderWidth: '1px',
+                color: 'var(--boston-optimistic-blue)'
+              }}>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -296,7 +306,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
           </div>
 
           {/* Contact Opt-in Section */}
-          <div className="border-t pt-5" style={{ borderColor: 'var(--boston-gray-medium)' }}>
+          <div className="border-t pt-5" style={{ borderColor: 'var(--boston-blue-desaturated)' }}>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <p className="text-sm font-medium text-slate-900">
                 Can we contact you with questions about your feedback?
@@ -363,8 +373,12 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
                   </p>
                 </div>
                 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-sm text-slate-700">
+                <div className="rounded-lg p-3" style={{
+                  backgroundColor: 'rgba(24, 113, 189, 0.08)',
+                  borderColor: 'var(--boston-blue-desaturated)',
+                  borderWidth: '1px'
+                }}>
+                  <p className="text-sm" style={{ color: 'var(--boston-charles-blue)' }}>
                     We respect your privacy. We will only use your contact information to respond to your feedback.
                   </p>
                 </div>
@@ -423,12 +437,13 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
           <button
             type="submit"
             disabled={loading || showChatbot || contactOptIn === null}
-            className={`w-full py-3.5 px-6 rounded-lg font-semibold text-base text-white disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md`}
+            className={`w-full py-3.5 px-6 rounded-lg font-semibold text-base transition-all duration-200 shadow-sm hover:shadow-md disabled:cursor-not-allowed`}
             style={{ 
               backgroundColor: (loading || showChatbot || contactOptIn === null) 
                 ? 'var(--boston-gray-medium-dark)' 
                 : 'var(--boston-optimistic-blue)',
-              opacity: (loading || showChatbot || contactOptIn === null) ? 0.7 : 1
+              color: 'white',
+              opacity: (loading || showChatbot || contactOptIn === null) ? 0.6 : 1
             } as React.CSSProperties}
             onMouseEnter={(e) => {
               if (!loading && !showChatbot && contactOptIn !== null) {
