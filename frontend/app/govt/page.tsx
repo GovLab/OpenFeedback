@@ -20,23 +20,11 @@ export default function GovtDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [expandedCards, setExpandedCards] = useState<{ [key: string]: boolean }>({
-    overview: true,  // Show Overview guide by default
-    batchUpload: false,
-    networkGraph: false,
-    publicFeedback: false,
-  });
   const [hoveredCards, setHoveredCards] = useState<{ [key: string]: boolean }>({
+    overview: false,
     batchUpload: false,
     networkGraph: false,
   });
-
-  const toggleCard = (cardId: string) => {
-    setExpandedCards(prev => ({
-      ...prev,
-      [cardId]: !prev[cardId]
-    }));
-  };
 
   const handleMouseEnter = (cardId: string) => {
     setHoveredCards(prev => ({
@@ -127,85 +115,128 @@ export default function GovtDashboard() {
 
         {/* Stats Overview */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2 mb-4">
             <h2 className="text-xl font-bold text-gray-900">Overview</h2>
-            <button
-              onClick={() => toggleCard('overview')}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+            <div 
+              className="relative"
+              onMouseEnter={() => handleMouseEnter('overview')}
+              onMouseLeave={() => handleMouseLeave('overview')}
             >
-              <svg className={`w-4 h-4 transition-transform ${expandedCards.overview ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-              {expandedCards.overview ? 'Hide Guide' : 'Show Guide'}
-            </button>
-          </div>
-          {expandedCards.overview && (
-            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-semibold text-blue-900 mb-2">How to use Overview</h3>
-              <ul className="space-y-2 text-sm text-blue-800">
-                <li>• View the total number of feedback submissions received.</li>
-                <li>• Check how many items fall under each category (e.g., Process Issues, Communication Problems, Equity Concerns).</li>
-                <li>• Use this section to understand high-level trends and where most feedback is coming from.</li>
-              </ul>
+              <button
+                className="w-6 h-6 rounded-full text-white flex items-center justify-center text-xs font-bold transition-all duration-200 shadow-sm hover:shadow-md cursor-help"
+                style={{
+                  background: `linear-gradient(to bottom right, var(--boston-optimistic-blue), var(--boston-charles-blue))`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = `linear-gradient(to bottom right, var(--boston-charles-blue), var(--boston-blue-dark))`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = `linear-gradient(to bottom right, var(--boston-optimistic-blue), var(--boston-charles-blue))`;
+                }}
+                aria-label="Show guide"
+              >
+                ?
+              </button>
+              {hoveredCards.overview && (
+                <div className="instruction-modal absolute left-full ml-3 -top-2 w-96 z-50 animate-fadeIn transition-opacity duration-200">
+                  <div className="absolute left-0 top-4 w-0 h-0 border-t-8 border-b-8 border-r-8 border-transparent -ml-2" style={{ borderRightColor: 'var(--instruction-modal-bg)' }}></div>
+                  <h3 className="font-bold text-blue-900 mb-3 text-base">How to use Overview</h3>
+                  <ul className="space-y-2.5 text-sm text-gray-700 leading-relaxed">
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-500 font-bold mt-0.5">•</span>
+                      <span>View the total number of feedback submissions received.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-500 font-bold mt-0.5">•</span>
+                      <span>Check how many items fall under each category (e.g., Process Issues, Communication Problems, Equity Concerns).</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-blue-500 font-bold mt-0.5">•</span>
+                      <span>Use this section to understand high-level trends and where most feedback is coming from.</span>
+                    </li>
+                  </ul>
+                </div>
+              )}
             </div>
-          )}
+          </div>
           <StatsDisplay stats={stats} />
         </div>
 
         {/* File Upload Section */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-gray-900">Batch Data Upload</h2>
-              <div 
-                className="relative"
-                onMouseEnter={() => handleMouseEnter('batchUpload')}
-                onMouseLeave={() => handleMouseLeave('batchUpload')}
-              >
-                <button
-                  className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center text-xs font-semibold transition-colors cursor-help"
-                  aria-label="Show guide"
-                >
-                  ?
-                </button>
-              </div>
-            </div>
-            <button
-              onClick={() => toggleCard('batchUpload')}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Batch Data Upload</h2>
+            <div 
+              className="relative"
+              onMouseEnter={() => handleMouseEnter('batchUpload')}
+              onMouseLeave={() => handleMouseLeave('batchUpload')}
             >
-              <svg className={`w-4 h-4 transition-transform ${expandedCards.batchUpload ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-              {expandedCards.batchUpload ? 'Hide Guide' : 'Show Guide'}
-            </button>
-          </div>
-          {(expandedCards.batchUpload || hoveredCards.batchUpload) && (
-            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-semibold text-blue-900 mb-3">How to use Batch Data Upload</h3>
-              <p className="text-sm text-blue-800 mb-3">Use this tool when you need to import feedback in bulk from reports, emails, or other sources.</p>
-              <div className="space-y-3 text-sm text-blue-800">
-                <div>
-                  <p className="font-medium mb-1">Steps:</p>
-                  <ol className="list-decimal list-inside space-y-1 ml-2">
-                    <li>Choose a file (PDF, TXT, or DOCX — up to 10 MB).</li>
-                    <li>Select a processing option:
-                      <ul className="list-disc list-inside ml-4 mt-1 space-y-1">
-                        <li><strong>Process & Store</strong> → Uploads and saves data to the system.</li>
-                        <li><strong>Classify Only</strong> → Tests the file without storing results.</li>
-                      </ul>
-                    </li>
-                    <li>Wait for confirmation that classification is complete.</li>
-                    <li>The data will appear automatically in your statistics and graphs.</li>
-                  </ol>
+              <button
+                className="w-6 h-6 rounded-full text-white flex items-center justify-center text-xs font-bold transition-all duration-200 shadow-sm hover:shadow-md cursor-help"
+                style={{
+                  background: `linear-gradient(to bottom right, var(--boston-optimistic-blue), var(--boston-charles-blue))`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = `linear-gradient(to bottom right, var(--boston-charles-blue), var(--boston-blue-dark))`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = `linear-gradient(to bottom right, var(--boston-optimistic-blue), var(--boston-charles-blue))`;
+                }}
+                aria-label="Show guide"
+              >
+                ?
+              </button>
+              {hoveredCards.batchUpload && (
+                <div className="instruction-modal absolute left-full ml-3 -top-2 w-[28rem] z-50 animate-fadeIn transition-opacity duration-200">
+                  <div className="absolute left-0 top-4 w-0 h-0 border-t-8 border-b-8 border-r-8 border-transparent -ml-2" style={{ borderRightColor: 'var(--instruction-modal-bg)' }}></div>
+                  <h3 className="font-bold text-blue-900 mb-3 text-base">How to use Batch Data Upload</h3>
+                  <p className="text-sm text-gray-600 mb-3 leading-relaxed">Use this tool when you need to import feedback in bulk from reports, emails, or other sources.</p>
+                  <div className="space-y-3 text-sm text-gray-700">
+                    <div>
+                      <p className="font-semibold mb-2 text-gray-900">Steps:</p>
+                      <ol className="space-y-2 ml-1">
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-500 font-bold flex-shrink-0">1.</span>
+                          <span>Choose a file (PDF, TXT, or DOCX — up to 10 MB).</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-500 font-bold flex-shrink-0">2.</span>
+                          <div>
+                            <span>Select a processing option:</span>
+                            <ul className="ml-4 mt-1 space-y-1">
+                              <li className="flex items-start gap-2">
+                                <span className="text-blue-400">•</span>
+                                <span><strong>Process & Store</strong> → Uploads and saves data to the system.</span>
+                              </li>
+                              <li className="flex items-start gap-2">
+                                <span className="text-blue-400">•</span>
+                                <span><strong>Classify Only</strong> → Tests the file without storing results.</span>
+                              </li>
+                            </ul>
+                          </div>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-500 font-bold flex-shrink-0">3.</span>
+                          <span>Wait for confirmation that classification is complete.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-500 font-bold flex-shrink-0">4.</span>
+                          <span>The data will appear automatically in your statistics and graphs.</span>
+                        </li>
+                      </ol>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-gray-200 bg-blue-50 rounded-lg p-3">
+                      <p className="font-semibold text-blue-900 flex items-center gap-1.5">
+                        <span className="text-lg">💡</span>
+                        <span>Tip:</span>
+                      </p>
+                      <p className="mt-1 text-gray-700">Files are automatically analyzed by AI to identify feedback categories and themes.</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-3 pt-3 border-t border-blue-300">
-                  <p className="font-medium">💡 Tip:</p>
-                  <p>Files are automatically analyzed by AI to identify feedback categories and themes.</p>
-                </div>
-              </div>
+              )}
             </div>
-          )}
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <FileUploadForm onFeedbackSubmitted={fetchData} />
@@ -258,56 +289,73 @@ export default function GovtDashboard() {
 
         {/* Graph Visualization */}
         <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-gray-900">Feedback Network Graph</h2>
-              <div 
-                className="relative"
-                onMouseEnter={() => handleMouseEnter('networkGraph')}
-                onMouseLeave={() => handleMouseLeave('networkGraph')}
-              >
-                <button
-                  className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 hover:bg-blue-200 flex items-center justify-center text-xs font-semibold transition-colors cursor-help"
-                  aria-label="Show guide"
-                >
-                  ?
-                </button>
-              </div>
-            </div>
-            <button
-              onClick={() => toggleCard('networkGraph')}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Feedback Network Graph</h2>
+            <div 
+              className="relative"
+              onMouseEnter={() => handleMouseEnter('networkGraph')}
+              onMouseLeave={() => handleMouseLeave('networkGraph')}
             >
-              <svg className={`w-4 h-4 transition-transform ${expandedCards.networkGraph ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-              {expandedCards.networkGraph ? 'Hide Guide' : 'Show Guide'}
-            </button>
-          </div>
-          {(expandedCards.networkGraph || hoveredCards.networkGraph) && (
-            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-semibold text-blue-900 mb-3">How to use Feedback Network Graph</h3>
-              <p className="text-sm text-blue-800 mb-3">Explore how feedback connects across categories and subtopics.</p>
-              <div className="space-y-3 text-sm text-blue-800">
-                <div>
-                  <p className="font-medium mb-2">How to read it:</p>
-                  <ul className="space-y-1 ml-2">
-                    <li>• <strong>Blue nodes</strong> = Individual feedback items</li>
-                    <li>• <strong>Green nodes</strong> = Categories</li>
-                    <li>• <strong>Orange nodes</strong> = Subcategories</li>
-                  </ul>
+              <button
+                className="w-6 h-6 rounded-full text-white flex items-center justify-center text-xs font-bold transition-all duration-200 shadow-sm hover:shadow-md cursor-help"
+                style={{
+                  background: `linear-gradient(to bottom right, var(--boston-optimistic-blue), var(--boston-charles-blue))`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = `linear-gradient(to bottom right, var(--boston-charles-blue), var(--boston-blue-dark))`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = `linear-gradient(to bottom right, var(--boston-optimistic-blue), var(--boston-charles-blue))`;
+                }}
+                aria-label="Show guide"
+              >
+                ?
+              </button>
+              {hoveredCards.networkGraph && (
+                <div className="instruction-modal absolute left-full ml-3 -top-2 w-96 z-50 animate-fadeIn transition-opacity duration-200">
+                  <div className="absolute left-0 top-4 w-0 h-0 border-t-8 border-b-8 border-r-8 border-transparent -ml-2" style={{ borderRightColor: 'var(--instruction-modal-bg)' }}></div>
+                  <h3 className="font-bold text-blue-900 mb-3 text-base">How to use Feedback Network Graph</h3>
+                  <p className="text-sm text-gray-600 mb-3 leading-relaxed">Explore how feedback connects across categories and subtopics.</p>
+                  <div className="space-y-3 text-sm text-gray-700">
+                    <div>
+                      <p className="font-semibold mb-2 text-gray-900">How to read it:</p>
+                      <ul className="space-y-2 ml-1">
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-500 font-bold mt-0.5">•</span>
+                          <span><strong className="text-blue-600">Blue nodes</strong> = Individual feedback items</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-green-500 font-bold mt-0.5">•</span>
+                          <span><strong className="text-green-600">Green nodes</strong> = Categories</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-orange-500 font-bold mt-0.5">•</span>
+                          <span><strong className="text-orange-600">Orange nodes</strong> = Subcategories</span>
+                        </li>
+                      </ul>
+                    </div>
+                    <div>
+                      <p className="font-semibold mb-2 text-gray-900">You can:</p>
+                      <ul className="space-y-2 ml-1">
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-500 font-bold mt-0.5">•</span>
+                          <span>Click a node to highlight its connections.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-500 font-bold mt-0.5">•</span>
+                          <span>Drag to pan across the visualization.</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-blue-500 font-bold mt-0.5">•</span>
+                          <span>Use the zoom control to see more or less detail.</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium mb-2">You can:</p>
-                  <ul className="space-y-1 ml-2">
-                    <li>• Click a node to highlight its connections.</li>
-                    <li>• Drag to pan across the visualization.</li>
-                    <li>• Use the zoom control to see more or less detail.</li>
-                  </ul>
-                </div>
-              </div>
+              )}
             </div>
-          )}
+          </div>
           {loading ? (
             <div className="bg-white rounded-lg shadow-md p-12 text-center border border-gray-200">
               <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
@@ -323,40 +371,7 @@ export default function GovtDashboard() {
           <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Feedback</h2>
           <FeedbackTable refreshTrigger={refreshTrigger} />
         </div>
-
-        {/* Public Feedback Switch Guide */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Navigation Guide</h2>
-            <button
-              onClick={() => toggleCard('publicFeedback')}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-            >
-              <svg className={`w-4 h-4 transition-transform ${expandedCards.publicFeedback ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-              {expandedCards.publicFeedback ? 'Hide Guide' : 'Show Guide'}
-            </button>
-          </div>
-          {expandedCards.publicFeedback && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-semibold text-blue-900 mb-3">Public Feedback Switch</h3>
-              <p className="text-sm text-blue-800 mb-2">Use the navigation at the bottom to switch between:</p>
-              <ul className="space-y-2 text-sm text-blue-800 ml-2">
-                <li>• <strong>Public Feedback</strong> → What residents submit</li>
-                <li>• <strong>Dashboard View</strong> → Internal analytics and management tools</li>
-              </ul>
-            </div>
-          )}
-        </div>
       </main>
-
-      {/* Footer */}
-      <footer className="mt-16 bg-white border-t border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 py-6 text-center text-sm text-gray-600">
-          <p>Government Dashboard - Feedback Management System</p>
-        </div>
-      </footer>
 
       {/* Navigation */}
       <Navigation />

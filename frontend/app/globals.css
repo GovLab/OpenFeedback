@@ -21,6 +21,13 @@
   --boston-gray-medium-dark: #D2D2D2;     /* Used for horizontal rules and borders */
   --boston-gray-medium: #E0E0E0;           /* Used for miscellaneous borders */
   --boston-gray-light: #F2F2F2;          /* Used as background color */
+  
+  /* Instruction Modal Styles */
+  --instruction-modal-bg: #ffffff;
+  --instruction-modal-border: rgba(24, 113, 189, 0.15);
+  --instruction-modal-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --instruction-modal-border-radius: 0.75rem;
+  --instruction-modal-padding: 1.25rem;
 }
 
 @theme inline {
@@ -105,8 +112,32 @@ body, p, span, div, input, textarea, label, .font-lora {
   }
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .animate-slide-in {
   animation: slide-in 0.3s ease-out;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Instruction Modal Base Styles */
+.instruction-modal {
+  background-color: var(--instruction-modal-bg);
+  border: 1px solid var(--instruction-modal-border);
+  border-radius: var(--instruction-modal-border-radius);
+  padding: var(--instruction-modal-padding);
+  box-shadow: var(--instruction-modal-shadow);
 }
 
 @media (min-width: 768px) {
