@@ -82,8 +82,10 @@ def load_settings():
         try:
             secrets = get_secret()
             print(f"✅ Successfully loaded {len(secrets)} secrets from AWS Secrets Manager")
+            # Convert keys to lowercase for Pydantic
+            secrets_lowercase = {k.lower(): v for k, v in secrets.items()}
             # Return Settings initialized with secrets from AWS Secrets Manager
-            return Settings(**secrets)
+            return Settings(**secrets_lowercase)
         except Exception as e:
             print(f"❌ Failed to load secrets from AWS Secrets Manager: {e}")
             print("⚠️  Falling back to environment variables...")
