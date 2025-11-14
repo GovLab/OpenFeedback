@@ -1,5 +1,36 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
+import os
+import json
+import boto3
+from botocore.exceptions import ClientError
+
+
+def get_secret():
+    """Fetch secrets from AWS Secrets Manager."""
+    secret_name = os.getenv("SECRET_NAME", "openpermits")
+    region_name = os.getenv("AWS_REGION", "us-east-2")
+
+    # Create a Secrets Manager client
+    session = boto3.session.Session()
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+
+    try:
+        get_secret_value_response = client.get_secret_value(
+            SecretId=secret_name
+        )
+    except ClientError as e:
+        # For a list of exceptions thrown, see
+        # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
+        print(f"Error fetching secret from AWS Secrets Manager: {e}")
+        raise e
+
+    # Parse the secret string as JSON
+    secret = get_secret_value_response['SecretString']
+    return json.loads(secret)
 
 
 class Settings(BaseSettings):
@@ -40,4 +71,26 @@ class Settings(BaseSettings):
         extra = "ignore"
 
 
-settings = Settings()
+# Initialize settings
+# Check if we should use AWS Secrets Manager (production) or environment variables (local dev)
+def load_settings():
+    """Load settings from AWS Secrets Manager if in production, otherwise use environment variables."""
+    use_secrets_manager = os.getenv("USE_SECRETS_MANAGER", "false").lower() == "true"
+    
+    if use_secrets_manager:
+        print("🔐 Loading configuration from AWS Secrets Manager...")
+        try:
+            secrets = get_secret()
+            print(f"✅ Successfully loaded {len(secrets)} secrets from AWS Secrets Manager")
+            # Return Settings initialized with secrets from AWS Secrets Manager
+            return Settings(**secrets)
+        except Exception as e:
+            print(f"❌ Failed to load secrets from AWS Secrets Manager: {e}")
+            print("⚠️  Falling back to environment variables...")
+            return Settings()
+    else:
+        print("📝 Loading configuration from environment variables (local development mode)")
+        return Settings()
+
+
+settings = load_settings()

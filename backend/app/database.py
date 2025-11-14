@@ -15,13 +15,19 @@ class Neo4jDatabase:
         AWS_PASSWORD = settings.aws_neo4j_password
         AWS_AUTH = (AWS_USER, AWS_PASSWORD)
         
-        self.aws_driver = GraphDatabase.driver(AWS_URI, auth=AWS_AUTH)
-        self.aws_driver.verify_connectivity()
+        self.driver = GraphDatabase.driver(AWS_URI, auth=AWS_AUTH)
+        
+        try:
+            self.driver.verify_connectivity()
+            print(f"✅ Successfully connected to Neo4j at {AWS_URI}")
+        except Exception as e:
+            print(f"❌ Failed to connect to Neo4j: {str(e)}")
+            raise
     
     def close(self):
         """Close the database connection."""
-        self.aws_driver.close()
-        self.aws_driver.close()
+        if hasattr(self, 'driver'):
+            self.driver.close()
     
     def add_feedback(self, feedback: ClassifiedFeedback, feedback_id: str = None) -> str:
         """
@@ -37,7 +43,7 @@ class Neo4jDatabase:
         if not feedback_id:
             feedback_id = str(uuid.uuid4())
         
-        with self.aws_driver.session() as session:
+        with self.driver.session() as session:
             # Create feedback node
             session.run(
                 """
@@ -97,7 +103,7 @@ class Neo4jDatabase:
         nodes = []
         relationships = []
         
-        with self.aws_driver.session() as session:
+        with self.driver.session() as session:
             # Get all nodes
             result = session.run(
                 """
@@ -142,14 +148,14 @@ class Neo4jDatabase:
     
     def get_feedback_count(self) -> int:
         """Get total number of feedback entries."""
-        with self.aws_driver.session() as session:
+        with self.driver.session() as session:
             result = session.run("MATCH (f:Feedback) RETURN count(f) as count")
             record = result.single()
             return record["count"] if record else 0
     
     def get_categories_summary(self) -> List[dict]:
         """Get summary of categories with feedback counts."""
-        with self.aws_driver.session() as session:
+        with self.driver.session() as session:
             result = session.run(
                 """
                 MATCH (c:Category)<-[:BELONGS_TO]-(f:Feedback)
