@@ -24,8 +24,8 @@
   
   /* Instruction Modal Styles */
   --instruction-modal-bg: #ffffff;
-  --instruction-modal-border: rgba(24, 113, 189, 0.15);
-  --instruction-modal-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --instruction-modal-border: var(--boston-optimistic-blue);
+  --instruction-modal-shadow: 0 20px 25px -5px rgba(9, 31, 47, 0.1), 0 10px 10px -5px rgba(9, 31, 47, 0.04);
   --instruction-modal-border-radius: 0.75rem;
   --instruction-modal-padding: 1.25rem;
 }
@@ -134,7 +134,7 @@ body, p, span, div, input, textarea, label, .font-lora {
 /* Instruction Modal Base Styles */
 .instruction-modal {
   background-color: var(--instruction-modal-bg);
-  border: 1px solid var(--instruction-modal-border);
+  border: 2px solid var(--instruction-modal-border);
   border-radius: var(--instruction-modal-border-radius);
   padding: var(--instruction-modal-padding);
   box-shadow: var(--instruction-modal-shadow);

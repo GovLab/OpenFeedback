@@ -139,6 +139,7 @@ export default function GovtDashboard() {
               </button>
               {hoveredCards.overview && (
                 <div className="instruction-modal absolute left-full ml-3 -top-2 w-96 z-50 animate-fadeIn transition-opacity duration-200">
+                  <div className="absolute left-0 top-4 w-0 h-0 border-t-[10px] border-b-[10px] border-r-[10px] border-transparent -ml-[11px]" style={{ borderRightColor: 'var(--instruction-modal-border)' }}></div>
                   <div className="absolute left-0 top-4 w-0 h-0 border-t-8 border-b-8 border-r-8 border-transparent -ml-2" style={{ borderRightColor: 'var(--instruction-modal-bg)' }}></div>
                   <h3 className="font-bold text-blue-900 mb-3 text-base">How to use Overview</h3>
                   <ul className="space-y-2.5 text-sm text-gray-700 leading-relaxed">
@@ -188,6 +189,7 @@ export default function GovtDashboard() {
               </button>
               {hoveredCards.batchUpload && (
                 <div className="instruction-modal absolute left-full ml-3 -top-2 w-[28rem] z-50 animate-fadeIn transition-opacity duration-200">
+                  <div className="absolute left-0 top-4 w-0 h-0 border-t-[10px] border-b-[10px] border-r-[10px] border-transparent -ml-[11px]" style={{ borderRightColor: 'var(--instruction-modal-border)' }}></div>
                   <div className="absolute left-0 top-4 w-0 h-0 border-t-8 border-b-8 border-r-8 border-transparent -ml-2" style={{ borderRightColor: 'var(--instruction-modal-bg)' }}></div>
                   <h3 className="font-bold text-blue-900 mb-3 text-base">How to use Batch Data Upload</h3>
                   <p className="text-sm text-gray-600 mb-3 leading-relaxed">Use this tool when you need to import feedback in bulk from reports, emails, or other sources.</p>
@@ -313,6 +315,7 @@ export default function GovtDashboard() {
               </button>
               {hoveredCards.networkGraph && (
                 <div className="instruction-modal absolute left-full ml-3 -top-2 w-96 z-50 animate-fadeIn transition-opacity duration-200">
+                  <div className="absolute left-0 top-4 w-0 h-0 border-t-[10px] border-b-[10px] border-r-[10px] border-transparent -ml-[11px]" style={{ borderRightColor: 'var(--instruction-modal-border)' }}></div>
                   <div className="absolute left-0 top-4 w-0 h-0 border-t-8 border-b-8 border-r-8 border-transparent -ml-2" style={{ borderRightColor: 'var(--instruction-modal-bg)' }}></div>
                   <h3 className="font-bold text-blue-900 mb-3 text-base">How to use Feedback Network Graph</h3>
                   <p className="text-sm text-gray-600 mb-3 leading-relaxed">Explore how feedback connects across categories and subtopics.</p>
