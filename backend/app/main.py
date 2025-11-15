@@ -87,7 +87,7 @@ async def health():
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://d57dpeqds75ja.amplifyapp.com",  # Your Amplify domain
+        "https://nmaptsavi9.us-east-2.awsapprunner.com/",  # Your Amplify domain
         "http://localhost:*",
     ],
     allow_credentials=True,
