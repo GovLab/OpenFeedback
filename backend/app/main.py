@@ -86,12 +86,14 @@ async def health():
 # Configure CORS to allow frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=[
+        "https://d57dpeqds75ja.amplifyapp.com",  # Your Amplify domain
+        "http://localhost:*",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
-
 
 # Root endpoint
 @app.get("/")

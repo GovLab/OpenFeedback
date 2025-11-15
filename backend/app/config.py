@@ -63,8 +63,9 @@ class Settings(BaseSettings):
         return f"postgresql://{quote(self.postgres_user, safe='')}:{quote(self.postgres_password, safe='')}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
     
     class Config:
-        # Don't require .env file - AWS App Runner uses environment variables
-        env_file = ".env"
+        # Prefer .env.local for local development, fall back to .env
+        # AWS App Runner uses environment variables directly
+        env_file = ".env.local"
         env_file_encoding = "utf-8"
         case_sensitive = False
         # This is crucial - don't error if .env file doesn't exist
