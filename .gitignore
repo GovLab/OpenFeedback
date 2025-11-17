@@ -32,3 +32,4 @@ neo4j_logs/
 # OS
 .DS_Store
 Thumbs.db
+backend/app/purge_databases.py

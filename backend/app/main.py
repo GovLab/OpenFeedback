@@ -89,10 +89,12 @@ app.add_middleware(
     allow_origins=[
         "https://main.d57dpeqds75ja.amplifyapp.com",  # Your Amplify frontend
         "http://localhost:3000",  # Local development
+        "http://localhost:3001",  # Local development
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 # Root endpoint
@@ -106,7 +108,8 @@ async def root():
             "feedback_agent": "/api/feedback-agent",
             "submit_feedback": "api/submit-feedback",
             "get_graph": "/api/graph",
-            "get_stats": "/api/stats"
+            "get_stats": "/api/stats",
+            "verify_ids": "/api/verify-ids"
         }
     }
 
@@ -439,4 +442,42 @@ async def get_all_postgres_feedback(limit: int = 100, offset: int = 0):
         }
     except Exception as e:
         logger.error(f"Error fetching PostgreSQL feedback: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/verify-ids")
+async def verify_database_ids():
+    """
+    Verify that IDs match between PostgreSQL and Neo4j databases.
+    
+    Returns:
+        Dictionary with verification results showing matched and unmatched IDs
+    """
+    try:
+        # Get all feedback IDs from PostgreSQL
+        postgres_feedbacks = postgres_db.get_all_feedback(limit=10000)
+        postgres_ids = {f["feedback_id"] for f in postgres_feedbacks}
+        
+        # Get all feedback IDs from Neo4j
+        neo4j_ids = set()
+        with db.driver.session() as session:
+            result = session.run("MATCH (f:Feedback) RETURN f.id as id")
+            neo4j_ids = {record["id"] for record in result}
+        
+        # Find matches and mismatches
+        matched_ids = postgres_ids.intersection(neo4j_ids)
+        only_in_postgres = postgres_ids - neo4j_ids
+        only_in_neo4j = neo4j_ids - postgres_ids
+        
+        return {
+            "total_postgres": len(postgres_ids),
+            "total_neo4j": len(neo4j_ids),
+            "matched": len(matched_ids),
+            "matched_ids": list(matched_ids),
+            "only_in_postgres": list(only_in_postgres),
+            "only_in_neo4j": list(only_in_neo4j),
+            "status": "OK" if len(only_in_postgres) == 0 and len(only_in_neo4j) == 0 else "MISMATCH"
+        }
+    except Exception as e:
+        logger.error(f"Error verifying database IDs: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
