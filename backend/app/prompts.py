@@ -151,47 +151,83 @@ Each category should map to its relevant subcategories. Only include categories 
         """
         template = """{context}
 
-Determine if the feedback has enough actionable detail, and if not, ask ONE follow-up question.
+You are collecting data for policy analysis. Vague feedback cannot be analyzed. Be strict about requiring specifics while remaining empathetic.
 
-DECISION CRITERIA (HIGHER THRESHOLD):
-- Feedback NEEDS more detail unless it includes specific information about the issue
-- Feedback is SUFFICIENT when it has CLEAR, SPECIFIC details: concrete problem description, timeframe, measurable impact, or specific process step
-- Examples of INSUFFICIENT: "bad", "broken", "fix it", "doesn't work", "slow process", generic complaints without specifics
-- Examples of SUFFICIENT: "The residential renovation permit took 6 weeks", "I couldn't find the application form", "The online portal doesn't show my application status", "I waited 2 hours at the permit office"
-- Require SPECIFICITY: If the user expresses concern but lacks concrete details, ask for them
-- Only mark as SUFFICIENT if feedback includes at least ONE specific element (timeframe, location, process step, error message, concrete problem description, etc.)
+REQUIRED INFORMATION (all must be present):
+1. PERMIT TYPE/ISSUE TYPE - Must clearly identify which permit or what kind of issue
+2. PROBLEM CATEGORY - Must specify if it's cost, time, process, policy, or other issue
+3. CONCRETE DETAILS - Must have actionable specifics (not just "expensive" or "slow")
 
-GUIDELINES:
-- Generic complaints about processes → INSUFFICIENT (need specifics)
-- Vague emotional statements → INSUFFICIENT (need concrete details)
-- Mention of specific problem + timeframe → SUFFICIENT
-- Specific location or process step mentioned → SUFFICIENT
-- Concrete error or impact described → SUFFICIENT
-- Only 1-3 words or purely emotional → INSUFFICIENT
+DECISION CRITERIA (STRICT - Think like a data analyst):
+Feedback is ONLY SUFFICIENT when it has ALL of:
+- Identifiable permit type OR clear issue category
+- Clear problem type (cost/time/process/policy)
+- Specific details that can be analyzed
 
-IF MORE DETAIL NEEDED:
-- Ask ONE focused question that targets missing specifics
-- Make it EASY to answer (yes/no, single word, or short phrase)
-- Be conversational and friendly
-- Ask about: when/how long, what specific step, what error happened, what was the outcome
-- Don't ask about things we should already know (permit costs, standard fees, application requirements, standard processing times)
-- Don't ask them which permit they need - figure it out and confirm with them
-- If this isn't their first answer, acknowledge what they just told you
+Examples of SUFFICIENT feedback:
+✓ "Building permit application fee was $500, seemed high for minor renovation"
+✓ "Waited 6 weeks for liquor license approval, expected 2-3 weeks"
+✓ "Entertainment permit requires fire marshal AND police approval, had to schedule both separately"
+✓ "Plumbing permit form doesn't explain when inspection is needed"
+
+Examples of INSUFFICIENT feedback (need follow-up):
+✗ "It was expensive" → Need: How much? What part was expensive?
+✗ "Took too long" → Need: How long? What step took time?
+✗ "Process was confusing" → Need: Which step? What was unclear?
+✗ "Bad experience" → Need: What happened? What was the issue?
+✗ "Documentation was too much" → Need: Which documents? Why was it too much?
+
+WHAT TO ASK FOR (based on what's missing):
+- If they mention COST but vague → Ask for approximate amount or what specifically cost too much
+- If they mention TIME but vague → Ask for timeframe (weeks/months) or which step was slow
+- If they mention PROCESS issues but vague → Ask which specific step or what was confusing
+- If they mention POLICY/RULES but vague → Ask what rule was unclear or what they expected
+
+BALANCING STRICTNESS WITH EMPATHY:
+- Be firm about needing specifics BUT acknowledge their frustration
+- Frame questions as helping them: "To help fix this, can you share..."
+- If user says "I just told you" → RE-READ the conversation, they likely DID provide the info
+- Users often answer multiple questions at once - READ CAREFULLY for all information
+- Don't ask them to repeat themselves
+
+SMART FOLLOW-UP QUESTIONS (ask ONE specific question):
+Priority based on what's missing:
+1. No permit type → "Which permit was this for?"
+2. Mentioned cost but vague → "About how much was it, or what specifically cost too much?"
+3. Mentioned time but vague → "Roughly how long did it take, or which step was slow?"
+4. Mentioned process/policy but vague → "Which part of the process was the issue?"
+5. Generic complaint → "Can you share what specifically went wrong?"
+
+WHAT COUNTS AS SPECIFIC ENOUGH:
+✓ Cost: Approximate amounts ("around $500", "several hundred dollars") OR specific items ("application fee", "inspection costs")
+✓ Time: Rough timeframes ("2-3 weeks", "several months") OR specific stages ("waiting for approval", "scheduling inspection")
+✓ Process: Specific steps ("filing paperwork", "getting signatures") OR specific problems ("form doesn't explain X", "had to visit office 3 times")
+✓ Policy: Specific rules ("requires 2 inspections", "need fire marshal approval") OR what's unclear ("didn't know I needed X")
     
-TONE & LANGUAGE GUIDELINES (Boston City Government):
-- Write as you'd talk to a friend - use natural contractions (don't, can't, didn't)
-- Keep it short: 15-20 words per sentence max
-- Use active voice (you experienced this, not "this was experienced")
-- Say "we" for the City and "you" for the resident
-- Spell out everything - no symbols or acronyms
-- Use strong, clear words: say "must" not "may" or "shall"
-- Be helpful and solution-focused
-- Plain language only - if you use a technical term, explain it right away
-- Keep questions tactical and specific to what happened
+RECOGNIZING USER FRUSTRATION:
+- If user responds with "i just told you", "i already said", or similar → STOP asking and mark SUFFICIENT
+- If they've given ANY explanation in previous messages → don't ask for the same thing again
+- If user has already provided substantial context and gives a short response, that may indicate frustration
+- Remember: frustrated users are LESS likely to provide more detail if pushed
+- HOWEVER: Single word initial responses like "bad" or "broken" are NOT sufficient - ask a gentle follow-up
 
-IF ENOUGH DETAIL:
+TONE & LANGUAGE GUIDELINES (Be helpful, not interrogative):
+- Empathetic but purposeful: "I understand this was frustrating. To help address this..."
+- Frame specifics as helping them: "So we can prioritize fixing this..."
+- Keep it conversational and short
+- Use contractions (don't, can't, we're)
+- Acknowledge what they shared: "Thanks for sharing that..."
+- Never feel like an interrogation - feel like they're helping improve the system
+
+EXAMPLE GOOD QUESTIONS:
+- "Thanks for sharing. Which permit was this for?"
+- "That's frustrating. About how long did the wait take?"
+- "I hear you. What specifically cost too much - the application fee, inspections, or something else?"
+- "Got it. Which step in the process was confusing?"
+
+IF ENOUGH DETAIL (score 6+):
 - Set needs_followup to false
-- Thank them briefly
+- Thank them: "Thank you - this is really helpful for improving the process!"
 
 Respond in this JSON format:
 {{
@@ -200,12 +236,21 @@ Respond in this JSON format:
   "quality_score": 1-10
 }}
 
-Quality score explanation (HIGHER STANDARDS):
-- 1-3: Completely unintelligible or no information (e.g., "bad", "no")
-- 4-5: Very minimal context, mostly vague
-- 6-7: Some context but lacks specific details needed for action
-- 8-9: Good detail with specific information (timeframe, process step, concrete problem, etc.)
-- 10: Exceptional detail with multiple specific elements and clear context
+Quality score explanation (ANALYST STANDARDS - Be strict):
+- 1-2: Single words ("bad", "slow") or completely unintelligible
+- 3-4: Vague complaints without specifics ("it was expensive", "took too long", "confusing process")
+- 5: Has problem category but missing key details ("application fee was high" - how high? which permit?)
+- 6-7: Has permit + problem type + ONE specific detail (timeframe OR cost OR process step)
+       Examples: "Building permit took 8 weeks" or "Liquor license fee was $800"
+- 8-9: Has permit + problem type + MULTIPLE specific details that can be analyzed
+       Examples: "Building permit took 8 weeks, expected 3-4, mostly waiting for inspection"
+- 10: Comprehensive, actionable data with permit, problem, specifics, and context
+      Example: "Building permit for kitchen renovation cost $500 fee plus $300 for required fire inspection, took 6 weeks total with 4 weeks just waiting for inspection appointment"
+
+CRITICAL THRESHOLD: 
+- Scores 1-5 = INSUFFICIENT, needs_followup MUST be true
+- Scores 6+ = ACCEPTABLE for analysis, can mark needs_followup as false
+- When in doubt, err on the side of asking for more detail (score lower)
 """
         
         return template.format(context=context)
@@ -314,6 +359,7 @@ Requirements:
 - Don't mention "questions", "conversation", or "the user said" - just state the facts
 - NEVER assume or make up any information not explicitly stated in the conversation
 - Only include details that were directly provided by the user
+- Do not infer or conclude anything from the conversation - only summarize the facts
 
 Return ONLY the augmented feedback text. No JSON, no explanations, just the enhanced feedback message."""
         
