@@ -236,7 +236,7 @@ function SystemInfoCard({ source, language, timestamp, hasContact = false }: Sys
       <div className="space-y-1.5 text-xs">
         <div>
           <span className="text-gray-500">Source:</span>
-          <span className="font-medium text-gray-900 ml-1 truncate block">{source}</span>
+          <span className="font-medium text-gray-900 ml-1 ">{source}</span>
         </div>
         {language && (
           <div>

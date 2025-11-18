@@ -50,13 +50,12 @@ class Neo4jDatabase:
                 CREATE (f:Feedback {
                     id: $id,
                     text: $text,
-                    sentiment: $sentiment,
                     timestamp: datetime()
                 })
                 """,
                 id=feedback_id,
                 text=feedback.text,
-                sentiment=feedback.sentiment
+                sentiment=feedback.sentiment,
             )
             
             # Create category nodes and relationships using the category_map
@@ -117,17 +116,27 @@ class Neo4jDatabase:
                 labels = record["labels"]
                 props = record["props"]
                 
-                # Determine label for display
-                if "Feedback" in labels:
-                    label = props.get("text", "")[:50] + "..." if len(props.get("text", "")) > 50 else props.get("text", "Feedback")
-                else:
-                    label = props.get("name", "Unknown")
+                # Create node with all available properties from Neo4j
+                node_data = {
+                    "id": node_id,
+                    "type": labels[0] if labels else "Unknown"
+                }
                 
-                nodes.append(GraphNode(
-                    id=node_id,
-                    label=label,
-                    type=labels[0] if labels else "Unknown"
-                ))
+                # Add type-specific properties
+                if "Feedback" in labels:
+                    node_data["text"] = props.get("text")
+                    node_data["sentiment"] = props.get("sentiment")
+                    # Convert Neo4j DateTime to ISO string if present
+                    if "timestamp" in props and props["timestamp"]:
+                        try:
+                            node_data["timestamp"] = props["timestamp"].isoformat()
+                        except:
+                            node_data["timestamp"] = str(props["timestamp"])
+                else:
+                    # For Category and Subcategory nodes
+                    node_data["name"] = props.get("name")
+                
+                nodes.append(GraphNode(**node_data))
             
             # Get all relationships
             result = session.run(

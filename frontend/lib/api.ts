@@ -87,8 +87,12 @@ export interface ClassifiedFeedback {
 
 export interface GraphNode {
   id: string;
-  label: string;
   type: string;
+  // Node properties from Neo4j (type-specific)
+  text?: string;  // Full feedback text (only for Feedback nodes)
+  sentiment?: string;  // Sentiment (only for Feedback nodes)
+  timestamp?: string;  // Timestamp (only for Feedback nodes)
+  name?: string;  // Name (only for Category/Subcategory nodes)
 }
 
 export interface GraphRelationship {

@@ -76,86 +76,291 @@ interface NodeDetailsSidebarProps {
 function NodeDetailsSidebar({ selectedNode, onClose, getNodeInfo }: NodeDetailsSidebarProps) {
   const nodeInfo = getNodeInfo(selectedNode);
 
+  // Get type-specific colors
+  const getTypeColors = (type: string) => {
+    const colors = {
+      Feedback: {
+        primary: '#3b82f6',
+        light: '#dbeafe',
+        dark: '#1e40af',
+        gradient: 'from-blue-50 to-blue-100',
+        border: 'border-blue-200'
+      },
+      Category: {
+        primary: '#10b981',
+        light: '#d1fae5',
+        dark: '#047857',
+        gradient: 'from-green-50 to-green-100',
+        border: 'border-green-200'
+      },
+      Subcategory: {
+        primary: '#f59e0b',
+        light: '#fef3c7',
+        dark: '#d97706',
+        gradient: 'from-amber-50 to-amber-100',
+        border: 'border-amber-200'
+      }
+    };
+    return colors[type as keyof typeof colors] || colors.Feedback;
+  };
+
+  const typeColors = getTypeColors(selectedNode.type);
+
   return (
-    <div className="w-80 bg-white rounded-xl p-4 md:p-6 border border-slate-200 shadow-lg flex flex-col h-full overflow-hidden flex-shrink-0">
-      <div className="flex items-start justify-between mb-4 md:mb-6">
-        <div>
-          <h3 className="text-lg md:text-xl font-bold text-slate-900">Node Details</h3>
-          <p className="text-xs text-slate-500 mt-1">Selected node information</p>
+    <div className="w-80 bg-white rounded-xl p-4 border border-gray-300 shadow-xl flex flex-col h-full overflow-hidden flex-shrink-0">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
+        <div className="flex items-center gap-2.5">
+          <div 
+            className="flex items-center justify-center w-8 h-8 rounded-lg shadow-sm"
+            style={{ backgroundColor: `${typeColors.primary}15` }}
+          >
+            <div 
+              className="w-3 h-3 rounded-full shadow-sm" 
+              style={{ backgroundColor: typeColors.primary }}
+            />
+          </div>
+          <div>
+            <h3 className="text-base md:text-lg font-bold text-gray-900">Node Details</h3>
+            <p className="text-xs text-gray-500">Explore information</p>
+          </div>
         </div>
         <button
           onClick={onClose}
-          className="text-slate-400 hover:text-slate-600 transition-colors"
+          className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1 rounded-lg transition-all"
+          title="Close"
         >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      <div className="space-y-3 md:space-y-4 flex-1 overflow-y-auto min-h-0">
-        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-3 md:p-4 border border-slate-200">
-          <p className="text-xs text-slate-600 font-semibold uppercase tracking-wide">Name</p>
-          <p className="text-base md:text-lg font-bold text-slate-900 mt-1 break-words">{selectedNode.name}</p>
-        </div>
+      <div className="flex-1 flex flex-col min-h-0 pr-1">
+        {/* Feedback Text Card - Only for Feedback nodes - Flexible to fit with other cards */}
+        {selectedNode.type === "Feedback" && nodeInfo.feedbackText && (
+          <>
+            <div className="bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden flex flex-col flex-1 min-h-0 mb-2.5 max-h-fit">
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-3 py-2 border-b border-gray-200 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#1871bd' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="text-xs text-gray-700 font-bold uppercase tracking-wide">Content</p>
+                </div>
+              </div>
+              <div className="p-3 bg-gray-50 overflow-y-auto flex-1 min-h-0">
+                <p className="text-xs leading-relaxed text-gray-900 whitespace-pre-wrap">{nodeInfo.feedbackText}</p>
+              </div>
+            </div>
 
-        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-3 md:p-4 border border-slate-200">
-          <p className="text-xs text-slate-600 font-semibold uppercase tracking-wide">Type</p>
-          <div className="flex items-center gap-2 mt-1">
-            <div 
-              className="w-3 h-3 rounded-full" 
-              style={{ backgroundColor: selectedNode.color }}
-            ></div>
-            <p className="text-base md:text-lg font-bold text-slate-900">{selectedNode.type}</p>
-          </div>
-        </div>
+            {/* Classification Cards - Fixed at natural height */}
+            <div className="space-y-2.5 flex-shrink-0">
+              {nodeInfo.categories && nodeInfo.categories.length > 0 && (
+                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-2.5 border border-green-200 shadow-sm">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-green-200">
+                      <svg className="w-3 h-3 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                    </div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-green-800">
+                      {nodeInfo.categories.length === 1 ? 'Category' : 'Categories'}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    {nodeInfo.categories.map((cat: string, idx: number) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <div className="w-1 h-1 rounded-full bg-green-600 flex-shrink-0"></div>
+                        <p className="text-xs font-semibold text-green-900">{cat}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
-        {(selectedNode.type === "Category" || selectedNode.type === "Subcategory") && (
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-3 md:p-4 border border-blue-200">
-            <p className="text-xs text-blue-700 font-semibold uppercase tracking-wide">Total Feedback</p>
-            <p className="text-xl md:text-2xl font-bold text-blue-900 mt-1">
-              {nodeInfo.feedbackCount || 0}
-            </p>
+              {nodeInfo.subcategories && nodeInfo.subcategories.length > 0 && (
+                <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-2.5 border border-amber-200 shadow-sm">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <div className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-200">
+                      <svg className="w-3 h-3 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                    </div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
+                      {nodeInfo.subcategories.length === 1 ? 'Subcategory' : 'Subcategories'}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    {nodeInfo.subcategories.map((subcat: string, idx: number) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <div className="w-1 h-1 rounded-full bg-amber-600 flex-shrink-0"></div>
+                        <p className="text-xs font-semibold text-amber-900">{subcat}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+         )}
+
+        {/* Name Card - For non-Feedback nodes - More compact */}
+        {selectedNode.type !== "Feedback" && (
+          <div className="space-y-2.5 overflow-y-auto">
+            <div className="bg-white rounded-lg p-3 border border-gray-300 shadow-sm">
+              <div className="flex items-center gap-2 mb-1.5">
+                <svg className="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                <p className="text-xs text-gray-600 font-bold uppercase tracking-wide">Name</p>
+              </div>
+              <p className="text-sm md:text-base font-bold text-gray-900 break-words leading-snug">{selectedNode.name}</p>
+            </div>
+
+        {/* Category Card - For Subcategory nodes - Compact */}
+        {selectedNode.type === "Subcategory" && nodeInfo.category && (
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-2.5 border border-green-200 shadow-sm">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <div className="flex items-center justify-center w-5 h-5 rounded-full bg-green-200">
+                <svg className="w-3 h-3 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+              </div>
+              <p className="text-xs font-bold uppercase tracking-wide text-green-800">Parent Category</p>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-1 h-1 rounded-full bg-green-600 flex-shrink-0"></div>
+              <p className="text-xs font-semibold text-green-900">{nodeInfo.category}</p>
+            </div>
           </div>
         )}
 
+        {/* Total Feedback Card - For Subcategory nodes - Compact */}
+        {selectedNode.type === "Subcategory" && (
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-2.5 border border-blue-200 shadow-sm">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <div className="flex items-center justify-center w-5 h-5 rounded-full" style={{ backgroundColor: 'rgba(24, 113, 189, 0.15)' }}>
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#1871bd' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#1e40af' }}>Total Feedback</p>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <p className="text-2xl md:text-3xl font-bold" style={{ color: '#1e3a8a' }}>
+                {nodeInfo.feedbackCount || 0}
+              </p>
+              <span className="text-xs text-blue-600 font-medium">
+                {nodeInfo.feedbackCount === 1 ? 'item' : 'items'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Total Subcategories Card - Category Only - Compact */}
         {selectedNode.type === "Category" && (
           <>
-            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-3 md:p-4 border border-green-200">
-              <p className="text-xs text-green-700 font-semibold uppercase tracking-wide">Total Subcategories</p>
-              <p className="text-xl md:text-2xl font-bold text-green-900 mt-1">
-                {nodeInfo.totalSubcategories}
-              </p>
+            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg p-2.5 border border-emerald-200 shadow-sm">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <div className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-200">
+                  <svg className="w-3 h-3 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  </svg>
+                </div>
+                <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">Total Subcategories</p>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <p className="text-2xl md:text-3xl font-bold text-emerald-900">
+                  {nodeInfo.totalSubcategories}
+                </p>
+                <span className="text-xs text-emerald-600 font-medium">
+                  {nodeInfo.totalSubcategories === 1 ? 'group' : 'groups'}
+                </span>
+              </div>
             </div>
 
-            <div>
-              <p className="text-xs text-slate-600 font-semibold uppercase tracking-wide mb-2 md:mb-3">Feedback by Subcategory</p>
-              <div className="space-y-1.5 md:space-y-2 bg-slate-50 rounded-lg p-2 md:p-3 border border-slate-200 max-h-48 md:max-h-64 overflow-y-auto">
+            {/* Total Feedback Card - Compact */}
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-2.5 border border-blue-200 shadow-sm">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <div className="flex items-center justify-center w-5 h-5 rounded-full" style={{ backgroundColor: 'rgba(24, 113, 189, 0.15)' }}>
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#1871bd' }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#1e40af' }}>Total Feedback</p>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <p className="text-2xl md:text-3xl font-bold" style={{ color: '#1e3a8a' }}>
+                  {nodeInfo.feedbackCount || 0}
+                </p>
+                <span className="text-xs text-blue-600 font-medium">
+                  {nodeInfo.feedbackCount === 1 ? 'item' : 'items'}
+                </span>
+              </div>
+            </div>
+
+            {/* Feedback by Subcategory List - Compact */}
+            <div className="bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden">
+              <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-3 py-2 border-b border-gray-200">
+                <div className="flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  <p className="text-xs text-gray-700 font-bold uppercase tracking-wide">Distribution</p>
+                </div>
+              </div>
+              <div className="max-h-56 overflow-y-auto">
                 {Object.entries(nodeInfo.feedbackBySubcategory || {}).length > 0 ? (
-                  Object.entries(nodeInfo.feedbackBySubcategory || {})
-                    .sort(([, a], [, b]) => (b as number) - (a as number))
-                    .map(([subcat, count]: [string, unknown]) => (
-                      <div key={subcat} className="flex items-center justify-between py-2 px-3 hover:bg-white rounded-lg transition-colors">
-                        <p className="text-sm text-slate-700 font-medium truncate flex-1 mr-2">{subcat}</p>
-                        <span className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 text-xs font-bold text-white bg-blue-500 rounded-full flex-shrink-0">
-                          {count as number}
-                        </span>
-                      </div>
-                    ))
+                  <div className="divide-y divide-gray-100">
+                    {Object.entries(nodeInfo.feedbackBySubcategory || {})
+                      .sort(([, a], [, b]) => (b as number) - (a as number))
+                      .map(([subcat, count]: [string, unknown]) => (
+                        <div key={subcat} className="flex items-center justify-between py-2 px-3 hover:bg-blue-50 transition-colors group">
+                          <div className="flex items-center gap-1.5 flex-1 min-w-0 mr-2">
+                            <div className="w-1 h-1 rounded-full bg-amber-500 flex-shrink-0 group-hover:scale-125 transition-transform"></div>
+                            <p className="text-xs text-gray-900 font-medium truncate">{subcat}</p>
+                          </div>
+                          <span 
+                            className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 text-xs font-bold text-white rounded-full shadow-sm flex-shrink-0"
+                            style={{ backgroundColor: '#1871bd' }}
+                          >
+                            {count as number}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
                 ) : (
-                  <p className="text-sm text-slate-500 py-2 text-center">No subcategories</p>
+                  <div className="py-6 text-center">
+                    <svg className="w-8 h-8 mx-auto text-gray-300 mb-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    </svg>
+                    <p className="text-xs text-gray-500">No subcategories found</p>
+                  </div>
                 )}
               </div>
             </div>
           </>
         )}
+          </div>
+        )}
       </div>
 
+      {/* Close Button - Compact */}
       <button
         onClick={onClose}
-        className="mt-4 md:mt-6 w-full px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-lg transition-colors text-sm shadow-sm"
+        className="mt-3 w-full px-3 py-2 font-semibold rounded-lg transition-all text-xs shadow-md hover:shadow-lg"
+        style={{ 
+          backgroundColor: '#1871bd',
+          color: 'white'
+        }}
       >
-        Close
+        <span className="flex items-center justify-center gap-1.5">
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          Close
+        </span>
       </button>
     </div>
   );
@@ -243,9 +448,11 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
     const arrangeInCircle = (nodes: any[], radius: number, startIndex: number) => {
       return nodes.map((node, index) => {
         const angle = (2 * Math.PI * (startIndex + index)) / Math.max(nodes.length, 1);
+        // Use 'text' for Feedback nodes, 'name' for Category/Subcategory nodes
+        const displayName = node.type === "Feedback" ? node.text : node.name;
         return {
       id: node.id,
-      name: node.label,
+      name: displayName,
       type: node.type,
       color: getNodeColor(node.type),
           feedbackCount: feedbackCounts[node.id] || 0,
@@ -436,7 +643,7 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
             data.nodes.find(n => n.id === rel.source && n.type === "Feedback")
         );
         
-        feedbackCounts[subcat.label] = feedbackForSubcat.length;
+        feedbackCounts[subcat.name || "Unknown"] = feedbackForSubcat.length;
         
         // Track unique feedback IDs across all subcategories
         feedbackForSubcat.forEach((rel) => uniqueFeedbackIds.add(rel.source));
@@ -459,10 +666,63 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
           data.nodes.find(n => n.id === rel.source && n.type === "Feedback")
       ).length;
       
+      // Find the category this subcategory belongs to
+      const categoryRel = data.relationships.find(
+        (rel) => rel.source === node.id && 
+        data.nodes.find(n => n.id === rel.target && n.type === "Category")
+      );
+      const categoryNode = categoryRel ? data.nodes.find(n => n.id === categoryRel.target) : null;
+      
       return {
         name: node.name,
         type: node.type,
         feedbackCount: feedbackCount,
+        category: categoryNode?.name || null,
+      };
+    }
+
+    if (node.type === "Feedback") {
+      // Find all subcategories this feedback is connected to
+      const subcategoryRels = data.relationships.filter(
+        (rel) => rel.source === node.id && 
+        data.nodes.find(n => n.id === rel.target && n.type === "Subcategory")
+      );
+      
+      const subcategories: string[] = [];
+      const categories: string[] = [];
+      
+      subcategoryRels.forEach((rel) => {
+        const subcatNode = data.nodes.find(n => n.id === rel.target);
+        if (subcatNode) {
+          subcategories.push(subcatNode.name || "");
+          
+          // Find the category for this subcategory
+          const catRel = data.relationships.find(
+            (r) => r.source === subcatNode.id && 
+            data.nodes.find(n => n.id === r.target && n.type === "Category")
+          );
+          if (catRel) {
+            const catNode = data.nodes.find(n => n.id === catRel.target);
+            if (catNode && catNode.name && !categories.includes(catNode.name)) {
+              categories.push(catNode.name);
+            }
+          }
+        }
+      });
+      
+      // Get the full text from the original data node
+      const originalNode = data.nodes.find(n => n.id === node.id);
+      const fullText = originalNode?.text || node.name;
+      
+      return {
+        name: node.name,
+        type: node.type,
+        feedbackCount: node.feedbackCount || 0,
+        feedbackText: fullText, // The FULL untruncated feedback text from Neo4j
+        sentiment: originalNode?.sentiment || null,
+        timestamp: originalNode?.timestamp || null,
+        subcategories: subcategories,
+        categories: categories,
       };
     }
 

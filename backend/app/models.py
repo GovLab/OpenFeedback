@@ -26,8 +26,12 @@ class ClassifiedFeedback(BaseModel):
 class GraphNode(BaseModel):
     """Model for a graph node."""
     id: str
-    label: str
     type: str
+    # Node properties from Neo4j (type-specific)
+    text: Optional[str] = None  # Full feedback text (only for Feedback nodes)
+    sentiment: Optional[str] = None  # Sentiment (only for Feedback nodes)
+    timestamp: Optional[str] = None  # Timestamp (only for Feedback nodes)
+    name: Optional[str] = None  # Name (only for Category/Subcategory nodes)
 
 
 class GraphRelationship(BaseModel):
