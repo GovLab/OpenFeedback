@@ -267,8 +267,11 @@ def chatbot_agent(original_feedback: str, conversation_history: List, permit_con
     logger.info(f"   - Needs followup: {result['needs_followup']}")
     logger.info(f"   - Message preview: {result.get('message', '')[:80]}...")
     
-    # Safety net for high quality scores
-    if result["quality_score"] >= 6:
+    # Enforce quality thresholds
+    if result["quality_score"] < 6:
+        logger.info(f"⚠️ Quality score below threshold (< 6), requiring followup")
+        result["needs_followup"] = True
+    elif result["quality_score"] >= 6:
         logger.info(f"✓ Quality threshold met (>= 6), marking as complete")
         result["needs_followup"] = False
         result["message"] = "Thank you for your feedback!"

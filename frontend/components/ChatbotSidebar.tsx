@@ -235,6 +235,16 @@ export default function ChatbotSidebar({
             </svg>
           </button>
         </div>
+        {/* Skip Button - Always Available */}
+        <div className="mt-2 text-center">
+          <button
+            onClick={onSkip}
+            disabled={chatLoading}
+            className="text-xs text-gray-500 hover:text-gray-700 underline transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Skip questions and submit feedback
+          </button>
+        </div>
       </div>
     </div>
   );
