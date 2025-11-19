@@ -262,14 +262,13 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
             <textarea
               id="feedback"
               value={feedback}
-              onChange={(e) => {
-                setFeedback(e.target.value);
-                // If user manually edits enhanced feedback, keep the flag but allow changes
-              }}
-              onFocus={() => setShowSuggestions(true)}
-              className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:ring-2 focus:ring-[#007A33] focus:border-[#007A33] text-slate-900 resize-y placeholder:text-slate-400 text-base leading-relaxed min-h-[120px] max-h-[400px]"
+              onChange={(e) => !hasBeenEnhanced && setFeedback(e.target.value)}
+              onFocus={() => setShowSuggestions(!hasBeenEnhanced)}
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-[#007A33] focus:border-[#007A33] text-slate-900 resize-y placeholder:text-slate-400 text-base leading-relaxed min-h-[120px] max-h-[400px] ${
+                hasBeenEnhanced ? 'border-slate-200 bg-slate-50 cursor-not-allowed' : 'border-slate-300'
+              }`}
               placeholder="Share feedback on your experience!"
-              disabled={loading || showChatbot}
+              disabled={loading || showChatbot || hasBeenEnhanced}
             />
             
             {hasBeenEnhanced && (
