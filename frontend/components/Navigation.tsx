@@ -12,23 +12,36 @@ export default function Navigation() {
   ];
 
   return (
-    <nav className="fixed bottom-6 right-6 z-50">
-      <div className="bg-white rounded-full shadow-lg border border-gray-200 px-4 py-2 flex items-center gap-2">
+    <nav className="fixed top-6 right-6 z-50">
+      <div className="flex items-center gap-1 bg-white rounded-full shadow-lg border p-1" style={{ borderColor: 'var(--boston-gray-light)' }}>
         {links.map((link) => (
           <Link
             key={link.href}
             href={link.href}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+            className={`w-10 h-10 flex items-center justify-center rounded-full text-lg transition-all ${
               pathname === link.href
-                ? 'bg-blue-600 text-white shadow-md'
-                : 'text-gray-700 hover:bg-gray-100'
+                ? 'text-white shadow-md'
+                : 'text-gray-600 hover:text-white'
             }`}
+            style={{
+              backgroundColor: pathname === link.href ? 'var(--boston-charles-blue)' : 'transparent'
+            }}
+            onMouseEnter={(e) => {
+              if (pathname !== link.href) {
+                e.currentTarget.style.backgroundColor = 'var(--boston-gray-light)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (pathname !== link.href) {
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }
+            }}
             title={link.label}
           >
-            <span className="hidden sm:inline">{link.label}</span>
-            <span className="sm:hidden">{link.icon}</span>
+            {link.icon}
           </Link>
         ))}
+        
       </div>
     </nav>
   );
