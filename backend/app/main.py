@@ -88,6 +88,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://main.d57dpeqds75ja.amplifyapp.com",  # Your Amplify frontend
+        "https://main.d3f474el750k1.amplifyapp.com",
         "http://localhost:3000",  # Local development
         "http://localhost:3001",  # Local development
     ],
