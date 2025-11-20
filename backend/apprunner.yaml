@@ -16,4 +16,5 @@ run:
       value: "true"
     - name: AWS_REGION
       value: "us-east-2"
-    # SECRET_NAME is set by Terraform via runtime environment variables
+    - name: SECRET_NAME
+      value: "test-tf-aws-deploy-secrets"
