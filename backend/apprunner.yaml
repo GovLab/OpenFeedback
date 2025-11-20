@@ -12,9 +12,4 @@ run:
   env:
     - name: PYTHONUNBUFFERED
       value: "1"
-    - name: USE_SECRETS_MANAGER
-      value: "true"
-    - name: AWS_REGION
-      value: "us-east-2"
-    - name: SECRET_NAME
-      value: "openpermits"
+    # USE_SECRETS_MANAGER, AWS_REGION, and SECRET_NAME are set by Terraform
