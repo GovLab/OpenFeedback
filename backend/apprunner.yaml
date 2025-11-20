@@ -12,4 +12,8 @@ run:
   env:
     - name: PYTHONUNBUFFERED
       value: "1"
-    # USE_SECRETS_MANAGER, AWS_REGION, and SECRET_NAME are set by Terraform
+    - name: USE_SECRETS_MANAGER
+      value: "true"
+    - name: AWS_REGION
+      value: "us-east-2"
+    # SECRET_NAME is set by Terraform via runtime environment variables
