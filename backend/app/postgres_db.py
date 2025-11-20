@@ -59,6 +59,14 @@ class PostgresDB:
         """Initialize the database connection."""
         self.engine = engine
         self.SessionLocal = SessionLocal
+        
+        # Create tables if they don't exist
+        try:
+            Base.metadata.create_all(bind=engine)
+            print("✅ PostgreSQL tables created/verified successfully")
+        except Exception as e:
+            print(f"❌ Failed to create PostgreSQL tables: {str(e)}")
+            raise
     
     @contextmanager
     def get_session(self):
