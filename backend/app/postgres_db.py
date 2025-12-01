@@ -6,11 +6,20 @@ from sqlalchemy.sql import func
 from contextlib import contextmanager
 from typing import Optional, Dict, Any
 import uuid
+import logging
 from .config import settings
 
+logger = logging.getLogger(__name__)
+
 # Create database engine
-engine = create_engine(settings.postgres_url, echo=False)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+try:
+    engine = create_engine(settings.postgres_url, echo=False)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+except Exception as e:
+    logger.error(f"Failed to create PostgreSQL engine: {str(e)}")
+    engine = None
+    SessionLocal = None
+
 Base = declarative_base()
 
 
@@ -59,14 +68,22 @@ class PostgresDB:
         """Initialize the database connection."""
         self.engine = engine
         self.SessionLocal = SessionLocal
+        self._connection_error = None
         
         # Create tables if they don't exist
+        if self.engine is None:
+            self._connection_error = "PostgreSQL engine not initialized"
+            logger.error("PostgreSQL engine is None - database operations will fail")
+            return
+        
         try:
             Base.metadata.create_all(bind=engine)
-            print("✅ PostgreSQL tables created/verified successfully")
+            logger.info("✅ PostgreSQL tables created/verified successfully")
         except Exception as e:
-            print(f"❌ Failed to create PostgreSQL tables: {str(e)}")
-            raise
+            self._connection_error = str(e)
+            logger.error(f"❌ Failed to create PostgreSQL tables: {str(e)}")
+            logger.warning("Server will continue to run, but PostgreSQL operations will fail")
+            # Don't raise - allow server to start even if database is unavailable
     
     @contextmanager
     def get_session(self):
@@ -92,6 +109,9 @@ class PostgresDB:
         Returns:
             feedback_id: UUID as string
         """
+        if self.engine is None or self.SessionLocal is None:
+            raise Exception(f"PostgreSQL database not connected: {self._connection_error}")
+        
         with self.get_session() as session:
             # If feedback_id is provided, add it to the data
             if feedback_id:
@@ -104,6 +124,9 @@ class PostgresDB:
     
     def get_feedback(self, feedback_id: str) -> Optional[Dict]:
         """Get feedback by ID."""
+        if self.engine is None or self.SessionLocal is None:
+            raise Exception(f"PostgreSQL database not connected: {self._connection_error}")
+        
         with self.get_session() as session:
             feedback = session.query(FeedbackDB).filter(
                 FeedbackDB.feedback_id == uuid.UUID(feedback_id)
@@ -128,6 +151,9 @@ class PostgresDB:
     
     def get_all_feedback(self, limit: int = 100, offset: int = 0):
         """Get all feedback with pagination."""
+        if self.engine is None or self.SessionLocal is None:
+            raise Exception(f"PostgreSQL database not connected: {self._connection_error}")
+        
         with self.get_session() as session:
             feedbacks = session.query(FeedbackDB).order_by(
                 FeedbackDB.timestamp_submitted.desc()
@@ -178,7 +204,11 @@ class PostgresDB:
     
     def close(self):
         """Close the database connection."""
-        self.engine.dispose()
+        if self.engine is not None:
+            try:
+                self.engine.dispose()
+            except Exception as e:
+                logger.error(f"Error closing PostgreSQL connection: {str(e)}")
 
 
 # Global instance

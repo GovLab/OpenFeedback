@@ -2,8 +2,9 @@ from contextlib import asynccontextmanager
 import logging
 import asyncio
 from datetime import datetime
-from fastapi import FastAPI, HTTPException, File, UploadFile
+from fastapi import FastAPI, HTTPException, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse, IndividualResponse, ConversationInput, ConversationResponse, AugmentationInput, AugmentationResponse
 from .classifier import classify_feedback, chatbot_agent, augment_feedback, determine_permit_context
 from .database import db
@@ -66,9 +67,16 @@ def sentiment_to_score(sentiment: str) -> float:
 async def lifespan(app: FastAPI):
     """Manage application lifespan events."""
     yield
-    # Close both database connections
-    db.close()
-    postgres_db.close()
+    # Close both database connections safely
+    try:
+        db.close()
+    except Exception as e:
+        logger.error(f"Error closing Neo4j connection: {str(e)}")
+    
+    try:
+        postgres_db.close()
+    except Exception as e:
+        logger.error(f"Error closing PostgreSQL connection: {str(e)}")
 
 
 app = FastAPI(
@@ -77,6 +85,20 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+
+# Global exception handler to prevent server crashes
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch all unhandled exceptions and return a proper error response."""
+    logger.error(f"Unhandled exception: {type(exc).__name__}: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "An internal server error occurred. The server continues to run.",
+            "error_type": type(exc).__name__
+        }
+    )
 
 
 @app.get("/health")
@@ -260,14 +282,32 @@ async def submit_feedback(feedback: FeedbackInput):
             "followup_opt_in": followup_opt_in,
             "user_contact_info": user_contact_info
         }
-        postgres_id = postgres_db.add_feedback(postgres_data, feedback_id=shared_feedback_id)
-        logger.info(f"Feedback stored in PostgreSQL. ID: {postgres_id}")
+        
+        postgres_id = None
+        neo4j_id = None
+        
+        # Try to store in PostgreSQL, but don't fail if it doesn't work
+        try:
+            postgres_id = postgres_db.add_feedback(postgres_data, feedback_id=shared_feedback_id)
+            logger.info(f"Feedback stored in PostgreSQL. ID: {postgres_id}")
+        except Exception as e:
+            logger.error(f"Failed to store feedback in PostgreSQL: {str(e)}")
+            # Continue execution even if PostgreSQL fails
         
         # 2. Store graph relationships in Neo4j
         logger.debug("Storing feedback relationships in Neo4j...")
-        neo4j_id = db.add_feedback(classified, feedback_id=shared_feedback_id)
-        logger.info(f"Feedback relationships stored in Neo4j. ID: {neo4j_id}")
-        logger.info(f"Verified: Both databases using same ID: {postgres_id == neo4j_id}")
+        try:
+            neo4j_id = db.add_feedback(classified, feedback_id=shared_feedback_id)
+            logger.info(f"Feedback relationships stored in Neo4j. ID: {neo4j_id}")
+            if postgres_id:
+                logger.info(f"Verified: Both databases using same ID: {postgres_id == neo4j_id}")
+        except Exception as e:
+            logger.error(f"Failed to store feedback in Neo4j: {str(e)}")
+            # Continue execution even if Neo4j fails
+        
+        # If both database operations failed, raise an error
+        if postgres_id is None and neo4j_id is None:
+            raise Exception("Failed to store feedback in both databases")
         
         return classified
         
@@ -335,13 +375,25 @@ async def upload_feedback_file(file: UploadFile = File(...), store_in_database: 
                     "feedback_source": "OpenPermit",
                     "timestamp_processed": datetime.now()
                 }
-                postgres_id = postgres_db.add_feedback(postgres_data, feedback_id=shared_feedback_id)
                 
-                # Store in Neo4j
-                neo4j_id = db.add_feedback(classified, feedback_id=shared_feedback_id)
+                postgres_id = None
+                neo4j_id = None
+                
+                # Try PostgreSQL, but don't fail if it doesn't work
+                try:
+                    postgres_id = postgres_db.add_feedback(postgres_data, feedback_id=shared_feedback_id)
+                except Exception as e:
+                    logger.error(f"Failed to store feedback {i+1} in PostgreSQL: {str(e)}")
+                
+                # Try Neo4j, but don't fail if it doesn't work
+                try:
+                    neo4j_id = db.add_feedback(classified, feedback_id=shared_feedback_id)
+                except Exception as e:
+                    logger.error(f"Failed to store feedback {i+1} in Neo4j: {str(e)}")
+                
                 feedback_ids.append({"postgres": postgres_id, "neo4j": neo4j_id, "shared_id": shared_feedback_id})
             
-            logger.info(f"All feedbacks stored successfully. Count: {len(feedback_ids)}")
+            logger.info(f"Feedback storage completed. Count: {len(feedback_ids)}")
         
         logger.info("================================================")
         logger.info("Not storing feedbacks in database")
@@ -399,7 +451,9 @@ async def get_graph():
         graph_data = db.get_graph_data()
         return graph_data
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error retrieving graph data: {str(e)}")
+        # Return empty graph data instead of crashing
+        return GraphData(nodes=[], relationships=[])
 
 @app.get("/api/stats")
 async def get_stats():
@@ -418,7 +472,12 @@ async def get_stats():
             "categories": categories
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error retrieving stats: {str(e)}")
+        # Return empty stats instead of crashing
+        return {
+            "total_feedback": 0,
+            "categories": []
+        }
 
 
 @app.get("/api/postgres/feedback")
@@ -443,7 +502,13 @@ async def get_all_postgres_feedback(limit: int = 100, offset: int = 0):
         }
     except Exception as e:
         logger.error(f"Error fetching PostgreSQL feedback: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # Return empty list instead of crashing
+        return {
+            "feedbacks": [],
+            "count": 0,
+            "limit": limit,
+            "offset": offset
+        }
 
 
 @app.get("/api/verify-ids")
@@ -456,14 +521,21 @@ async def verify_database_ids():
     """
     try:
         # Get all feedback IDs from PostgreSQL
-        postgres_feedbacks = postgres_db.get_all_feedback(limit=10000)
-        postgres_ids = {f["feedback_id"] for f in postgres_feedbacks}
+        postgres_ids = set()
+        try:
+            postgres_feedbacks = postgres_db.get_all_feedback(limit=10000)
+            postgres_ids = {f["feedback_id"] for f in postgres_feedbacks}
+        except Exception as e:
+            logger.error(f"Error fetching PostgreSQL IDs: {str(e)}")
         
         # Get all feedback IDs from Neo4j
         neo4j_ids = set()
-        with db.driver.session() as session:
-            result = session.run("MATCH (f:Feedback) RETURN f.id as id")
-            neo4j_ids = {record["id"] for record in result}
+        try:
+            with db.driver.session() as session:
+                result = session.run("MATCH (f:Feedback) RETURN f.id as id")
+                neo4j_ids = {record["id"] for record in result}
+        except Exception as e:
+            logger.error(f"Error fetching Neo4j IDs: {str(e)}")
         
         # Find matches and mismatches
         matched_ids = postgres_ids.intersection(neo4j_ids)
@@ -481,4 +553,13 @@ async def verify_database_ids():
         }
     except Exception as e:
         logger.error(f"Error verifying database IDs: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # Return error status instead of crashing
+        return {
+            "total_postgres": 0,
+            "total_neo4j": 0,
+            "matched": 0,
+            "matched_ids": [],
+            "only_in_postgres": [],
+            "only_in_neo4j": [],
+            "status": "ERROR"
+        }

@@ -3,31 +3,40 @@ from .config import settings
 from .models import ClassifiedFeedback, GraphData, GraphNode, GraphRelationship
 from typing import List
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class Neo4jDatabase:
     """Neo4j database handler for feedback storage and retrieval."""
     def __init__(self):
         """Initialize the database connection."""
-
-        AWS_URI = settings.aws_neo4j_uri
-        AWS_USER = settings.aws_neo4j_username
-        AWS_PASSWORD = settings.aws_neo4j_password
-        AWS_AUTH = (AWS_USER, AWS_PASSWORD)
-        
-        self.driver = GraphDatabase.driver(AWS_URI, auth=AWS_AUTH)
+        self.driver = None
+        self._connection_error = None
         
         try:
+            AWS_URI = settings.aws_neo4j_uri
+            AWS_USER = settings.aws_neo4j_username
+            AWS_PASSWORD = settings.aws_neo4j_password
+            AWS_AUTH = (AWS_USER, AWS_PASSWORD)
+            
+            self.driver = GraphDatabase.driver(AWS_URI, auth=AWS_AUTH)
             self.driver.verify_connectivity()
-            print(f"✅ Successfully connected to Neo4j at {AWS_URI}")
+            logger.info(f"✅ Successfully connected to Neo4j at {AWS_URI}")
         except Exception as e:
-            print(f"❌ Failed to connect to Neo4j: {str(e)}")
-            raise
+            self._connection_error = str(e)
+            logger.error(f"❌ Failed to connect to Neo4j: {str(e)}")
+            logger.warning("Server will continue to run, but Neo4j operations will fail")
+            # Don't raise - allow server to start even if database is unavailable
     
     def close(self):
         """Close the database connection."""
-        if hasattr(self, 'driver'):
-            self.driver.close()
+        if hasattr(self, 'driver') and self.driver is not None:
+            try:
+                self.driver.close()
+            except Exception as e:
+                logger.error(f"Error closing Neo4j connection: {str(e)}")
     
     def add_feedback(self, feedback: ClassifiedFeedback, feedback_id: str = None) -> str:
         """
@@ -40,6 +49,9 @@ class Neo4jDatabase:
         Returns:
             feedback_id: Unique identifier for the feedback
         """
+        if self.driver is None:
+            raise Exception(f"Neo4j database not connected: {self._connection_error}")
+        
         if not feedback_id:
             feedback_id = str(uuid.uuid4())
         
@@ -99,6 +111,9 @@ class Neo4jDatabase:
         Returns:
             GraphData object containing nodes and relationships
         """
+        if self.driver is None:
+            raise Exception(f"Neo4j database not connected: {self._connection_error}")
+        
         nodes = []
         relationships = []
         
@@ -157,6 +172,9 @@ class Neo4jDatabase:
     
     def get_feedback_count(self) -> int:
         """Get total number of feedback entries."""
+        if self.driver is None:
+            raise Exception(f"Neo4j database not connected: {self._connection_error}")
+        
         with self.driver.session() as session:
             result = session.run("MATCH (f:Feedback) RETURN count(f) as count")
             record = result.single()
@@ -164,6 +182,9 @@ class Neo4jDatabase:
     
     def get_categories_summary(self) -> List[dict]:
         """Get summary of categories with feedback counts."""
+        if self.driver is None:
+            raise Exception(f"Neo4j database not connected: {self._connection_error}")
+        
         with self.driver.session() as session:
             result = session.run(
                 """
