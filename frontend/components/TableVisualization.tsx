@@ -541,10 +541,11 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
-
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
+    if (diffDays >= 7) return '';
+    
     return formatDate(dateString).split(',')[0];
   };
 
@@ -727,8 +728,8 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
         <table className="w-full">
           <thead className="bg-gray-50 border-b-2 border-gray-200">
             <tr>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-24">
-                <div className="flex items-center gap-1">
+              <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 w-24">
+                <div className="flex items-center justify-center gap-1">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -757,6 +758,7 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
                 onFilterChange={updateFilter}
                 isOpen={openDropdown === "department"}
                 onToggle={() => toggleDropdown("department")}
+                align="center"
                 width="w-36"
               />
               <FilterableHeader
@@ -767,6 +769,7 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
                 onFilterChange={updateFilter}
                 isOpen={openDropdown === "impact"}
                 onToggle={() => toggleDropdown("impact")}
+                align="center"
                 width="w-28"
               />
               <FilterableHeader
@@ -855,14 +858,25 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
                     borderBottomColor: expandedRows.has(feedback.feedback_id) ? 'rgba(24, 113, 189, 0.2)' : undefined
                   }}
                 >
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-xs font-semibold text-gray-900">
-                        {getRelativeTime(feedback.timestamp_submitted)}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {feedback.timestamp_submitted ? new Date(feedback.timestamp_submitted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
-                      </span>
+                  <td className="px-4 py-3 whitespace-nowrap text-center">
+                    <div className="flex flex-col items-center gap-1">
+                      {(() => {
+                        const relativeTime = getRelativeTime(feedback.timestamp_submitted);
+                        return relativeTime=='' ? (
+                          <span className="text-xs text-gray-500">
+                            {feedback.timestamp_submitted ? new Date(feedback.timestamp_submitted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+                          </span>
+                        ) : (
+                          <>
+                            <span className="text-xs font-semibold text-gray-900">
+                              {relativeTime}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {feedback.timestamp_submitted ? new Date(feedback.timestamp_submitted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+                            </span>
+                          </>
+                        );
+                      })()}
                       {feedback.followup_opt_in && (
                         <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold" title="Contact info available" style={{ color: 'var(--boston-green)' }}>
                           <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -910,13 +924,13 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap text-center">
                     <span className="text-sm font-medium text-gray-900">
                       {feedback.department_predicted || <span className="text-gray-400">Unassigned</span>}
                     </span>
                   </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
+                  <td className="px-4 py-3 text-center">
+                    <div className="flex flex-wrap gap-1 justify-center">
                       {feedback.impact_type && feedback.impact_type.length > 0 ? (
                         feedback.impact_type.slice(0, 2).map((impact, idx) => (
                           <span
