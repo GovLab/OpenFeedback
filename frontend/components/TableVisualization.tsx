@@ -1,10 +1,136 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { api, FeedbackRecord } from "@/lib/api";
 
 interface FeedbackTableProps {
   refreshTrigger?: number;
+}
+
+interface Filters {
+  urgency: string;
+  status: string;
+  department: string;
+  permitType: string;
+  sentiment: string;
+  impact: string;
+}
+
+// Filterable Header Component
+interface FilterableHeaderProps {
+  label: string;
+  filterKey: keyof Filters;
+  options: string[];
+  currentValue: string;
+  onFilterChange: (key: keyof Filters, value: string) => void;
+  isOpen: boolean;
+  onToggle: () => void;
+  align?: "left" | "center";
+  width?: string;
+  icon?: React.ReactNode;
+}
+
+function FilterableHeader({ 
+  label, 
+  filterKey, 
+  options, 
+  currentValue, 
+  onFilterChange, 
+  isOpen, 
+  onToggle,
+  align = "left",
+  width,
+  icon
+}: FilterableHeaderProps) {
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        if (isOpen) onToggle();
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen, onToggle]);
+
+  const isFiltered = currentValue !== "";
+
+  return (
+    <th className={`px-4 py-3 text-sm font-semibold text-gray-700 ${width || ""} ${align === "center" ? "text-center" : "text-left"}`}>
+      <div className="relative" ref={dropdownRef}>
+        <button
+          onClick={onToggle}
+          className={`flex items-center gap-1 transition-colors rounded px-1.5 py-0.5 -mx-1.5 ${align === "center" ? "mx-auto" : ""}`}
+          style={{ 
+            backgroundColor: isFiltered ? 'var(--boston-optimistic-blue)' : 'transparent',
+            color: isFiltered ? 'white' : 'var(--boston-gray-dark)'
+          }}
+        >
+          {icon}
+          <span>{label}</span>
+          <svg className={`w-3.5 h-3.5 transition-transform ${isOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {/* Dropdown */}
+        {isOpen && (
+          <div 
+            className="absolute z-50 mt-1 rounded-lg shadow-lg py-1 min-w-[160px]"
+            style={{ 
+              left: align === "center" ? "50%" : "0", 
+              transform: align === "center" ? "translateX(-50%)" : "none",
+              backgroundColor: 'white',
+              border: '1px solid var(--boston-gray-medium)'
+            }}
+          >
+            <button
+              onClick={() => { onFilterChange(filterKey, ""); onToggle(); }}
+              className="w-full text-left px-3 py-2 text-sm flex items-center justify-between transition-colors"
+              style={{ 
+                color: !currentValue ? 'var(--boston-optimistic-blue)' : 'var(--boston-gray-dark)',
+                fontWeight: !currentValue ? 600 : 400,
+                backgroundColor: 'transparent'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--boston-gray-light)'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+              <span>All {label}</span>
+              {!currentValue && (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              )}
+            </button>
+            <div style={{ borderTop: '1px solid var(--boston-gray-medium)', margin: '4px 0' }}></div>
+            {options.map((option) => (
+              <button
+                key={option}
+                onClick={() => { onFilterChange(filterKey, option); onToggle(); }}
+                className="w-full text-left px-3 py-2 text-sm flex items-center justify-between transition-colors"
+                style={{ 
+                  color: currentValue === option ? 'var(--boston-optimistic-blue)' : 'var(--boston-gray-dark)',
+                  fontWeight: currentValue === option ? 600 : 400,
+                  backgroundColor: 'transparent'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--boston-gray-light)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                <span>{option}</span>
+                {currentValue === option && (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </th>
+  );
 }
 
 // Original Feedback Card Component
@@ -258,6 +384,80 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [filters, setFilters] = useState<Filters>({
+    urgency: "",
+    status: "",
+    department: "",
+    permitType: "",
+    sentiment: "",
+    impact: "",
+  });
+  const [openDropdown, setOpenDropdown] = useState<keyof Filters | null>(null);
+
+  const toggleDropdown = (key: keyof Filters) => {
+    setOpenDropdown(openDropdown === key ? null : key);
+  };
+
+  // Helper to get sentiment label from score
+  const getSentimentFromScore = (score: number | null): string => {
+    if (score === null) return "Unknown";
+    if (score > 0.3) return "Positive";
+    if (score < -0.3) return "Negative";
+    return "Neutral";
+  };
+
+  // Extract unique filter options from loaded data
+  const filterOptions = useMemo(() => {
+    const urgencies = new Set<string>();
+    const statuses = new Set<string>();
+    const departments = new Set<string>();
+    const permitTypes = new Set<string>();
+    const sentiments = new Set<string>();
+    const impacts = new Set<string>();
+
+    feedbacks.forEach((f) => {
+      if (f.urgency_level) urgencies.add(f.urgency_level);
+      if (f.status) statuses.add(f.status);
+      if (f.department_predicted) departments.add(f.department_predicted);
+      if (f.permit_type) permitTypes.add(f.permit_type);
+      sentiments.add(getSentimentFromScore(f.sentiment_score));
+      if (f.impact_type) {
+        f.impact_type.forEach((impact) => impacts.add(impact));
+      }
+    });
+
+    return {
+      urgencies: Array.from(urgencies).sort(),
+      statuses: Array.from(statuses).sort(),
+      departments: Array.from(departments).sort(),
+      permitTypes: Array.from(permitTypes).sort(),
+      sentiments: Array.from(sentiments).sort(),
+      impacts: Array.from(impacts).sort(),
+    };
+  }, [feedbacks]);
+
+  // Apply filters to feedbacks
+  const filteredFeedbacks = useMemo(() => {
+    return feedbacks.filter((f) => {
+      if (filters.urgency && f.urgency_level !== filters.urgency) return false;
+      if (filters.status && f.status !== filters.status) return false;
+      if (filters.department && f.department_predicted !== filters.department) return false;
+      if (filters.permitType && f.permit_type !== filters.permitType) return false;
+      if (filters.sentiment && getSentimentFromScore(f.sentiment_score) !== filters.sentiment) return false;
+      if (filters.impact && (!f.impact_type || !f.impact_type.includes(filters.impact))) return false;
+      return true;
+    });
+  }, [feedbacks, filters]);
+
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
+
+  const clearAllFilters = () => {
+    setFilters({ urgency: "", status: "", department: "", permitType: "", sentiment: "", impact: "" });
+  };
+
+  const updateFilter = (key: keyof Filters, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
 
   const fetchFeedbacks = async () => {
     try {
@@ -361,12 +561,12 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
   };
 
   const toggleAllRows = () => {
-    if (expandedRows.size === feedbacks.length) {
+    if (expandedRows.size === filteredFeedbacks.length) {
       // All rows are expanded, collapse all
       setExpandedRows(new Set());
     } else {
       // Not all rows are expanded, expand all
-      setExpandedRows(new Set(feedbacks.map(f => f.feedback_id)));
+      setExpandedRows(new Set(filteredFeedbacks.map(f => f.feedback_id)));
     }
   };
 
@@ -409,12 +609,7 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200" style={{ background: 'linear-gradient(to right, rgba(24, 113, 189, 0.05), rgba(79, 156, 235, 0.05))' }}>
         <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-bold text-gray-900">Feedback Database</h3>
-            <p className="text-sm text-gray-600 mt-1">
-              {feedbacks.length} records from PostgreSQL
-            </p>
-          </div>
+          <h3 className="text-lg font-bold text-gray-900">Feedback Database</h3>
           <button
             onClick={fetchFeedbacks}
             className="flex items-center gap-2 px-4 py-2 text-white rounded-lg hover:opacity-90 transition-all"
@@ -428,50 +623,193 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
         </div>
       </div>
 
+      {/* Active Filters Bar - Only shows when filters are active */}
+      {activeFilterCount > 0 && (
+        <div className="px-6 py-2 border-b border-gray-200" style={{ backgroundColor: 'rgba(24, 113, 189, 0.05)' }}>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-medium" style={{ color: 'var(--boston-charles-blue)' }}>
+              <svg className="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              Filtering by:
+            </span>
+            {filters.urgency && (
+              <span 
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full text-white"
+                style={{ backgroundColor: 'var(--urgency-medium)' }}
+              >
+                {filters.urgency} Urgency
+                <button onClick={() => updateFilter("urgency", "")} className="hover:opacity-80">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            )}
+            {filters.status && (
+              <span 
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full text-white"
+                style={{ backgroundColor: 'var(--status-new)' }}
+              >
+                {filters.status}
+                <button onClick={() => updateFilter("status", "")} className="hover:opacity-80">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            )}
+            {filters.department && (
+              <span 
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full text-white"
+                style={{ backgroundColor: 'var(--boston-optimistic-blue)' }}
+              >
+                {filters.department}
+                <button onClick={() => updateFilter("department", "")} className="hover:opacity-80">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            )}
+            {filters.permitType && (
+              <span 
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full text-white"
+                style={{ backgroundColor: 'var(--boston-charles-blue)' }}
+              >
+                {filters.permitType}
+                <button onClick={() => updateFilter("permitType", "")} className="hover:opacity-80">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            )}
+            {filters.sentiment && (
+              <span 
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full text-white"
+                style={{ backgroundColor: filters.sentiment === 'Positive' ? 'var(--sentiment-positive)' : filters.sentiment === 'Negative' ? 'var(--sentiment-negative)' : 'var(--sentiment-neutral)' }}
+              >
+                {filters.sentiment}
+                <button onClick={() => updateFilter("sentiment", "")} className="hover:opacity-80">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            )}
+            {filters.impact && (
+              <span 
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full text-white"
+                style={{ backgroundColor: 'var(--boston-blue-desaturated)' }}
+              >
+                {filters.impact}
+                <button onClick={() => updateFilter("impact", "")} className="hover:opacity-80">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            )}
+            <button
+              onClick={clearAllFilters}
+              className="ml-auto text-xs font-medium hover:underline"
+              style={{ color: 'var(--boston-freedom-trail-red)' }}
+            >
+              Clear all
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-gray-50 border-b-2 border-gray-200">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-24">
+              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-24">
                 <div className="flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   Time
                 </div>
               </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                <div className="flex items-center gap-1">
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <FilterableHeader
+                label="Issue"
+                filterKey="permitType"
+                options={filterOptions.permitTypes}
+                currentValue={filters.permitType}
+                onFilterChange={updateFilter}
+                isOpen={openDropdown === "permitType"}
+                onToggle={() => toggleDropdown("permitType")}
+                icon={
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
-                  Issue Summary
-                </div>
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-36">
-                Department
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider w-28">
-                Impact
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-20">
-                Sentiment
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-24">
-                Urgency
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-24">
-                Status
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider w-16">
+                }
+              />
+              <FilterableHeader
+                label="Department"
+                filterKey="department"
+                options={filterOptions.departments}
+                currentValue={filters.department}
+                onFilterChange={updateFilter}
+                isOpen={openDropdown === "department"}
+                onToggle={() => toggleDropdown("department")}
+                width="w-36"
+              />
+              <FilterableHeader
+                label="Impact"
+                filterKey="impact"
+                options={filterOptions.impacts}
+                currentValue={filters.impact}
+                onFilterChange={updateFilter}
+                isOpen={openDropdown === "impact"}
+                onToggle={() => toggleDropdown("impact")}
+                width="w-28"
+              />
+              <FilterableHeader
+                label="Sentiment"
+                filterKey="sentiment"
+                options={filterOptions.sentiments}
+                currentValue={filters.sentiment}
+                onFilterChange={updateFilter}
+                isOpen={openDropdown === "sentiment"}
+                onToggle={() => toggleDropdown("sentiment")}
+                align="center"
+                width="w-24"
+              />
+              <FilterableHeader
+                label="Urgency"
+                filterKey="urgency"
+                options={filterOptions.urgencies}
+                currentValue={filters.urgency}
+                onFilterChange={updateFilter}
+                isOpen={openDropdown === "urgency"}
+                onToggle={() => toggleDropdown("urgency")}
+                align="center"
+                width="w-24"
+              />
+              <FilterableHeader
+                label="Status"
+                filterKey="status"
+                options={filterOptions.statuses}
+                currentValue={filters.status}
+                onFilterChange={updateFilter}
+                isOpen={openDropdown === "status"}
+                onToggle={() => toggleDropdown("status")}
+                align="center"
+                width="w-24"
+              />
+              <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 w-16">
                 <button
                   onClick={toggleAllRows}
                   className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-gray-200 transition-all"
                   style={{ color: 'var(--boston-optimistic-blue)' }}
-                  title={expandedRows.size === feedbacks.length ? "Collapse all rows" : "Expand all rows"}
+                  title={expandedRows.size === filteredFeedbacks.length ? "Collapse all rows" : "Expand all rows"}
                 >
-                  {expandedRows.size === feedbacks.length ? (
+                  {expandedRows.size === filteredFeedbacks.length ? (
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
                     </svg>
@@ -485,7 +823,23 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {feedbacks.map((feedback) => (
+            {filteredFeedbacks.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-6 py-12 text-center">
+                  <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                  </svg>
+                  <p className="text-gray-600 font-medium">No feedback matches your filters</p>
+                  <button
+                    onClick={clearAllFilters}
+                    className="mt-2 text-sm text-blue-600 hover:text-blue-800 underline"
+                  >
+                    Clear all filters
+                  </button>
+                </td>
+              </tr>
+            )}
+            {filteredFeedbacks.map((feedback) => (
               <>
                 <tr 
                   key={feedback.feedback_id} 
@@ -689,12 +1043,21 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
         </table>
       </div>
 
-      {/* Footer */}
-      <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
-        <p className="text-sm text-gray-600 text-center">
-          Showing {feedbacks.length} most recent feedback entries
-        </p>
-      </div>
+      {/* Footer - Only shows when filters are active */}
+      {activeFilterCount > 0 && (
+        <div className="bg-gray-50 px-6 py-3 border-t border-gray-200">
+          <p className="text-sm text-gray-600 text-center">
+            Showing {filteredFeedbacks.length} of {feedbacks.length} entries
+            <button 
+              onClick={clearAllFilters}
+              className="ml-2 hover:underline"
+              style={{ color: 'var(--boston-optimistic-blue)' }}
+            >
+              Clear filters
+            </button>
+          </p>
+        </div>
+      )}
     </div>
   );
 }
