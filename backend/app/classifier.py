@@ -301,6 +301,13 @@ def augment_feedback(original_feedback: str, conversation_history: List) -> str:
         # No conversation, return empty string
         return ""
     
+    # Check if there are any user answers (not just assistant questions)
+    has_user_responses = any(msg.role == "user" for msg in conversation_history)
+    if not has_user_responses:
+        # User skipped without answering, return empty string
+        logger.info("No user responses found in conversation history, skipping augmentation")
+        return ""
+    
     try:
         # Build the augmentation prompt
         system_message = prompt_builder.build_augmentation_system_message()

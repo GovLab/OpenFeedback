@@ -179,27 +179,35 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
   };
 
   const finishConversation = async () => {
-    try {
-      // Use AI to generate an additional note from the conversation
-      const augmentationResult = await api.augmentFeedback({
-        original_feedback: originalFeedback,
-        conversation_history: conversationHistory
-      });
-      
-      const additionalNote = augmentationResult.additional_note;
-      // Keep original feedback and append AI-generated note
-      const enhancedFeedback = `${originalFeedback}\n\nAdditional note: ${additionalNote}`;
-      setFeedback(enhancedFeedback);      
-    } catch (error) {
-      console.error('Error augmenting feedback:', error);
-      // Fallback to simple concatenation if AI fails
-      const conversationText = conversationHistory
-        .filter(msg => msg.role === 'user')
-        .map(msg => msg.content)
-        .join(' ');
-      
-      const enhancedFeedback = `${originalFeedback}\n\nAdditional note: ${conversationText}`;
-      setFeedback(enhancedFeedback);
+    // Check if user actually answered any questions
+    const hasUserAnswers = conversationHistory.some(msg => msg.role === 'user');
+    
+    if (!hasUserAnswers) {
+      // User skipped without answering, use original feedback as-is
+      setFeedback(originalFeedback);
+    } else {
+      try {
+        // Use AI to generate an additional note from the conversation
+        const augmentationResult = await api.augmentFeedback({
+          original_feedback: originalFeedback,
+          conversation_history: conversationHistory
+        });
+        
+        const additionalNote = augmentationResult.additional_note;
+        // Keep original feedback and append AI-generated note
+        const enhancedFeedback = `${originalFeedback}\n\nAdditional note: ${additionalNote}`;
+        setFeedback(enhancedFeedback);      
+      } catch (error) {
+        console.error('Error augmenting feedback:', error);
+        // Fallback to simple concatenation if AI fails
+        const conversationText = conversationHistory
+          .filter(msg => msg.role === 'user')
+          .map(msg => msg.content)
+          .join(' ');
+        
+        const enhancedFeedback = `${originalFeedback}\n\nAdditional note: ${conversationText}`;
+        setFeedback(enhancedFeedback);
+      }
     }
 
     // Close chatbot and put enhanced text back in textarea
