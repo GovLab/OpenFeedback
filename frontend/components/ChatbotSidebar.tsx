@@ -28,6 +28,7 @@ export default function ChatbotSidebar({
 }: ChatbotSidebarProps) {
   const [userInput, setUserInput] = useState('');
   const chatbotRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Scroll to chatbot on mobile when it opens
   useEffect(() => {
@@ -46,6 +47,13 @@ export default function ChatbotSidebar({
       }
     }
   }, [isOpen]);
+
+  // Auto-scroll to bottom when new messages are added or loading state changes
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [conversationHistory, chatLoading]);
 
   if (!isOpen) return null;
 
@@ -154,6 +162,7 @@ export default function ChatbotSidebar({
             </div>
           </div>
         )}
+        <div ref={messagesEndRef} />
       </div>
 
       {/* Action Buttons */}

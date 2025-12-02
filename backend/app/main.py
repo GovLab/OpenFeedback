@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse, IndividualResponse, ConversationInput, ConversationResponse, AugmentationInput, AugmentationResponse
-from .classifier import classify_feedback, chatbot_agent, augment_feedback, determine_permit_context
+from .classifier import classify_feedback, chatbot_agent, augment_feedback, determine_permit_context, detect_spam_or_invalid
 from .database import db
 from .postgres_db import postgres_db
 from .file_processor import FileProcessor
@@ -155,16 +155,29 @@ async def feedback_agent(conversation: ConversationInput):
     logger.info(f"Conversation turn: {len(conversation.conversation_history) + 1}")
     
     try:
-        # Determine permit context only on first call (empty conversation history)
-        permit_context = ""
+        # Check for spam/invalid feedback only on first call (empty conversation history)
         if not conversation.conversation_history:
+            logger.info("📍 FIRST TURN: Checking for spam/invalid content")
+            spam_check = detect_spam_or_invalid(conversation.original_feedback)
+            
+            if spam_check.get("is_invalid", False):
+                logger.info("⚠️ Feedback detected as spam/invalid - returning early")
+                return {
+                    "message": "We cannot allow non-permit related feedback or other contect.",
+                    "needs_followup": False,
+                    "quality_score": 0,
+                    "is_invalid": True
+                }
+            
+            # Determine permit context only on first call
             logger.info("📍 FIRST TURN: Will determine permit context")
             permit_context = determine_permit_context(
                 conversation.original_feedback,
                 conversation.category_map
             )
         else:
-            logger.info("📍 SUBSEQUENT TURN: Skipping permit context (already loaded)")
+            logger.info("📍 SUBSEQUENT TURN: Skipping spam check and permit context (already loaded)")
+            permit_context = ""
             logger.info("=" * 60)
         
         # Call the chatbot agent with permit context
@@ -173,6 +186,9 @@ async def feedback_agent(conversation: ConversationInput):
             conversation.conversation_history,
             permit_context
         )
+        
+        # Ensure is_invalid is set in result
+        result["is_invalid"] = False
         
         logger.info("\n" + "=" * 70)
         logger.info("==== FINAL RESULT ====")

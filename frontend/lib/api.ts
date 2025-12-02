@@ -141,6 +141,7 @@ export interface ConversationResponse {
   message: string;
   needs_followup: boolean;
   quality_score?: number;
+  is_invalid?: boolean;
 }
 
 export interface FeedbackRecord {

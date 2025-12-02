@@ -194,6 +194,64 @@ def determine_permit_context(feedback_text: str, category_map: dict = None) -> s
         return ""
 
 
+def detect_spam_or_invalid(feedback_text: str) -> dict:
+    """
+    Detect if feedback is spam, outlandish, or non-permit-related.
+    
+    Args:
+        feedback_text: The feedback text to check
+        
+    Returns:
+        Dict with is_invalid (bool) and reason (str, optional)
+    """
+    logger.info("=" * 60)
+    logger.info("==== SPAM/INVALID DETECTION ====")
+    logger.info("=" * 60)
+    
+    if not settings.openai_api_key:
+        logger.warning("OpenAI API key not configured, skipping spam detection")
+        return {"is_invalid": False}
+    
+    try:
+        logger.info(f"Checking feedback: {feedback_text[:100]}...")
+        
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            temperature=0.3,
+            messages=[
+                {
+                    "role": "system",
+                    "content": "You are a spam detection system for Boston city permit feedback. You identify spam, outlandish content, or feedback completely unrelated to permits."
+                },
+                {
+                    "role": "user",
+                    "content": prompt_builder.build_spam_detection_prompt(feedback=feedback_text)
+                }
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=50
+        )
+        
+        result = json.loads(response.choices[0].message.content)
+        is_invalid = bool(result.get("is_invalid", False))
+        reason = result.get("reason", "")
+        
+        logger.info(f"Spam detection result: is_invalid={is_invalid}")
+        if is_invalid:
+            logger.info(f"Reason: {reason}")
+        logger.info("=" * 60)
+        
+        return {
+            "is_invalid": is_invalid,
+            "reason": reason
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in spam detection: {str(e)}")
+        # On error, default to not invalid (be lenient)
+        return {"is_invalid": False}
+
+
 def chatbot_agent(original_feedback: str, conversation_history: List, permit_context: str = "") -> dict:
     """
     Intelligent chatbot agent that evaluates feedback quality and asks follow-up questions.
@@ -217,20 +275,23 @@ def chatbot_agent(original_feedback: str, conversation_history: List, permit_con
     logger.info(f"Conversation history: {len(conversation_history)} messages")
     logger.info(f"Permit context: {'Available (' + str(len(permit_context)) + ' chars)' if permit_context else 'Not provided'}")
     
-    # Build conversation context
-    context_parts = [f"Original feedback: {original_feedback}"]
+    # Build conversation context with clear structure
+    context_parts = [f"=== ORIGINAL FEEDBACK ===\n{original_feedback}"]
     
     if conversation_history:
-        context_parts.append("\nConversation so far:")
+        context_parts.append("\n=== CONVERSATION HISTORY ===")
+        # Format conversation as Q&A pairs for clarity
+        question_num = 1
         for msg in conversation_history[-8:]:  # Last 8 messages for context
-            role_name = msg.role
-            context_parts.append(f"{role_name}: {msg.content}")
+            if msg.role == "assistant":
+                context_parts.append(f"\nQuestion {question_num}: {msg.content}")
+            elif msg.role == "user":
+                context_parts.append(f"Answer {question_num}: {msg.content}")
+                question_num += 1
+        
+        context_parts.append(f"\n=== END CONVERSATION HISTORY ===")
         logger.info(f"Context parts built: {len(context_parts)} parts")
-        for i, part in enumerate(context_parts):
-            if i == 0:
-                logger.info(f"  [0] Original feedback: {part[:80]}..." if len(part) > 80 else f"  [0] {part}")
-            else:
-                logger.info(f"  [{i}] {part}")
+        logger.info(f"Conversation has {question_num - 1} Q&A pairs")
     context = "\n".join(context_parts)
     
     # Build system message with permit context if available

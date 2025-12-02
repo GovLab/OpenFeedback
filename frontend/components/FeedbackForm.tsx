@@ -78,6 +78,13 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
           conversation_history: []
         });
         
+        // Check if feedback is spam/invalid
+        if (agentData.is_invalid) {
+          setError('We cannot allow non-permit related feedback or other content.');
+          setLoading(false);
+          return;
+        }
+        
         if (agentData.needs_followup) {
           // Low quality - show chatbot sidebar with agent's first question
           setOriginalFeedback(feedback);

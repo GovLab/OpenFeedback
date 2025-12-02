@@ -121,7 +121,7 @@ function NodeDetailsSidebar({ selectedNode, onClose, getNodeInfo }: NodeDetailsS
             />
           </div>
           <div>
-            <h3 className="text-base md:text-lg font-bold text-gray-900">Node Details</h3>
+            <h3 className="text-base md:text-lg font-bold text-gray-900">Details</h3>
             <p className="text-xs text-gray-500">Explore information</p>
           </div>
         </div>

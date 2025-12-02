@@ -79,6 +79,7 @@ class ConversationResponse(BaseModel):
     message: str
     needs_followup: bool
     quality_score: Optional[int] = None
+    is_invalid: Optional[bool] = False  # True if feedback is spam/outlandish/non-permit-related
 
 
 class AugmentationInput(BaseModel):
