@@ -7,11 +7,8 @@ interface ChatbotSidebarProps {
   isOpen: boolean;
   conversationHistory: ConversationMessage[];
   questionCount: number;
-  canSkip: boolean;
   onClose: () => void;
   onSubmitAnswer: (answer: string) => Promise<void>;
-  onSkip: () => void;
-  onEdit: () => void;
   chatLoading: boolean;
 }
 
@@ -19,11 +16,8 @@ export default function ChatbotSidebar({
   isOpen,
   conversationHistory,
   questionCount,
-  canSkip,
   onClose,
   onSubmitAnswer,
-  onSkip,
-  onEdit,
   chatLoading
 }: ChatbotSidebarProps) {
   const [userInput, setUserInput] = useState('');
@@ -165,39 +159,19 @@ export default function ChatbotSidebar({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Action Buttons */}
+      {/* Status Message */}
       {questionCount >= 2 && (
         <div className="px-3 pb-2">
-          {canSkip ? (
-            <div className="flex gap-2">
-              <button
-                onClick={onEdit}
-                className="flex-1 text-sm px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all font-medium"
-              >
-                ← Edit
-              </button>
-              <button
-                onClick={onSkip}
-                className="flex-1 text-sm px-3 py-2 text-white rounded-lg transition-all shadow-sm font-semibold"
-                style={{ backgroundColor: 'var(--boston-optimistic-blue)' }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--boston-charles-blue)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'var(--boston-optimistic-blue)'}
-              >
-                Continue →
-              </button>
+          <div className="text-center py-2 px-3 bg-amber-50 border border-amber-300 rounded-lg">
+            <div className="flex items-center justify-center gap-1.5">
+              <svg className="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <p className="text-xs text-amber-800 font-semibold">
+                Additional details needed
+              </p>
             </div>
-          ) : (
-            <div className="text-center py-2 px-3 bg-amber-50 border border-amber-300 rounded-lg">
-              <div className="flex items-center justify-center gap-1.5">
-                <svg className="w-3.5 h-3.5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <p className="text-xs text-amber-800 font-semibold">
-                  Additional details needed
-                </p>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       )}
 
@@ -240,14 +214,14 @@ export default function ChatbotSidebar({
             }}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3.5} d="M12 5l8 8m0 0l-8 8m8-8H4" />
             </svg>
           </button>
         </div>
         {/* Skip Button - Always Available */}
         <div className="mt-2 text-center">
           <button
-            onClick={onSkip}
+            onClick={onClose}
             disabled={chatLoading}
             className="text-xs text-gray-500 hover:text-gray-700 underline transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >

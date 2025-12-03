@@ -21,9 +21,10 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
   const [questionCount, setQuestionCount] = useState(0);
-  const [canSkip, setCanSkip] = useState(false);
   const [hasBeenEnhanced, setHasBeenEnhanced] = useState(false);
+  const [isActuallyAugmented, setIsActuallyAugmented] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
+  const [prefetchedAugmentation, setPrefetchedAugmentation] = useState<string | null>(null);
 
   // Contact opt-in state
   const [contactOptIn, setContactOptIn] = useState<'yes' | 'no' | null>(null);
@@ -93,7 +94,6 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
             content: agentData.message
           }]);
           setQuestionCount(1);
-          setCanSkip(false);
           setShowChatbot(true);
           setLoading(false);
           return;
@@ -121,6 +121,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
       setResult(submitted);
       setFeedback('');
       setHasBeenEnhanced(false); // Reset for next submission
+      setIsActuallyAugmented(false); // Reset augmentation flag
       setShowSuggestions(true); // Show suggestions for next feedback
       setContactOptIn(null); // Reset contact opt-in
       setContactInfo({ name: '', email: '', phone: '' }); // Reset contact fields
@@ -149,12 +150,6 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
       const newQuestionCount = questionCount + 1;
       setQuestionCount(newQuestionCount);
       
-      // Stop after 5 questions max
-      if (newQuestionCount >= 5) {
-        await finishConversation();
-        return;
-      }
-      
       // Call intelligent agent with full conversation history
       const agentData = await api.feedbackAgent({
         original_feedback: originalFeedback,
@@ -169,14 +164,33 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
       ];
       setConversationHistory(updatedHistory);
       
-      // Update skip button based on agent's quality assessment
-      if (newQuestionCount >= 2) {
-        setCanSkip(!agentData.needs_followup);
-      }
+      // Auto-finish if quality is sufficient OR after 5 questions
+      const shouldFinish = !agentData.needs_followup || newQuestionCount >= 5;
       
-      // If agent says quality is sufficient, finish conversation
-      if (!agentData.needs_followup) {
-        setTimeout(() => finishConversation(), 1500);
+      if (shouldFinish) {
+        // Prefetch augmentation before finishing
+        const hasUserAnswers = updatedHistory.some(msg => msg.role === 'user');
+        if (hasUserAnswers) {
+          // Start augmentation in background
+          api.augmentFeedback({
+            original_feedback: originalFeedback,
+            conversation_history: updatedHistory
+          })
+            .then((augmentationResult) => {
+              setPrefetchedAugmentation(augmentationResult.additional_note);
+            })
+            .catch((error) => {
+              console.error('Error prefetching augmentation:', error);
+              // Fallback to simple concatenation if AI fails
+              const conversationText = updatedHistory
+                .filter(msg => msg.role === 'user')
+                .map(msg => msg.content)
+                .join(' ');
+              setPrefetchedAugmentation(conversationText);
+            });
+        }
+        // Auto-finish when quality is sufficient or after 5 questions
+        setTimeout(() => finishConversation(updatedHistory, true), 1500);
       }
     } catch (err) {
       console.error('Chat error:', err);
@@ -185,36 +199,47 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
     }
   };
 
-  const finishConversation = async () => {
+  const finishConversation = async (historyToUse?: ConversationMessage[], usePrefetched: boolean = false) => {
+    // Use provided history or fall back to current state
+    const history = historyToUse ?? conversationHistory;
+    
     // Check if user actually answered any questions
-    const hasUserAnswers = conversationHistory.some(msg => msg.role === 'user');
+    const hasUserAnswers = history.some(msg => msg.role === 'user');
     
     if (!hasUserAnswers) {
       // User skipped without answering, use original feedback as-is
       setFeedback(originalFeedback);
+      setPrefetchedAugmentation(null);
     } else {
-      try {
-        // Use AI to generate an additional note from the conversation
-        const augmentationResult = await api.augmentFeedback({
-          original_feedback: originalFeedback,
-          conversation_history: conversationHistory
-        });
-        
-        const additionalNote = augmentationResult.additional_note;
-        // Keep original feedback and append AI-generated note
-        const enhancedFeedback = `${originalFeedback}\n\nAdditional note: ${additionalNote}`;
-        setFeedback(enhancedFeedback);      
-      } catch (error) {
-        console.error('Error augmenting feedback:', error);
-        // Fallback to simple concatenation if AI fails
-        const conversationText = conversationHistory
-          .filter(msg => msg.role === 'user')
-          .map(msg => msg.content)
-          .join(' ');
-        
-        const enhancedFeedback = `${originalFeedback}\n\nAdditional note: ${conversationText}`;
-        setFeedback(enhancedFeedback);
+      let additionalNote: string | null = null;
+      
+      if (usePrefetched && prefetchedAugmentation) {
+        // Use prefetched augmentation if available
+        additionalNote = prefetchedAugmentation;
+      } else {
+        // Generate augmentation on demand
+        try {
+          const augmentationResult = await api.augmentFeedback({
+            original_feedback: originalFeedback,
+            conversation_history: history
+          });
+          additionalNote = augmentationResult.additional_note;
+        } catch (error) {
+          console.error('Error augmenting feedback:', error);
+          // Fallback to simple concatenation if AI fails
+          const conversationText = history
+            .filter(msg => msg.role === 'user')
+            .map(msg => msg.content)
+            .join(' ');
+          additionalNote = conversationText;
+        }
       }
+      
+      // Keep original feedback and append AI-generated note
+      const enhancedFeedback = `${originalFeedback}\n\nAdditional note: ${additionalNote}`;
+      setFeedback(enhancedFeedback);
+      setPrefetchedAugmentation(null);
+      setIsActuallyAugmented(true);
     }
 
     // Close chatbot and put enhanced text back in textarea
@@ -225,21 +250,27 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
     setConversationHistory([]);
     setOriginalFeedback('');
     setQuestionCount(0);
-    setCanSkip(false);
   };
 
-  const handleSkipConversation = () => {
-    finishConversation();
-  };
-
-  const handleEditFeedback = () => {
-    setFeedback(originalFeedback);
-    setShowChatbot(false);
-    setConversationHistory([]);
-    setOriginalFeedback('');
-    setQuestionCount(0);
-    setCanSkip(false);
-    setHasBeenEnhanced(false); // Reset enhancement flag
+  const handleCloseChatbot = async () => {
+    // Check if user answered at least one question
+    const hasUserAnswers = conversationHistory.some(msg => msg.role === 'user');
+    
+    if (hasUserAnswers) {
+      // User answered at least one question - augment feedback
+      await finishConversation(conversationHistory, true);
+    } else {
+      // User skipped after 1st question - just restore original feedback
+      // Mark as enhanced so it can be submitted without triggering chatbot again
+      setFeedback(originalFeedback);
+      setHasBeenEnhanced(true);
+      setShowChatbot(false);
+      setPrefetchedAugmentation(null);
+      // Reset chatbot state
+      setConversationHistory([]);
+      setOriginalFeedback('');
+      setQuestionCount(0);
+    }
   };
 
   return (
@@ -251,16 +282,33 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
         borderWidth: '1px',
         boxShadow: '0 4px 6px -1px rgba(24, 113, 189, 0.1), 0 2px 4px -1px rgba(24, 113, 189, 0.06)'
       }}>
-        <div className="mb-5">
-          <label htmlFor="feedback" className="block text-lg font-semibold mb-1 text-slate-900">
-            How would you improve permitting?
+        <div className="mb-2">
+          <label htmlFor="feedback" className="block text-lg font-semibold text-slate-900">
+            How was your experience with permitting?
           </label>
-          <p className="text-sm text-slate-600">Frustrated by permitting? Want to share your experiences? Have ideas to make it better?</p>
         </div>
-        
+        {/* Suggestion prompts */}
+        {showSuggestions && !isActuallyAugmented && (
+          <div className="mb-2 space-y-1">
+            <p className="text-xs italic mb-1.5" style={{ color: 'var(--boston-gray-dark)', opacity: 0.8 }}>
+              Need help? Try answering:
+            </p>
+            <div className="space-y-0.5 pl-1">
+              {suggestionPrompts.map((prompt, index) => (
+                <p
+                  key={index}
+                  className="text-xs italic leading-relaxed"
+                  style={{ color: 'var(--boston-gray-dark)', opacity: 0.8 }}
+                >
+                  • {prompt}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            {hasBeenEnhanced && (
+            {isActuallyAugmented && (
               <div className="mb-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium" style={{ 
                 backgroundColor: 'rgba(24, 113, 189, 0.12)', 
                 borderColor: 'var(--boston-optimistic-blue)',
@@ -277,16 +325,18 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
             <textarea
               id="feedback"
               value={feedback}
-              onChange={(e) => !hasBeenEnhanced && setFeedback(e.target.value)}
-              onFocus={() => setShowSuggestions(!hasBeenEnhanced)}
-              className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-[#007A33] focus:border-[#007A33] text-slate-900 resize-y placeholder:text-slate-400 text-base leading-relaxed min-h-[120px] max-h-[400px] ${
-                hasBeenEnhanced ? 'border-slate-200 bg-slate-50 cursor-not-allowed' : 'border-slate-300'
+              onChange={(e) => !isActuallyAugmented && setFeedback(e.target.value)}
+              onFocus={() => setShowSuggestions(!isActuallyAugmented)}
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-[#007A33] focus:border-[#007A33] text-slate-900 resize-y placeholder:text-slate-400 text-base leading-relaxed max-h-[400px] ${
+                isActuallyAugmented 
+                  ? 'border-slate-200 bg-slate-50 cursor-not-allowed min-h-[300px]' 
+                  : 'border-slate-300 min-h-[120px]'
               }`}
               placeholder="Share feedback on your experience!"
-              disabled={loading || showChatbot || hasBeenEnhanced}
+              disabled={loading || showChatbot || isActuallyAugmented}
             />
             
-            {hasBeenEnhanced && (
+            {isActuallyAugmented && (
               <div className="mt-3 flex items-start gap-2 text-sm" style={{ color: 'var(--boston-gray-dark)' }}>
                 <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--boston-optimistic-blue)' }}>
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -295,25 +345,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
               </div>
             )}
             
-            {/* Suggestion prompts */}
-            {showSuggestions && !hasBeenEnhanced && (
-              <div className="mt-3 space-y-1">
-                <p className="text-xs italic mb-1.5" style={{ color: 'var(--boston-gray-dark)', opacity: 0.8 }}>
-                  Need help? Try answering:
-                </p>
-                <div className="space-y-0.5 pl-1">
-                  {suggestionPrompts.map((prompt, index) => (
-                    <p
-                      key={index}
-                      className="text-xs italic leading-relaxed"
-                      style={{ color: 'var(--boston-gray-dark)', opacity: 0.8 }}
-                    >
-                      • {prompt}
-                    </p>
-                  ))}
-                </div>
-              </div>
-            )}
+          
           </div>
 
           {/* Contact Opt-in Section */}
@@ -475,7 +507,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
                 </svg>
                 Submitting...
               </span>
-            ) : hasBeenEnhanced ? (
+            ) : isActuallyAugmented ? (
               <span className="flex items-center justify-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -503,11 +535,8 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
         isOpen={showChatbot}
         conversationHistory={conversationHistory}
         questionCount={questionCount}
-        canSkip={canSkip}
-        onClose={handleEditFeedback}
+        onClose={handleCloseChatbot}
         onSubmitAnswer={handleChatSubmit}
-        onSkip={handleSkipConversation}
-        onEdit={handleEditFeedback}
         chatLoading={chatLoading}
       />
     </div>

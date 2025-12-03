@@ -71,6 +71,7 @@ class PromptBuilder:
             Formatted prompt string
         """
         template = """Analyze the following citizen feedback and classify it into relevant categories and subcategories based on core friction points in the permit process.
+Note: If feedback is vague or lacks detail, make your best assessment based on available information without spending excessive time trying to infer missing context.
 
 Available Categories and Subcategories:
 
