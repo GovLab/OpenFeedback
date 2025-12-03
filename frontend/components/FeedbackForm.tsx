@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api, ClassifiedFeedback, ConversationMessage } from '@/lib/api';
 import ChatbotSidebar from './ChatbotSidebar';
 
@@ -25,6 +25,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
   const [isActuallyAugmented, setIsActuallyAugmented] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [prefetchedAugmentation, setPrefetchedAugmentation] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Contact opt-in state
   const [contactOptIn, setContactOptIn] = useState<'yes' | 'no' | null>(null);
@@ -40,6 +41,16 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
     "Can you describe a problem you encountered?",
     "What frustrated you about your recent interaction?",
   ];
+
+  // Auto-resize textarea when feedback is augmented and scroll to bottom
+  useEffect(() => {
+    if (textareaRef.current && isActuallyAugmented) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+      // Scroll to bottom to show the augmented content
+      textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+    }
+  }, [feedback, isActuallyAugmented]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -323,15 +334,17 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
             )}
             
             <textarea
+              ref={textareaRef}
               id="feedback"
               value={feedback}
               onChange={(e) => !isActuallyAugmented && setFeedback(e.target.value)}
               onFocus={() => setShowSuggestions(!isActuallyAugmented)}
               className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-[#007A33] focus:border-[#007A33] text-slate-900 resize-y placeholder:text-slate-400 text-base leading-relaxed max-h-[400px] ${
                 isActuallyAugmented 
-                  ? 'border-slate-200 bg-slate-50 cursor-not-allowed min-h-[300px]' 
+                  ? 'border-slate-200 bg-slate-50 cursor-not-allowed' 
                   : 'border-slate-300 min-h-[120px]'
               }`}
+              style={isActuallyAugmented ? { minHeight: '120px' } : undefined}
               placeholder="Share feedback on your experience!"
               disabled={loading || showChatbot || isActuallyAugmented}
             />

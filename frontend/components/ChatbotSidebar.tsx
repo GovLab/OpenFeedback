@@ -219,11 +219,26 @@ export default function ChatbotSidebar({
           </button>
         </div>
         {/* Skip Button - Always Available */}
-        <div className="mt-2 text-center">
+        <div className="mt-3 pt-3 border-t" style={{ borderColor: 'var(--boston-blue-desaturated)' }}>
           <button
             onClick={onClose}
             disabled={chatLoading}
-            className="text-xs text-gray-500 hover:text-gray-700 underline transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full text-sm px-4 py-2.5 border-2 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-sm"
+            style={{
+              borderColor: 'var(--boston-blue-desaturated)',
+              color: 'var(--boston-charles-blue)',
+              backgroundColor: 'rgba(255, 255, 255, 0.95)'
+            }}
+            onMouseEnter={(e) => {
+              if (!e.currentTarget.disabled) {
+                e.currentTarget.style.backgroundColor = 'rgba(24, 113, 189, 0.05)';
+                e.currentTarget.style.borderColor = 'var(--boston-optimistic-blue)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.95)';
+              e.currentTarget.style.borderColor = 'var(--boston-blue-desaturated)';
+            }}
           >
             Skip questions and submit feedback
           </button>
