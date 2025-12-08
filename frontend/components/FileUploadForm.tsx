@@ -7,108 +7,6 @@ interface FileUploadFormProps {
   onFeedbackSubmitted: () => void;
 }
 
-interface IndividualFeedbackModalProps {
-  response: IndividualResponse;
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-function IndividualFeedbackModal({ response, isOpen, onClose }: IndividualFeedbackModalProps) {
-  if (!isOpen) return null;
-
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
-  return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-      onClick={handleBackdropClick}
-    >
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl max-h-[80vh] flex flex-col">
-        <div className="flex justify-between items-center p-6 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Feedback Details</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl font-bold"
-          >
-            ×
-          </button>
-        </div>
-        
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="space-y-4">
-            <div>
-              <h4 className="font-medium text-gray-700 mb-2">Text Content:</h4>
-              <p className="text-gray-600 bg-gray-50 p-4 rounded-md whitespace-pre-wrap">
-                {response.text_content}
-              </p>
-            </div>
-            
-            {response.classified_feedback && response.classified_feedback.category_map && (
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <h4 className="font-medium text-gray-700 mb-2">Categories & Subcategories:</h4>
-                  <div className="space-y-3">
-                    {Object.entries(response.classified_feedback.category_map).map(([category, subcategories]) => (
-                      <div key={category} className="space-y-1">
-                        <div className="flex flex-wrap gap-2">
-                          <span className="px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full font-medium">
-                            {category}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-2 ml-4">
-                          {subcategories.map((subcategory, index) => (
-                            <span 
-                              key={index}
-                              className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full"
-                            >
-                              {subcategory}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="md:col-span-2">
-                  <h4 className="font-medium text-gray-700 mb-2">Sentiment:</h4>
-                  <span className={`px-3 py-1 rounded-full text-sm ${
-                    response.classified_feedback.sentiment.toLowerCase() === 'positive' 
-                      ? 'bg-green-100 text-green-800'
-                      : response.classified_feedback.sentiment.toLowerCase() === 'negative'
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {response.classified_feedback.sentiment}
-                  </span>
-                </div>
-              </div>
-            )}
-            
-            <div>
-              <h4 className="font-medium text-gray-700 mb-2">Status:</h4>
-              <p className="text-sm text-gray-600">{response.message}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="p-6 border-t border-gray-200">
-          <button
-            onClick={onClose}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md transition-colors"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function FileUploadForm({
   onFeedbackSubmitted,
 }: FileUploadFormProps) {
@@ -116,8 +14,22 @@ export default function FileUploadForm({
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<FileUploadResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedIndividualResponse, setSelectedIndividualResponse] = useState<IndividualResponse | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Map<number, Set<string>>>(new Map());
+
+  const toggleCategory = (responseIndex: number, category: string) => {
+    setExpandedCategories(prev => {
+      const newMap = new Map(prev);
+      const categories = newMap.get(responseIndex) || new Set<string>();
+      const newCategories = new Set(categories);
+      if (newCategories.has(category)) {
+        newCategories.delete(category);
+      } else {
+        newCategories.add(category);
+      }
+      newMap.set(responseIndex, newCategories);
+      return newMap;
+    });
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -181,11 +93,6 @@ export default function FileUploadForm({
     }
   };
 
-  const handleIndividualFeedbackClick = (response: IndividualResponse) => {
-    setSelectedIndividualResponse(response);
-    setIsModalOpen(true);
-  };
-
   const clearFile = () => {
     setSelectedFile(null);
     setResult(null);
@@ -194,7 +101,7 @@ export default function FileUploadForm({
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">
+      <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--boston-charles-blue)' }}>
         Upload Feedback File
       </h2>
 
@@ -202,7 +109,8 @@ export default function FileUploadForm({
         <div>
           <label
             htmlFor="file-upload"
-            className="block text-sm font-medium text-gray-700 mb-2"
+            className="block text-sm font-medium mb-2"
+            style={{ color: 'var(--boston-charles-blue)' }}
           >
             Select File (PDF, TXT, or DOCX)
           </label>
@@ -211,13 +119,25 @@ export default function FileUploadForm({
             id="file-upload"
             onChange={handleFileSelect}
             accept=".pdf,.txt,.docx"
-            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+            className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:border-transparent"
+            style={{ 
+              borderColor: 'var(--boston-gray-medium)',
+              color: 'var(--boston-charles-blue)',
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = 'var(--boston-optimistic-blue)';
+              e.currentTarget.style.boxShadow = '0 0 0 2px rgba(24, 113, 189, 0.2)';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = 'var(--boston-gray-medium)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
             disabled={loading}
           />
 
           {selectedFile && (
-            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm text-blue-800">
+            <div className="mt-2 p-3 border rounded-md" style={{ backgroundColor: 'rgba(24, 113, 189, 0.05)', borderColor: 'rgba(24, 113, 189, 0.2)' }}>
+              <p className="text-sm" style={{ color: 'var(--boston-optimistic-blue)' }}>
                 <strong>Selected:</strong> {selectedFile.name} (
                 {(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
               </p>
@@ -230,7 +150,20 @@ export default function FileUploadForm({
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 py-2 px-4 rounded-md disabled:cursor-not-allowed transition-colors text-white"
+              style={{ 
+                backgroundColor: loading ? 'var(--boston-gray-medium-dark)' : 'var(--boston-optimistic-blue)',
+              }}
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.backgroundColor = '#155a9a';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.backgroundColor = 'var(--boston-optimistic-blue)';
+                }
+              }}
             >
               {loading ? "Processing..." : "Process & Store"}
             </button>
@@ -239,7 +172,20 @@ export default function FileUploadForm({
               type="button"
               onClick={handleClassifyOnly}
               disabled={loading}
-              className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              className="flex-1 py-2 px-4 rounded-md disabled:cursor-not-allowed transition-colors text-white"
+              style={{ 
+                backgroundColor: loading ? 'var(--boston-gray-medium-dark)' : 'var(--boston-green)',
+              }}
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.backgroundColor = '#1a6f1a';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.backgroundColor = 'var(--boston-green)';
+                }
+              }}
             >
               {loading ? "Classifying..." : "Classify Only"}
             </button>
@@ -248,7 +194,21 @@ export default function FileUploadForm({
               type="button"
               onClick={clearFile}
               disabled={loading}
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 rounded-md disabled:cursor-not-allowed transition-colors"
+              style={{ 
+                backgroundColor: loading ? 'var(--boston-gray-medium-dark)' : 'var(--boston-charles-blue)',
+                color: 'white',
+              }}
+              onMouseEnter={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.backgroundColor = '#061622';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.backgroundColor = 'var(--boston-charles-blue)';
+                }
+              }}
             >
               Clear
             </button>
@@ -257,126 +217,231 @@ export default function FileUploadForm({
       </form>
 
       {error && (
-        <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
+        <div className="mt-4 p-4 border rounded-md" style={{ backgroundColor: 'rgba(220, 38, 38, 0.1)', borderColor: 'var(--sentiment-negative)', color: 'var(--sentiment-negative)' }}>
           {error}
         </div>
       )}
 
       {result && result.individual_responses && result.individual_responses.length > 0 && (
-        <div className="mt-4 p-4 bg-green-100 border border-green-400 rounded-md">
-          <h3 className="font-semibold text-green-800 mb-4">
+        <div className="mt-4 p-4 border rounded-md" style={{ backgroundColor: 'var(--boston-gray-light)', borderColor: 'var(--boston-gray-medium)' }}>
+          <h3 className="font-semibold mb-4" style={{ color: 'var(--boston-charles-blue)' }}>
             File Processed Successfully!
           </h3>
           
-          <div className="text-sm text-green-700 space-y-2 mb-4">
+          <div className="text-sm space-y-2 mb-4" style={{ color: 'var(--boston-charles-blue)' }}>
             <p><strong>File:</strong> {result.original_filename}</p>
             <p><strong>Type:</strong> {result.file_type}</p>
-            <p><strong>Total Feedback Items:</strong> {result.individual_responses.length}</p>
           </div>
 
           <div className="space-y-3">
-            <h4 className="text-lg font-semibold text-green-800 mb-3">
+            <h4 className="text-lg font-semibold mb-3" style={{ color: 'var(--boston-charles-blue)' }}>
               Individual Feedback
-              <span className="ml-2 text-sm font-normal text-green-600 bg-green-50 px-2 py-1 rounded-full">
+              <span className="ml-2 text-sm font-normal px-2 py-1 rounded-full" style={{ color: 'var(--boston-charles-blue)', backgroundColor: 'rgba(9, 31, 47, 0.1)' }}>
                 {result.individual_responses.length} item{result.individual_responses.length !== 1 ? 's' : ''}
               </span>
             </h4>
 
             {result.individual_responses.length === 1 ? (
-              console.log("result.individual_responses[0]",result.individual_responses[0]),
               <div
                 key={0}
-                className="bg-white rounded-xl border border-green-200 p-5 shadow-sm hover:shadow-md transition-all duration-200 flex justify-between items-center"
+                className="bg-white rounded-xl border shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
+                style={{ borderColor: 'var(--boston-gray-medium)' }}
               >
-                <div className="flex-1 pr-4">
-                  <p className="text-gray-800 leading-relaxed">
-                    {result.individual_responses[0].message}
-                  </p>
-                  {result.individual_responses[0].classified_feedback && (
-                    <div className="flex flex-wrap items-center gap-2 mt-3">
-                      {result.individual_responses[0].classified_feedback.category_map && Object.keys(result.individual_responses[0].classified_feedback.category_map).map((cat, i) => (
-                        <span
-                          key={i}
-                          className="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-200"
-                        >
-                          {cat}
-                        </span>
-                      ))}
-                      <span className={`ml-auto px-2.5 py-1 rounded-full text-xs font-medium ${
-                            result.individual_responses[0].classified_feedback.sentiment.toLowerCase() === 'positive'
-                              ? 'bg-green-50 text-green-700 border border-green-200'
-                              : result.individual_responses[0].classified_feedback.sentiment.toLowerCase() === 'negative'
-                              ? 'bg-red-50 text-red-700 border border-red-200'
-                              : 'bg-amber-50 text-amber-700 border border-amber-200'
-                          }`}>
-                        {result.individual_responses[0].classified_feedback.sentiment}
-                      </span>
+                {/* Header with Sentiment */}
+                {result.individual_responses[0].classified_feedback && (
+                  <div className="px-5 pt-5 pb-3 flex justify-between items-start border-b" style={{ borderColor: 'var(--boston-gray-medium)' }}>
+                    <h5 className="text-sm font-semibold" style={{ color: 'var(--boston-charles-blue)' }}>Feedback Details</h5>
+                    <span 
+                      className="px-3 py-1 rounded-full text-xs font-semibold text-white capitalize"
+                      style={{
+                        backgroundColor: result.individual_responses[0].classified_feedback.sentiment.toLowerCase() === 'positive'
+                          ? 'var(--sentiment-positive)'
+                          : result.individual_responses[0].classified_feedback.sentiment.toLowerCase() === 'negative'
+                          ? 'var(--sentiment-negative)'
+                          : 'var(--sentiment-neutral)'
+                      }}
+                    >
+                      {result.individual_responses[0].classified_feedback.sentiment}
+                    </span>
+                  </div>
+                )}
+                
+                <div className="p-5 space-y-5">
+                  {/* Message */}
+                  <div>
+                    <h6 className="text-xs font-semibold mb-2 uppercase tracking-wide" style={{ color: 'var(--boston-gray-dark)' }}>Summary</h6>
+                    <p className="leading-relaxed text-sm mb-3" style={{ color: 'var(--boston-charles-blue)' }}>
+                      {result.individual_responses[0].message}
+                    </p>
+                  </div>
+
+                  {/* Text Content */}
+                  {result.individual_responses[0].text_content && (
+                    <div 
+                      className="p-3 rounded-md overflow-y-auto min-h-24 max-h-32 text-sm"
+                      style={{ 
+                        backgroundColor: 'var(--boston-gray-light)',
+                        color: 'var(--boston-charles-blue)',
+                        border: '1px solid var(--boston-gray-medium)'
+                      }}
+                    >
+                      <p className="whitespace-pre-wrap">{result.individual_responses[0].text_content}</p>
+                    </div>
+                  )}
+
+                  {/* Categories */}
+                  {result.individual_responses[0].classified_feedback && result.individual_responses[0].classified_feedback.category_map && (
+                    <div>
+                      <h6 className="text-xs font-semibold mb-3 uppercase tracking-wide" style={{ color: 'var(--boston-gray-dark)' }}>Categories</h6>
+                      <div className="space-y-2">
+                        {Object.entries(result.individual_responses[0].classified_feedback.category_map).map(([category, subcategories], i) => {
+                          const isExpanded = expandedCategories.get(0)?.has(category) || false;
+                          const hasSubcategories = subcategories && subcategories.length > 0;
+                          return (
+                            <div key={i} className="space-y-2">
+                              <button
+                                onClick={() => hasSubcategories && toggleCategory(0, category)}
+                                className={`w-full flex items-center justify-between px-4 py-2.5 text-sm rounded-lg font-semibold border transition-all text-left ${hasSubcategories ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+                                style={{ 
+                                  backgroundColor: 'rgba(110, 231, 183, 0.15)', 
+                                  color: '#10b981',
+                                  borderColor: 'rgba(110, 231, 183, 0.3)'
+                                }}
+                                disabled={!hasSubcategories}
+                              >
+                                <span className="text-left flex-1">{category}</span>
+                                {hasSubcategories && (
+                                  <span className="text-xs flex-shrink-0 ml-2">
+                                    {isExpanded ? '▼' : '▶'} ({subcategories.length})
+                                  </span>
+                                )}
+                              </button>
+                              {hasSubcategories && isExpanded && (
+                                <div className="flex flex-wrap gap-2 pl-4">
+                                  {subcategories.map((subcat, idx) => (
+                                    <span
+                                      key={idx}
+                                      className="px-3 py-1.5 text-xs rounded-lg font-semibold border"
+                                      style={{ 
+                                        backgroundColor: 'rgba(252, 211, 77, 0.15)', 
+                                        color: '#f59e0b',
+                                        borderColor: 'rgba(252, 211, 77, 0.3)'
+                                      }}
+                                    >
+                                      {subcat}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={() => handleIndividualFeedbackClick(result.individual_responses[0])}
-                  className="ml-4 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 text-sm font-medium shadow-sm hover:shadow"
-                >
-                  View Details
-                </button>
               </div>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {result.individual_responses.map((response, index) => (
                   <div
                     key={index}
-                    className="bg-white rounded-xl border border-green-200 p-4 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                    className="bg-white rounded-xl border shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col"
+                    style={{ borderColor: 'var(--boston-gray-medium)' }}
                   >
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-800 leading-relaxed mb-3 line-clamp-3">
-                        {response.message}
-                      </p>
-                      {response.classified_feedback && (
-                        <div className="flex flex-wrap items-center gap-2 mb-3">
-                          {response.classified_feedback.category_map && Object.keys(response.classified_feedback.category_map).map((cat, i) => (
-                            <span
-                              key={i}
-                              className="px-2.5 py-1 bg-blue-50 text-blue-700 text-xs rounded-full border border-blue-200"
-                            >
-                              {cat}
-                            </span>
-                          ))}
+                    {/* Header with Sentiment */}
+                    {response.classified_feedback && (
+                      <div className="px-4 pt-4 pb-2 flex justify-between items-center border-b" style={{ borderColor: 'var(--boston-gray-medium)' }}>
+                        <h6 className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--boston-gray-dark)' }}>Feedback {index + 1}</h6>
+                        <span 
+                          className="px-2.5 py-1 rounded-full text-xs font-semibold text-white capitalize"
+                          style={{
+                            backgroundColor: response.classified_feedback.sentiment.toLowerCase() === 'positive'
+                              ? 'var(--sentiment-positive)'
+                              : response.classified_feedback.sentiment.toLowerCase() === 'negative'
+                              ? 'var(--sentiment-negative)'
+                              : 'var(--sentiment-neutral)'
+                          }}
+                        >
+                          {response.classified_feedback.sentiment}
+                        </span>
+                      </div>
+                    )}
+                    
+                    <div className="p-4 flex-1 flex flex-col space-y-3">
+                      {/* Text Content */}
+                      {response.text_content && (
+                        <div 
+                          className="p-2 rounded-md overflow-y-auto min-h-16 max-h-24 text-xs flex-shrink-0"
+                          style={{ 
+                            backgroundColor: 'var(--boston-gray-light)',
+                            color: 'var(--boston-charles-blue)',
+                            border: '1px solid var(--boston-gray-medium)'
+                          }}
+                        >
+                          <p className="whitespace-pre-wrap">{response.text_content}</p>
+                        </div>
+                      )}
+
+                      {/* Categories */}
+                      {response.classified_feedback && response.classified_feedback.category_map && (
+                        <div className="flex-shrink-0 space-y-1.5">
+                          {Object.entries(response.classified_feedback.category_map).slice(0, 2).map(([category, subcategories], i) => {
+                            const isExpanded = expandedCategories.get(index)?.has(category) || false;
+                            const hasSubcategories = subcategories && subcategories.length > 0;
+                            return (
+                              <div key={i} className="space-y-1.5">
+                                <button
+                                  onClick={() => hasSubcategories && toggleCategory(index, category)}
+                                  className={`w-full flex items-center justify-between px-3 py-1.5 text-xs rounded-lg font-semibold border transition-all text-left ${hasSubcategories ? 'cursor-pointer hover:opacity-80' : 'cursor-default'}`}
+                                  style={{ 
+                                    backgroundColor: 'rgba(110, 231, 183, 0.15)', 
+                                    color: '#10b981',
+                                    borderColor: 'rgba(110, 231, 183, 0.3)'
+                                  }}
+                                  disabled={!hasSubcategories}
+                                >
+                                  <span className="text-left flex-1 truncate">{category}</span>
+                                  {hasSubcategories && (
+                                    <span className="text-xs flex-shrink-0 ml-2">
+                                      {isExpanded ? '▼' : '▶'} ({subcategories.length})
+                                    </span>
+                                  )}
+                                </button>
+                                {hasSubcategories && isExpanded && (
+                                  <div className="flex flex-wrap gap-1.5 pl-3">
+                                    {subcategories.map((subcat, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="px-2.5 py-1 text-xs rounded-lg font-semibold border"
+                                        style={{ 
+                                          backgroundColor: 'rgba(252, 211, 77, 0.15)', 
+                                          color: '#f59e0b',
+                                          borderColor: 'rgba(252, 211, 77, 0.3)'
+                                        }}
+                                      >
+                                        {subcat}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                           {response.classified_feedback.category_map && Object.keys(response.classified_feedback.category_map).length > 2 && (
-                            <span className="text-xs text-gray-500">+{Object.keys(response.classified_feedback.category_map).length - 2}</span>
+                            <span className="text-xs px-2 py-1 block" style={{ color: 'var(--boston-gray-dark)' }}>
+                              +{Object.keys(response.classified_feedback.category_map).length - 2} more
+                            </span>
                           )}
-                          <span className={`ml-auto px-2.5 py-1 rounded-full text-xs font-medium ${
-                                response.classified_feedback.sentiment.toLowerCase() === 'positive'
-                                  ? 'bg-green-50 text-green-700 border border-green-200'
-                                  : response.classified_feedback.sentiment.toLowerCase() === 'negative'
-                                  ? 'bg-red-50 text-red-700 border border-red-200'
-                                  : 'bg-amber-50 text-amber-700 border border-amber-200'
-                              }`}>
-                            {response.classified_feedback.sentiment}
-                          </span>
                         </div>
                       )}
                     </div>
-                    <button
-                      onClick={() => handleIndividualFeedbackClick(response)}
-                      className="mt-3 w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all duration-200 text-sm font-medium shadow-sm hover:shadow"
-                    >
-                      View Details
-                    </button>
                   </div>
                 ))}
               </div>
             )}
           </div>
         </div>
-      )}
-
-      {selectedIndividualResponse && (
-        <IndividualFeedbackModal
-          response={selectedIndividualResponse}
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-        />
       )}
     </div>
   );
