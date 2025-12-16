@@ -453,7 +453,8 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
       if (filters.permitType && f.permit_type !== filters.permitType) return false;
       if (filters.sentiment && getSentimentFromScore(f.sentiment_score) !== filters.sentiment) return false;
       if (filters.impact && (!f.impact_type || !f.impact_type.includes(filters.impact))) return false;
-      if (filters.version && f.config_version !== null && f.config_version.toString() !== filters.version) return false;
+      // When filtering by version, exclude null versions and only include exact matches
+      if (filters.version && (f.config_version === null || f.config_version.toString() !== filters.version)) return false;
       return true;
     });
 
