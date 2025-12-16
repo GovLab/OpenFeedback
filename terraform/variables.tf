@@ -17,7 +17,7 @@ variable "environment" {
 variable "project_name" {
   description = "Project name for resource naming"
   type        = string
-  default     = "openpermit"
+  default     = "openfeedback"
 }
 
 variable "your_ip_address" {

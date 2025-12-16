@@ -80,12 +80,12 @@ aws configure
 
 ```bash
 aws ec2 create-key-pair \
-  --key-name openpermit-key \
+  --key-name openfeedback-key \
   --query 'KeyMaterial' \
-  --output text > openpermit-key.pem
+  --output text > openfeedback-key.pem
 
 # Mac/Linux only
-chmod 400 openpermit-key.pem
+chmod 400 openfeedback-key.pem
 ```
 
 ### 4. Get GitHub Connection ARN
@@ -127,7 +127,7 @@ code terraform.tfvars   # or nano, vim, notepad
 your_ip_address = "<run: curl https://ipinfo.io/ip>/32"
 
 # From setup steps above
-ec2_key_name         = "openpermit-key"
+ec2_key_name         = "openfeedback-key"
 github_connection_arn = "arn:aws:apprunner:us-east-2:..."
 amplify_github_token  = "ghp_..."
 
@@ -278,7 +278,7 @@ See [MODULES.md](MODULES.md) for detailed documentation.
 - AWS Console → App Runner → Connections → Update → Re-authorize
 
 ### "EC2 key pair not found"
-- Run: `aws ec2 describe-key-pairs --key-names openpermit-key`
+- Run: `aws ec2 describe-key-pairs --key-names openfeedback-key`
 - If not found, create it again (Step 3)
 
 ### "RDS connection timeout"
@@ -288,7 +288,7 @@ See [MODULES.md](MODULES.md) for detailed documentation.
 
 ### "App Runner deployment failed"
 - Check logs: AWS Console → App Runner → Service → Logs
-- Or: `aws logs tail /aws/apprunner/openpermit-backend --follow`
+- Or: `aws logs tail /aws/apprunner/openfeedback-backend --follow`
 
 ### "Amplify build failed"
 - AWS Console → Amplify → App → Build history
@@ -298,13 +298,13 @@ See [MODULES.md](MODULES.md) for detailed documentation.
 
 ```bash
 # App Runner logs
-aws logs tail /aws/apprunner/openpermit-backend --follow --region us-east-2
+aws logs tail /aws/apprunner/openfeedback-backend --follow --region us-east-2
 
 # RDS connection
 psql -h $(terraform output -raw rds_address) -U postgres -d OpenPermit
 
 # Neo4j status (SSH first)
-ssh -i openpermit-key.pem ec2-user@$(terraform output -raw neo4j_public_ip)
+ssh -i openfeedback-key.pem ec2-user@$(terraform output -raw neo4j_public_ip)
 sudo systemctl status neo4j
 ```
 
@@ -344,11 +344,11 @@ aws ce get-cost-and-usage \
 aws ec2 stop-instances --instance-ids $(terraform output -raw neo4j_instance_id)
 
 # Stop RDS (takes snapshot first)
-aws rds stop-db-instance --db-instance-identifier openpermit-postgres
+aws rds stop-db-instance --db-instance-identifier openfeedback-postgres
 
 # Resume when needed
 aws ec2 start-instances --instance-ids $(terraform output -raw neo4j_instance_id)
-aws rds start-db-instance --db-instance-identifier openpermit-postgres
+aws rds start-db-instance --db-instance-identifier openfeedback-postgres
 ```
 
 **For long breaks (delete everything):**
