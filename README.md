@@ -1,6 +1,74 @@
-# OpenFeedback
+# 🗣️ OpenFeedback
 
-A web application that leverages AI to automatically classify and analyze feedback, then visualizes the insights in an interactive graph for easy exploration and understanding.
+**An AI-powered civic feedback system that helps governments listen better — and act faster.**
+
+OpenFeedback is a full-stack web application that collects, clarifies, classifies, and visualizes constituent feedback about permitting experiences. It transforms unstructured public input into structured, actionable insights using AI and a graph database, enabling city staff to identify patterns, prioritize issues, and ensure no feedback is lost.
+
+---
+
+## 🌍 What OpenFeedback Does
+
+OpenFeedback bridges the gap between **how residents share feedback** and **how governments act on it**.
+
+- Residents submit feedback through a simple, accessible form  
+- An AI assistant asks clarifying questions to improve data quality  
+- Feedback is automatically classified into standardized categories  
+- A graph-based dashboard visualizes themes, relationships, and trends  
+- Staff can spot systemic issues instead of reacting to one-off complaints  
+
+---
+
+## 🧭 Core Features
+
+### 📝 Constituent Feedback Intake
+- Short, mobile-friendly feedback form  
+- Optional file uploads (screenshots, PDFs)  
+- Optional contact information for follow-up  
+- Designed to be embedded directly into Boston.gov permit pages  
+
+📸 **Constituent Facing Form:**  
+<img width="1430" height="707" alt="Main Page" src="https://github.com/user-attachments/assets/3647180a-120f-4270-96a3-1aba3af0b2b9" />
+
+---
+
+### 🤖 AI-Assisted Feedback Clarification
+- Friendly chatbot asks follow-up questions when feedback is vague  
+- Improves clarity at submission time (e.g., “Which step caused confusion?”)  
+- Reduces staff time spent interpreting unclear comments  
+
+📸 **Chatbot Clarification Flow:**  
+<img width="542" height="369" alt="Chatbot" src="https://github.com/user-attachments/assets/14f8b5bf-271a-47cb-983a-15ca9300a61d" />
+
+---
+
+### 🧠 Automated Classification
+- Uses generative AI to categorize feedback into city-defined issue areas:
+  - Process & Operations  
+  - Policy / Rules Clarity  
+  - Economic & Equity Concerns  
+  - Communication & Service  
+- Extracts metadata such as urgency, sentiment, and affected department  
+
+---
+
+### 🕸️ Graph-Based Visualization (Neo4j)
+- Feedback is stored and visualized as a graph  
+- Nodes represent feedback, themes, categories, and attributes  
+- Relationships reveal recurring issues and cross-department patterns  
+
+📸 **Neo4j graph visualization:**  
+<img width="1419" height="714" alt="Graph" src="https://github.com/user-attachments/assets/09e38f69-7e3b-4421-860f-f5193596204e" />
+
+---
+
+### 📊 Staff Insights & Analytics
+- Live statistics update as new feedback arrives  
+- Enables pattern detection across time, categories, and volume  
+- Designed to support staff dashboards and executive reporting  
+
+📸 **Staff Dashboard / Analytics View:** 
+<img width="1418" height="683" alt="Table View" src="https://github.com/user-attachments/assets/613338ab-e1f5-4071-99d2-99c56a14ff91" />
+
 
 ---
 
