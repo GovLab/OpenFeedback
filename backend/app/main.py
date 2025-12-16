@@ -275,6 +275,12 @@ async def submit_feedback(feedback: FeedbackInput):
         classified = await classify_feedback(feedback.text)
         logger.info(f"Classification completed. Categories: {list(classified.category_map.keys())}")
         
+        # Get active config version for tracking
+        active_config = system_config_manager.get_active_config()
+        config_version = active_config['version'] if active_config else None
+        if config_version:
+            logger.debug(f"Using config version {config_version} for classification")
+        
         # Generate a single UUID for both databases
         import uuid as uuid_module
         shared_feedback_id = str(uuid_module.uuid4())
@@ -327,8 +333,8 @@ async def submit_feedback(feedback: FeedbackInput):
         
         # Try to store in PostgreSQL, but don't fail if it doesn't work
         try:
-            postgres_id = postgres_db.add_feedback(postgres_data, feedback_id=shared_feedback_id)
-            logger.info(f"Feedback stored in PostgreSQL. ID: {postgres_id}")
+            postgres_id = postgres_db.add_feedback(postgres_data, feedback_id=shared_feedback_id, config_version=config_version)
+            logger.info(f"Feedback stored in PostgreSQL. ID: {postgres_id}, Config version: {config_version}")
         except Exception as e:
             logger.error(f"Failed to store feedback in PostgreSQL: {str(e)}")
             # Continue execution even if PostgreSQL fails
@@ -389,6 +395,12 @@ async def upload_feedback_file(file: UploadFile = File(...), store_in_database: 
         
         logger.info(f"All {len(classified_results)} feedback segments classified successfully")
         
+        # Get active config version for tracking (same version used for all feedbacks in this batch)
+        active_config = system_config_manager.get_active_config()
+        config_version = active_config['version'] if active_config else None
+        if config_version:
+            logger.debug(f"Using config version {config_version} for all feedbacks in this batch")
+        
         if store_in_database:
             # Store all feedbacks in both databases
             logger.debug("Storing all feedbacks in databases...")
@@ -420,7 +432,7 @@ async def upload_feedback_file(file: UploadFile = File(...), store_in_database: 
                 
                 # Try PostgreSQL, but don't fail if it doesn't work
                 try:
-                    postgres_id = postgres_db.add_feedback(postgres_data, feedback_id=shared_feedback_id)
+                    postgres_id = postgres_db.add_feedback(postgres_data, feedback_id=shared_feedback_id, config_version=config_version)
                 except Exception as e:
                     logger.error(f"Failed to store feedback {i+1} in PostgreSQL: {str(e)}")
                 

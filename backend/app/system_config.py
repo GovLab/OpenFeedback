@@ -315,6 +315,20 @@ class SystemConfigManager:
                     logger.warning(f"Cannot delete active version {version}")
                     raise ValueError(f"Cannot delete active version {version}. Please activate another version first.")
                 
+                # Check if any feedback references this version
+                feedback_check = session.execute(
+                    text("SELECT COUNT(*) FROM feedback2 WHERE config_version = :version"),
+                    {"version": version}
+                )
+                feedback_count = feedback_check.scalar() or 0
+                
+                if feedback_count > 0:
+                    logger.warning(f"Cannot delete version {version}: {feedback_count} feedback record(s) reference it")
+                    raise ValueError(
+                        f"Cannot delete version {version}. {feedback_count} feedback record(s) are using this version. "
+                        f"Please reassign those feedback records to another version or set their config_version to NULL first."
+                    )
+                
                 # Delete the version
                 session.execute(
                     text("DELETE FROM system_config WHERE version = :version"),

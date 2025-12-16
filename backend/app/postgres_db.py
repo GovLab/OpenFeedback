@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, String, Text, Boolean, Float, TIMESTAMP, ARRAY
+from sqlalchemy import create_engine, Column, String, Text, Boolean, Float, TIMESTAMP, ARRAY, Integer
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -25,7 +25,7 @@ Base = declarative_base()
 
 class FeedbackDB(Base):
     """SQLAlchemy model for feedback table."""
-    __tablename__ = "feedback"
+    __tablename__ = "feedback2"
     
     feedback_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     timestamp_submitted = Column(TIMESTAMP(timezone=True), server_default=func.now())
@@ -59,6 +59,11 @@ class FeedbackDB(Base):
     # Metadata
     attachment_urls = Column(ARRAY(Text), nullable=True)
     feedback_source = Column(String(50), default='OpenPermit')
+    
+    # Configuration version tracking
+    # Note: Foreign key constraint is enforced at database level via schema.sql
+    # Using Integer here to avoid SQLAlchemy trying to resolve the FK relationship
+    config_version = Column(Integer, nullable=True)
 
 
 class PostgresDB:
@@ -98,13 +103,14 @@ class PostgresDB:
         finally:
             session.close()
     
-    def add_feedback(self, feedback_data: Dict[str, Any], feedback_id: str = None) -> str:
+    def add_feedback(self, feedback_data: Dict[str, Any], feedback_id: str = None, config_version: Optional[int] = None) -> str:
         """
         Add feedback to PostgreSQL.
         
         Args:
             feedback_data: Dictionary with feedback fields
             feedback_id: Optional UUID string to use (if None, will auto-generate)
+            config_version: Optional config version number used for classification
             
         Returns:
             feedback_id: UUID as string
@@ -116,6 +122,10 @@ class PostgresDB:
             # If feedback_id is provided, add it to the data
             if feedback_id:
                 feedback_data['feedback_id'] = uuid.UUID(feedback_id)
+            
+            # Add config_version if provided
+            if config_version is not None:
+                feedback_data['config_version'] = config_version
             
             feedback = FeedbackDB(**feedback_data)
             session.add(feedback)
@@ -147,6 +157,7 @@ class PostgresDB:
                 "sentiment_score": feedback.sentiment_score,
                 "status": feedback.status,
                 "feedback_source": feedback.feedback_source,
+                "config_version": feedback.config_version,
             }
     
     def get_all_feedback(self, limit: int = 100, offset: int = 0):
@@ -178,6 +189,7 @@ class PostgresDB:
                     "language": f.language,
                     "followup_opt_in": f.followup_opt_in,
                     "user_contact_info": f.user_contact_info,
+                    "config_version": f.config_version,
                 }
                 for f in feedbacks
             ]

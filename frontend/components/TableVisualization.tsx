@@ -14,6 +14,7 @@ interface Filters {
   permitType: string;
   sentiment: string;
   impact: string;
+  version: string;
 }
 
 // Filterable Header Component
@@ -391,6 +392,7 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
     permitType: "",
     sentiment: "",
     impact: "",
+    version: "",
   });
   const [openDropdown, setOpenDropdown] = useState<keyof Filters | null>(null);
 
@@ -414,6 +416,7 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
     const permitTypes = new Set<string>();
     const sentiments = new Set<string>();
     const impacts = new Set<string>();
+    const versions = new Set<number>();
 
     feedbacks.forEach((f) => {
       if (f.urgency_level) urgencies.add(f.urgency_level);
@@ -424,6 +427,9 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
       if (f.impact_type) {
         f.impact_type.forEach((impact) => impacts.add(impact));
       }
+      if (f.config_version !== null && f.config_version !== undefined) {
+        versions.add(f.config_version);
+      }
     });
 
     return {
@@ -433,26 +439,64 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
       permitTypes: Array.from(permitTypes).sort(),
       sentiments: Array.from(sentiments).sort(),
       impacts: Array.from(impacts).sort(),
+      versions: Array.from(versions).sort((a, b) => b - a), // Sort descending (newest first)
     };
   }, [feedbacks]);
 
-  // Apply filters to feedbacks
+  // Apply filters, group by version, and sort feedbacks
   const filteredFeedbacks = useMemo(() => {
-    return feedbacks.filter((f) => {
+    // First apply filters
+    let filtered = feedbacks.filter((f) => {
       if (filters.urgency && f.urgency_level !== filters.urgency) return false;
       if (filters.status && f.status !== filters.status) return false;
       if (filters.department && f.department_predicted !== filters.department) return false;
       if (filters.permitType && f.permit_type !== filters.permitType) return false;
       if (filters.sentiment && getSentimentFromScore(f.sentiment_score) !== filters.sentiment) return false;
       if (filters.impact && (!f.impact_type || !f.impact_type.includes(filters.impact))) return false;
+      if (filters.version && f.config_version !== null && f.config_version.toString() !== filters.version) return false;
       return true;
     });
+
+    // Group by version (null/undefined versions go last)
+    const grouped = filtered.reduce((acc, f) => {
+      const version = f.config_version ?? 'null';
+      if (!acc[version]) {
+        acc[version] = [];
+      }
+      acc[version].push(f);
+      return acc;
+    }, {} as Record<string | number, FeedbackRecord[]>);
+
+    // Sort within each group by timestamp (most recent first)
+    Object.keys(grouped).forEach(version => {
+      grouped[version].sort((a, b) => {
+        const timeA = a.timestamp_submitted ? new Date(a.timestamp_submitted).getTime() : 0;
+        const timeB = b.timestamp_submitted ? new Date(b.timestamp_submitted).getTime() : 0;
+        return timeB - timeA; // Descending (newest first)
+      });
+    });
+
+    // Flatten grouped results: versions sorted descending, then by timestamp within each version
+    const versionKeys = Object.keys(grouped).filter(v => v !== 'null').map(Number).sort((a, b) => b - a);
+    const result: FeedbackRecord[] = [];
+    
+    // Add versioned feedbacks first (newest version first)
+    versionKeys.forEach(version => {
+      result.push(...grouped[version]);
+    });
+    
+    // Add null/undefined versions last
+    if (grouped['null']) {
+      result.push(...grouped['null']);
+    }
+
+    return result;
   }, [feedbacks, filters]);
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
 
   const clearAllFilters = () => {
-    setFilters({ urgency: "", status: "", department: "", permitType: "", sentiment: "", impact: "" });
+    setFilters({ urgency: "", status: "", department: "", permitType: "", sentiment: "", impact: "", version: "" });
   };
 
   const updateFilter = (key: keyof Filters, value: string) => {
@@ -610,7 +654,25 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
       {/* Header */}
       <div className="px-6 py-4 border-b border-gray-200" style={{ background: 'linear-gradient(to right, rgba(24, 113, 189, 0.05), rgba(79, 156, 235, 0.05))' }}>
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-gray-900">Feedback Database</h3>
+          <div className="flex items-center gap-4">
+            <h3 className="text-lg font-bold text-gray-900">Feedback Database</h3>
+            <FilterableHeader
+              label="Version"
+              filterKey="version"
+              options={filterOptions.versions.map(v => v.toString())}
+              currentValue={filters.version}
+              onFilterChange={updateFilter}
+              isOpen={openDropdown === "version"}
+              onToggle={() => toggleDropdown("version")}
+              align="left"
+              width="w-auto"
+              icon={
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+              }
+            />
+          </div>
           <button
             onClick={fetchFeedbacks}
             className="flex items-center gap-2 px-4 py-2 text-white rounded-lg hover:opacity-90 transition-all"
@@ -706,6 +768,19 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
               >
                 {filters.impact}
                 <button onClick={() => updateFilter("impact", "")} className="hover:opacity-80">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            )}
+            {filters.version && (
+              <span 
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full text-white"
+                style={{ backgroundColor: 'var(--boston-green)' }}
+              >
+                Version {filters.version}
+                <button onClick={() => updateFilter("version", "")} className="hover:opacity-80">
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -842,217 +917,243 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
                 </td>
               </tr>
             )}
-            {filteredFeedbacks.map((feedback) => (
-              <>
-                <tr 
-                  key={feedback.feedback_id} 
-                  className={`transition-all ${
-                    expandedRows.has(feedback.feedback_id)
-                      ? 'border-l-4 border-r-4 border-b-2 shadow-lg' 
-                      : 'hover:bg-blue-50'
-                  }`}
-                  style={{
-                    backgroundColor: expandedRows.has(feedback.feedback_id) ? 'rgba(24, 113, 189, 0.05)' : undefined,
-                    borderLeftColor: expandedRows.has(feedback.feedback_id) ? 'var(--boston-optimistic-blue)' : undefined,
-                    borderRightColor: expandedRows.has(feedback.feedback_id) ? 'var(--boston-optimistic-blue)' : undefined,
-                    borderBottomColor: expandedRows.has(feedback.feedback_id) ? 'rgba(24, 113, 189, 0.2)' : undefined
-                  }}
-                >
-                  <td className="px-4 py-3 whitespace-nowrap text-center">
-                    <div className="flex flex-col items-center gap-1">
-                      {(() => {
-                        const relativeTime = getRelativeTime(feedback.timestamp_submitted);
-                        return relativeTime=='' ? (
-                          <span className="text-xs text-gray-500">
-                            {feedback.timestamp_submitted ? new Date(feedback.timestamp_submitted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
-                          </span>
-                        ) : (
-                          <>
-                            <span className="text-xs font-semibold text-gray-900">
-                              {relativeTime}
-                            </span>
+            {filteredFeedbacks.map((feedback, index) => {
+              // Check if this is the first feedback of a new version group
+              const prevFeedback = index > 0 ? filteredFeedbacks[index - 1] : null;
+              const isNewVersionGroup = !prevFeedback || prevFeedback.config_version !== feedback.config_version;
+              
+              return (
+                 <>
+                   {isNewVersionGroup && (
+                     <tr key={`separator-${feedback.feedback_id}`}>
+                       <td colSpan={8} className="px-6 py-3" style={{
+                         background: 'linear-gradient(to right, rgba(24, 113, 189, 0.1), rgba(24, 113, 189, 0.05))',
+                         borderTop: '2px solid var(--boston-optimistic-blue)',
+                         borderBottom: '1px solid var(--boston-gray-medium)'
+                       }}>
+                         <div className="flex items-center gap-3">
+                           <span className="inline-flex items-center px-3 py-1 text-sm font-bold rounded-lg text-white" style={{
+                             backgroundColor: feedback.config_version ? 'var(--boston-green)' : 'var(--boston-gray-medium)'
+                           }}>
+                             {feedback.config_version ? `Version ${feedback.config_version}` : 'Version N/A'}
+                           </span>
+                           <span className="text-sm font-medium" style={{ color: 'var(--boston-gray-dark)' }}>
+                             {(() => {
+                               const versionFeedbacks = filteredFeedbacks.filter(f => f.config_version === feedback.config_version);
+                               return `${versionFeedbacks.length} feedback${versionFeedbacks.length !== 1 ? 's' : ''}`;
+                             })()}
+                           </span>
+                         </div>
+                       </td>
+                     </tr>
+                   )}
+                   <tr
+                     key={feedback.feedback_id}
+                     className={`transition-all ${expandedRows.has(feedback.feedback_id)
+                         ? 'border-l-4 border-r-4 border-b-2 shadow-lg'
+                         : 'hover:bg-blue-50'
+                       }`}
+                     style={{
+                       backgroundColor: expandedRows.has(feedback.feedback_id) ? 'rgba(24, 113, 189, 0.05)' : undefined,
+                       borderLeftColor: expandedRows.has(feedback.feedback_id) ? 'var(--boston-optimistic-blue)' : undefined,
+                       borderRightColor: expandedRows.has(feedback.feedback_id) ? 'var(--boston-optimistic-blue)' : undefined,
+                       borderBottomColor: expandedRows.has(feedback.feedback_id) ? 'rgba(24, 113, 189, 0.2)' : undefined
+                     }}
+                   >
+                     <td className="px-4 py-3 whitespace-nowrap text-center">
+                      <div className="flex flex-col items-center gap-1">
+                        {(() => {
+                          const relativeTime = getRelativeTime(feedback.timestamp_submitted);
+                          return relativeTime == '' ? (
                             <span className="text-xs text-gray-500">
                               {feedback.timestamp_submitted ? new Date(feedback.timestamp_submitted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
                             </span>
-                          </>
-                        );
-                      })()}
-                      {feedback.followup_opt_in && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold" title="Contact info available" style={{ color: 'var(--boston-green)' }}>
-                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                          </svg>
-                          Contact
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col gap-1 max-w-md">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {feedback.permit_type && (
-                          <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium text-white rounded" style={{ backgroundColor: 'var(--boston-optimistic-blue)' }}>
-                            {feedback.permit_type}
-                          </span>
-                        )}
-                        {feedback.language && feedback.language !== 'en' && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 text-xs font-medium rounded" style={{ backgroundColor: '#ddd6fe', color: '#6b21a8' }}>
-                            {feedback.language.toUpperCase()}
-                          </span>
-                        )}
-                      </div>
-                      {feedback.ai_summary ? (
-                        <p className="text-sm text-gray-900 line-clamp-2">
-                          {feedback.ai_summary}
-                        </p>
-                      ) : (
-                        <p className="text-sm text-gray-700 line-clamp-2">
-                          {feedback.issue_description}
-                        </p>
-                      )}
-                      {feedback.category && (
-                        <div className="flex items-center gap-1 text-xs text-gray-500">
-                          <span className="font-medium">{feedback.category}</span>
-                          {feedback.subcategory && (
+                          ) : (
                             <>
-                              <span>•</span>
-                              <span>{feedback.subcategory}</span>
+                              <span className="text-xs font-semibold text-gray-900">
+                                {relativeTime}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {feedback.timestamp_submitted ? new Date(feedback.timestamp_submitted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+                              </span>
                             </>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-center">
-                    <span className="text-sm font-medium text-gray-900">
-                      {feedback.department_predicted || <span className="text-gray-400">Unassigned</span>}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <div className="flex flex-wrap gap-1 justify-center">
-                      {feedback.impact_type && feedback.impact_type.length > 0 ? (
-                        feedback.impact_type.slice(0, 2).map((impact, idx) => (
-                          <span
-                            key={idx}
-                            className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded"
-                    style={{ backgroundColor: 'var(--boston-gray-light)', color: 'var(--boston-optimistic-blue)' }}
-                          >
-                            {impact}
+                          );
+                        })()}
+                        {feedback.followup_opt_in && (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold" title="Contact info available" style={{ color: 'var(--boston-green)' }}>
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                            </svg>
+                            Contact
                           </span>
-                        ))
-                      ) : (
-                        <span className="text-xs text-gray-400">None</span>
-                      )}
-                      {feedback.impact_type && feedback.impact_type.length > 2 && (
-                        <span className="text-xs text-gray-500 font-medium">
-                          +{feedback.impact_type.length - 2}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-center whitespace-nowrap">
-                    <div className="flex items-center justify-center gap-1">
-                      <span className="text-lg" style={getSentimentStyle(feedback.sentiment_score)}>
-                        {getSentimentIcon(feedback.sentiment_score)}
-                      </span>
-                      <span className="text-xs font-medium" style={getSentimentStyle(feedback.sentiment_score)}>
-                        {getSentimentLabel(feedback.sentiment_score)}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-center whitespace-nowrap">
-                    {feedback.urgency_level ? (
-                      <span className="text-white rounded-full px-2.5 py-1 text-xs font-bold" style={getUrgencyStyle(feedback.urgency_level)}>
-                        {feedback.urgency_level}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-gray-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-center whitespace-nowrap">
-                    <span className="text-white rounded-full px-2.5 py-1 text-xs font-semibold" style={getStatusBadgeStyle(feedback.status)}>
-                      {feedback.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center whitespace-nowrap">
-                    <button
-                      onClick={() => toggleRow(feedback.feedback_id)}
-                      className={`font-medium inline-flex items-center justify-center w-8 z-10 h-8 rounded-lg transition-all ${
-                        expandedRows.has(feedback.feedback_id)
-                          ? 'text-white shadow-lg'
-                          : 'hover:shadow-xl'
-                      }`}
-                      style={{
-                        backgroundColor: expandedRows.has(feedback.feedback_id) ? 'var(--boston-optimistic-blue)' : 'transparent',
-                        color: expandedRows.has(feedback.feedback_id) ? 'white' : 'var(--boston-optimistic-blue)'
-                      }}
-                      title={expandedRows.has(feedback.feedback_id) ? "Hide details" : "View details"}
-                    >
-                      {expandedRows.has(feedback.feedback_id) ? (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                        </svg>
-                      ) : (
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      )}
-                    </button>
-                  </td>
-                </tr>
-                
-                {/* Expanded Row Details */}
-                {expandedRows.has(feedback.feedback_id) && (
-                  <tr className="" style={{ backgroundColor: 'rgba(24, 113, 189, 0.03)'}}>
-                    <td colSpan={8} className="px-6 py-4 border-t-0">
-                      <div className="space-y-3">
-                        {/* First Row - Original Feedback and Classification */}
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                          <OriginalFeedbackCard description={feedback.issue_description} />
-                          <ClassificationCard 
-                            permitType={feedback.permit_type}
-                            category={feedback.category}
-                            subcategory={feedback.subcategory}
-                            department={feedback.department_predicted}
-                            impactTypes={feedback.impact_type}
-                          />
-                        </div>
-
-                        {/* Second Row - AI Summary, System Info, and Contact Info */}
-                        {feedback.ai_summary && (
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                            <AISummaryCard 
-                              summary={feedback.ai_summary}
-                              hasContact={!!(feedback.followup_opt_in && feedback.user_contact_info)}
-                            />
-                            <SystemInfoCard 
-                              source={feedback.feedback_source}
-                              language={feedback.language}
-                              timestamp={feedback.timestamp_submitted}
-                              hasContact={!!(feedback.followup_opt_in && feedback.user_contact_info)}
-                            />
-                            {feedback.followup_opt_in && feedback.user_contact_info && (
-                              <ContactInfoCard contactInfo={feedback.user_contact_info} />
-                                      )}
-                                    </div>
-                        )}
-
-                        {/* System Info if no AI Summary */}
-                        {!feedback.ai_summary && (
-                          <SystemInfoCard 
-                            source={feedback.feedback_source}
-                            language={feedback.language}
-                            timestamp={feedback.timestamp_submitted}
-                            hasContact={false}
-                          />
                         )}
                       </div>
                     </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-1 max-w-md">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {feedback.permit_type && (
+                            <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium text-white rounded" style={{ backgroundColor: 'var(--boston-optimistic-blue)' }}>
+                              {feedback.permit_type}
+                            </span>
+                          )}
+                          {feedback.language && feedback.language !== 'en' && (
+                            <span className="inline-flex items-center px-1.5 py-0.5 text-xs font-medium rounded" style={{ backgroundColor: '#ddd6fe', color: '#6b21a8' }}>
+                              {feedback.language.toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        {feedback.ai_summary ? (
+                          <p className="text-sm text-gray-900 line-clamp-2">
+                            {feedback.ai_summary}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-gray-700 line-clamp-2">
+                            {feedback.issue_description}
+                          </p>
+                        )}
+                        {feedback.category && (
+                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                            <span className="font-medium">{feedback.category}</span>
+                            {feedback.subcategory && (
+                              <>
+                                <span>•</span>
+                                <span>{feedback.subcategory}</span>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-center">
+                      <span className="text-sm font-medium text-gray-900">
+                        {feedback.department_predicted || <span className="text-gray-400">Unassigned</span>}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex flex-wrap gap-1 justify-center">
+                        {feedback.impact_type && feedback.impact_type.length > 0 ? (
+                          feedback.impact_type.slice(0, 2).map((impact, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded"
+                              style={{ backgroundColor: 'var(--boston-gray-light)', color: 'var(--boston-optimistic-blue)' }}
+                            >
+                              {impact}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs text-gray-400">None</span>
+                        )}
+                        {feedback.impact_type && feedback.impact_type.length > 2 && (
+                          <span className="text-xs text-gray-500 font-medium">
+                            +{feedback.impact_type.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1">
+                        <span className="text-lg" style={getSentimentStyle(feedback.sentiment_score)}>
+                          {getSentimentIcon(feedback.sentiment_score)}
+                        </span>
+                        <span className="text-xs font-medium" style={getSentimentStyle(feedback.sentiment_score)}>
+                          {getSentimentLabel(feedback.sentiment_score)}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-center whitespace-nowrap">
+                      {feedback.urgency_level ? (
+                        <span className="text-white rounded-full px-2.5 py-1 text-xs font-bold" style={getUrgencyStyle(feedback.urgency_level)}>
+                          {feedback.urgency_level}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-center whitespace-nowrap">
+                      <span className="text-white rounded-full px-2.5 py-1 text-xs font-semibold" style={getStatusBadgeStyle(feedback.status)}>
+                        {feedback.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center whitespace-nowrap">
+                      <button
+                        onClick={() => toggleRow(feedback.feedback_id)}
+                        className={`font-medium inline-flex items-center justify-center w-8 z-10 h-8 rounded-lg transition-all ${expandedRows.has(feedback.feedback_id)
+                            ? 'text-white shadow-lg'
+                            : 'hover:shadow-xl'
+                          }`}
+                        style={{
+                          backgroundColor: expandedRows.has(feedback.feedback_id) ? 'var(--boston-optimistic-blue)' : 'transparent',
+                          color: expandedRows.has(feedback.feedback_id) ? 'white' : 'var(--boston-optimistic-blue)'
+                        }}
+                        title={expandedRows.has(feedback.feedback_id) ? "Hide details" : "View details"}
+                      >
+                        {expandedRows.has(feedback.feedback_id) ? (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                          </svg>
+                        ) : (
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        )}
+                      </button>
+                    </td>
                   </tr>
-                )}
-              </>
-            ))}
+                
+                   {/* Expanded Row Details */}
+                   {expandedRows.has(feedback.feedback_id) && (
+                     <tr className="" style={{ backgroundColor: 'rgba(24, 113, 189, 0.03)' }}>
+                       <td colSpan={8} className="px-6 py-4 border-t-0">
+                        <div className="space-y-3">
+                          {/* First Row - Original Feedback and Classification */}
+                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                            <OriginalFeedbackCard description={feedback.issue_description} />
+                            <ClassificationCard
+                              permitType={feedback.permit_type}
+                              category={feedback.category}
+                              subcategory={feedback.subcategory}
+                              department={feedback.department_predicted}
+                              impactTypes={feedback.impact_type}
+                            />
+                          </div>
+
+                          {/* Second Row - AI Summary, System Info, and Contact Info */}
+                          {feedback.ai_summary && (
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                              <AISummaryCard
+                                summary={feedback.ai_summary}
+                                hasContact={!!(feedback.followup_opt_in && feedback.user_contact_info)}
+                              />
+                              <SystemInfoCard
+                                source={feedback.feedback_source}
+                                language={feedback.language}
+                                timestamp={feedback.timestamp_submitted}
+                                hasContact={!!(feedback.followup_opt_in && feedback.user_contact_info)}
+                              />
+                              {feedback.followup_opt_in && feedback.user_contact_info && (
+                                <ContactInfoCard contactInfo={feedback.user_contact_info} />
+                              )}
+                            </div>
+                          )}
+
+                          {/* System Info if no AI Summary */}
+                          {!feedback.ai_summary && (
+                            <SystemInfoCard
+                              source={feedback.feedback_source}
+                              language={feedback.language}
+                              timestamp={feedback.timestamp_submitted}
+                              hasContact={false}
+                            />
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              )})}
           </tbody>
         </table>
       </div>

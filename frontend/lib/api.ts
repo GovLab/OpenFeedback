@@ -166,6 +166,7 @@ export interface FeedbackRecord {
     email?: string;
     phone?: string;
   } | null;
+  config_version: number | null;
 }
 
 export interface FeedbackListResponse {
