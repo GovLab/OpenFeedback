@@ -7,7 +7,7 @@ from .system_config import system_config_manager
 import json
 import logging
 import re
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 
 # Configure logging for the classifier module
 logger = logging.getLogger(__name__)
@@ -15,32 +15,36 @@ logger = logging.getLogger(__name__)
 client = OpenAI(api_key=settings.openai_api_key)
 
 # Cache for active config to avoid repeated database queries
+# Cache stores both config_data and version to ensure consistency
 _active_config_cache: Optional[Dict[str, Any]] = None
+_active_config_version: Optional[int] = None
 
 
-def _get_active_config() -> Optional[Dict[str, Any]]:
+def _get_active_config() -> Tuple[Optional[Dict[str, Any]], Optional[int]]:
     """
     Get active configuration, using cache if available.
     
     Returns:
-        Config data dict or None if not available (will use hardcoded fallback)
+        Tuple of (config_data dict, version number) or (None, None) if not available
+        (will use hardcoded fallback)
     """
-    global _active_config_cache
+    global _active_config_cache, _active_config_version
     
     try:
         if _active_config_cache is None:
             config = system_config_manager.get_active_config()
             if config:
                 _active_config_cache = config['config_data']
-                logger.info("Loaded active configuration from database")
+                _active_config_version = config['version']
+                logger.info(f"Loaded active configuration version {_active_config_version} from database")
             else:
                 logger.warning("No active config found, will use hardcoded values")
-                return None
-        return _active_config_cache
+                return None, None
+        return _active_config_cache, _active_config_version
     except Exception as e:
         logger.error(f"Error loading active config: {str(e)}")
         logger.warning("Falling back to hardcoded values")
-        return None
+        return None, None
 
 
 def clear_config_cache():
@@ -48,8 +52,9 @@ def clear_config_cache():
     Clear the cached configuration. Call this when config is updated.
     Next classification will reload config from database.
     """
-    global _active_config_cache
+    global _active_config_cache, _active_config_version
     _active_config_cache = None
+    _active_config_version = None
     logger.info("Configuration cache cleared")
 
 
@@ -66,12 +71,14 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
     logger.debug(f"Classifier function called with feedback: {feedback_text[:100]}...")
     
     # Try to load active config (will use defaults if None)
-    config_data = _get_active_config()
+    # Capture both config_data and version at the time of classification
+    config_data, config_version = _get_active_config()
     
     if config_data:
-        logger.debug("Using dynamic configuration from database")
+        logger.debug(f"Using dynamic configuration version {config_version} from database")
     else:
         logger.debug("Using hardcoded configuration defaults (fallback)")
+        config_version = None
     
     prompt = prompt_builder.build_classification_prompt_from_config(feedback_text, config_data)
     
@@ -117,12 +124,15 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
             department_predicted=classification.get("department_predicted"),
             urgency_level=classification.get("urgency_level", "Medium"),
             impact_type=classification.get("impact_type", []),
-            language=classification.get("language", "en")
+            language=classification.get("language", "en"),
+            config_version=config_version
         )
     
     except json.JSONDecodeError as e:
         logger.error(f"JSON parsing failed for content: {content[:200]}... Error: {str(e)}")
         logger.warning("Falling back to default classification due to JSON parsing error")
+        # Get config version even for fallback (may be None if no active config)
+        _, config_version = _get_active_config()
         return ClassifiedFeedback(
             text=feedback_text,
             category_map={"Process & Operational Flow Issues": ["Unclassified"]},
@@ -133,7 +143,8 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
             department_predicted=None,
             urgency_level="Medium",
             impact_type=[],
-            language="en"
+            language="en",
+            config_version=config_version
         )
     except Exception as e:
         logger.error(f"Error classifying feedback: {str(e)}")

@@ -275,11 +275,12 @@ async def submit_feedback(feedback: FeedbackInput):
         classified = await classify_feedback(feedback.text)
         logger.info(f"Classification completed. Categories: {list(classified.category_map.keys())}")
         
-        # Get active config version for tracking
-        active_config = system_config_manager.get_active_config()
-        config_version = active_config['version'] if active_config else None
+        # Use config_version from classification result (captured during classification)
+        config_version = classified.config_version
         if config_version:
-            logger.debug(f"Using config version {config_version} for classification")
+            logger.debug(f"Classification used config version {config_version}")
+        else:
+            logger.debug("Classification used hardcoded defaults (no active config)")
         
         # Generate a single UUID for both databases
         import uuid as uuid_module
@@ -395,11 +396,13 @@ async def upload_feedback_file(file: UploadFile = File(...), store_in_database: 
         
         logger.info(f"All {len(classified_results)} feedback segments classified successfully")
         
-        # Get active config version for tracking (same version used for all feedbacks in this batch)
-        active_config = system_config_manager.get_active_config()
-        config_version = active_config['version'] if active_config else None
+        # Get config version from first classification result (all should use same version in batch)
+        # This ensures we use the version that was actually used during classification
+        config_version = classified_results[0].config_version if classified_results else None
         if config_version:
-            logger.debug(f"Using config version {config_version} for all feedbacks in this batch")
+            logger.debug(f"Batch classification used config version {config_version}")
+        else:
+            logger.debug("Batch classification used hardcoded defaults (no active config)")
         
         if store_in_database:
             # Store all feedbacks in both databases

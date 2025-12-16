@@ -21,6 +21,7 @@ class ClassifiedFeedback(BaseModel):
     urgency_level: Optional[str] = None  # Low, Medium, High
     impact_type: Optional[List[str]] = None  # ["Time lost", "Financial cost", etc.]
     language: Optional[str] = "en"  # Detected language code
+    config_version: Optional[int] = None  # Config version used for classification
 
 
 class GraphNode(BaseModel):
