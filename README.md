@@ -243,3 +243,15 @@ npm run dev
    - **PostgreSQL** stores the full feedback details (text, timestamps, AI analysis)
    - **Neo4j** stores the relationships between categories for the graph visualization
 4. The interactive graph updates to show your feedback and how topics connect
+
+
+## Authors and Acknowledgments
+- Built by the OpenFeedback team
+-   [Arnav Jaiswal](https://github.com/ShadowMasterAJ).
+-   [Isabella Iype](https://isabellaiype.com).
+-   In partnership with the Burnes Center for Social Change
+-   For the City of Boston
+
+
+
+
