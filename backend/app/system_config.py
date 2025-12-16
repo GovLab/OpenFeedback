@@ -235,6 +235,98 @@ class SystemConfigManager:
         except Exception as e:
             logger.error(f"Error fetching config version {version}: {str(e)}")
             raise
+    
+    def activate_version(self, version: int) -> bool:
+        """
+        Activate a specific configuration version (rollback).
+        Deactivates all other versions.
+        
+        Args:
+            version: Version number to activate
+            
+        Returns:
+            True if successful, False if version doesn't exist
+        """
+        if self.postgres_db.engine is None:
+            logger.error("PostgreSQL database not connected")
+            raise Exception("PostgreSQL database not connected")
+        
+        try:
+            with self.get_session() as session:
+                # Check if version exists
+                check_result = session.execute(
+                    text("SELECT version FROM system_config WHERE version = :version"),
+                    {"version": version}
+                )
+                if not check_result.fetchone():
+                    logger.warning(f"Version {version} does not exist")
+                    return False
+                
+                # Deactivate all versions
+                session.execute(
+                    text("UPDATE system_config SET is_active = false WHERE is_active = true")
+                )
+                
+                # Activate the specified version
+                session.execute(
+                    text("UPDATE system_config SET is_active = true WHERE version = :version"),
+                    {"version": version}
+                )
+                
+                logger.info(f"Activated config version {version}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error activating version {version}: {str(e)}")
+            raise
+    
+    def delete_version(self, version: int) -> bool:
+        """
+        Delete a configuration version.
+        Cannot delete the active version.
+        
+        Args:
+            version: Version number to delete
+            
+        Returns:
+            True if successful, False if version doesn't exist
+            
+        Raises:
+            ValueError: If attempting to delete the active version
+        """
+        if self.postgres_db.engine is None:
+            logger.error("PostgreSQL database not connected")
+            raise Exception("PostgreSQL database not connected")
+        
+        try:
+            with self.get_session() as session:
+                # Check if version exists and is active
+                check_result = session.execute(
+                    text("SELECT is_active FROM system_config WHERE version = :version"),
+                    {"version": version}
+                )
+                row = check_result.fetchone()
+                
+                if not row:
+                    logger.warning(f"Version {version} does not exist")
+                    return False
+                
+                if row[0]:  # is_active is True
+                    logger.warning(f"Cannot delete active version {version}")
+                    raise ValueError(f"Cannot delete active version {version}. Please activate another version first.")
+                
+                # Delete the version
+                session.execute(
+                    text("DELETE FROM system_config WHERE version = :version"),
+                    {"version": version}
+                )
+                
+                logger.info(f"Deleted config version {version}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error deleting version {version}: {str(e)}")
+            raise
 
 
 # Global instance

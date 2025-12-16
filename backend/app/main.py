@@ -712,3 +712,108 @@ async def get_config_history():
     except Exception as e:
         logger.error(f"Error fetching config history: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/config/{version}", response_model=ConfigResponse)
+async def get_config_by_version(version: int):
+    """
+    Get a specific configuration version by version number.
+    
+    Args:
+        version: Version number to retrieve
+        
+    Returns:
+        ConfigResponse with the requested configuration
+    """
+    try:
+        config = system_config_manager.get_config_by_version(version)
+        if not config:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Configuration version {version} not found."
+            )
+        
+        # Convert config_data dict to SystemConfig model
+        system_config = _dict_to_system_config(config['config_data'])
+        
+        return ConfigResponse(
+            config_id=config['config_id'],
+            version=config['version'],
+            config_data=system_config,
+            created_at=config['created_at'],
+            created_by=config['created_by'],
+            change_notes=config['change_notes']
+        )
+    except Exception as e:
+        logger.error(f"Error fetching config version {version}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/config/activate/{version}", response_model=ConfigUpdateResponse)
+async def activate_config_version(version: int):
+    """
+    Activate a specific configuration version (rollback).
+    
+    Args:
+        version: Version number to activate
+        
+    Returns:
+        ConfigUpdateResponse with success status
+    """
+    try:
+        success = system_config_manager.activate_version(version)
+        if not success:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Configuration version {version} not found."
+            )
+        
+        # Clear classifier cache so new config is used immediately
+        clear_config_cache()
+        
+        logger.info(f"Activated config version {version}")
+        
+        return ConfigUpdateResponse(
+            success=True,
+            version=version,
+            message=f"Configuration version {version} activated successfully."
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error activating config version {version}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/config/{version}", response_model=ConfigUpdateResponse)
+async def delete_config_version(version: int):
+    """
+    Delete a configuration version.
+    Cannot delete the active version.
+    
+    Args:
+        version: Version number to delete
+        
+    Returns:
+        ConfigUpdateResponse with success status
+    """
+    try:
+        success = system_config_manager.delete_version(version)
+        if not success:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Configuration version {version} not found."
+            )
+        
+        logger.info(f"Deleted config version {version}")
+        
+        return ConfigUpdateResponse(
+            success=True,
+            version=version,
+            message=f"Configuration version {version} deleted successfully."
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error deleting config version {version}: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
