@@ -39,6 +39,7 @@ backend/app/purge_databases.py
 *.tfstate.*
 .terraform/
 .terraform.lock.hcl
+terraform.tfvars
 crash.log
 crash.*.log
 override.tf
@@ -46,6 +47,8 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 *.ppk
-.cursor/
-.pem
+*.pem
 tfplan
+
+# Cursor
+.cursor/

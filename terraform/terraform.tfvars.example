@@ -1,0 +1,57 @@
+# =============================================================================
+# OpenPermit Terraform Configuration
+# =============================================================================
+# Copy this file to prod/terraform.tfvars or test/terraform.tfvars
+# and fill in your values.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# GENERAL SETTINGS
+# -----------------------------------------------------------------------------
+aws_region   = "us-east-2"
+environment  = "dev"           # dev, staging, or prod
+project_name = "openpermit"    # Used for naming all resources
+
+# Your IP address for SSH and database access
+# Get it with: curl https://ipinfo.io/ip
+# Add /32 at the end for single IP
+your_ip_address = "YOUR_IP_HERE/32"   # Example: "203.0.113.42/32"
+
+# -----------------------------------------------------------------------------
+# EC2 - NEO4J GRAPH DATABASE
+# -----------------------------------------------------------------------------
+ec2_instance_type = "t3.small"        # 2 vCPU, 2 GB RAM (~$15/month)
+                                       # Options: t3.micro, t3.small, t3.medium
+ec2_key_name      = "openpermit-key"  # Create with: aws ec2 create-key-pair --key-name openpermit-key
+neo4j_password    = "CHANGE_ME"       # Generate with: openssl rand -base64 32
+
+# -----------------------------------------------------------------------------
+# RDS - POSTGRESQL DATABASE  
+# -----------------------------------------------------------------------------
+rds_instance_class    = "db.t4g.micro"  # 2 vCPU, 1 GB RAM (~$15/month)
+                                         # Options: db.t4g.micro, db.t4g.small, db.t4g.medium
+rds_allocated_storage = 20               # Storage in GB (can grow automatically)
+rds_engine_version    = "17.6"           # PostgreSQL version
+rds_database_name     = "OpenPermit"     # Database name
+rds_username          = "postgres"       # Admin username
+rds_password          = "CHANGE_ME"      # Generate with: openssl rand -base64 32
+
+# -----------------------------------------------------------------------------
+# APP RUNNER - BACKEND API
+# -----------------------------------------------------------------------------
+github_repo_url       = "https://github.com/YOUR_USERNAME/OpenPermit"
+github_branch         = "main"
+github_connection_arn = "CHANGE_ME"      # Get from: AWS Console → App Runner → GitHub connections
+
+# CPU and Memory allocation
+app_runner_cpu    = "1024"   # 1024 = 1 vCPU (options: 256, 512, 1024, 2048, 4096)
+app_runner_memory = "2048"   # 2048 = 2 GB (options: 512, 1024, 2048, 3072, 4096, 6144, 8192, 10240, 12288)
+
+# OpenAI for AI features
+openai_api_key = "sk-proj-..."   # Your OpenAI API key
+
+# -----------------------------------------------------------------------------
+# AMPLIFY - FRONTEND WEBSITE
+# -----------------------------------------------------------------------------
+amplify_github_token = "ghp_..."   # GitHub Personal Access Token with 'repo' scope
+                                    # Get from: GitHub → Settings → Developer settings → Personal access tokens
