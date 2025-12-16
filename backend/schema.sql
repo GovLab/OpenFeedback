@@ -1,7 +1,10 @@
--- OpenPermit PostgreSQL Schema
--- Run this in pgAdmin to create the feedback table
+-- OpenFeedback PostgreSQL Schema
+-- Run this file in pgAdmin to set up the database
 
--- Create ENUM types first (Based on City of Boston permit types)
+-- ============================================
+-- ENUM TYPES
+-- ============================================
+
 CREATE TYPE permit_type_enum AS ENUM (
     'Building - Short Form',
     'Building - Long Form',
@@ -38,7 +41,11 @@ CREATE TYPE feedback_source_enum AS ENUM (
     'OpenPermit', 'Email', 'Phone', 'In-Person', 'Website', '311', 'Interview', 'Other'
 );
 
--- Create system configuration table
+-- ============================================
+-- TABLES
+-- ============================================
+
+-- System configuration table (stores versioned config)
 CREATE TABLE system_config (
     config_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     version INTEGER NOT NULL UNIQUE,
@@ -49,11 +56,10 @@ CREATE TABLE system_config (
     change_notes TEXT
 );
 
--- Create indexes for system_config
 CREATE INDEX idx_active_config ON system_config (is_active) WHERE is_active = true;
 CREATE INDEX idx_version ON system_config (version DESC);
 
--- Create main feedback table
+-- Main feedback table
 CREATE TABLE feedback2 (
     feedback_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     timestamp_submitted TIMESTAMPTZ DEFAULT NOW(),
@@ -90,4 +96,121 @@ CREATE TABLE feedback2 (
     
     -- Configuration version tracking
     config_version INTEGER REFERENCES system_config(version)
+);
+
+-- ============================================
+-- INITIAL DATA
+-- ============================================
+
+-- Seed initial system configuration (Version 1)
+INSERT INTO system_config (
+    version,
+    config_data,
+    is_active,
+    created_at,
+    created_by,
+    change_notes
+) VALUES (
+    1,
+    '{
+        "categories": [
+            {
+                "name": "Economic & Equity Concerns",
+                "subcategories": [
+                    "High or Unexpected Costs",
+                    "Access or Fairness Barriers"
+                ]
+            },
+            {
+                "name": "Communication & Service Problems",
+                "subcategories": [
+                    "Poor Communication / Experience",
+                    "Service Responsiveness & Transparency"
+                ]
+            },
+            {
+                "name": "Technology & Access Barriers",
+                "subcategories": [
+                    "Technical / Portal Problems",
+                    "Digital Access & Portal Problems"
+                ]
+            },
+            {
+                "name": "Process & Operational Flow Issues",
+                "subcategories": [
+                    "Confusion or Missing Guidance",
+                    "Delays or Waiting Too Long",
+                    "Conflicting Departments / Redundant Steps",
+                    "Procedural & Coordination Issues"
+                ]
+            },
+            {
+                "name": "Policy & Rules Clarity",
+                "subcategories": [
+                    "Outdated or Unclear Rules",
+                    "Rules & Policy Gaps"
+                ]
+            }
+        ],
+        "permit_types": [
+            "Building - Short Form",
+            "Building - Long Form",
+            "Use of Premises",
+            "Liquor License",
+            "Common Victualler (Food Service)",
+            "Entertainment License",
+            "Street Occupancy",
+            "Resident Parking",
+            "Business Parking",
+            "Fire Prevention",
+            "Fire Alarm",
+            "Place of Assembly",
+            "Hot Work",
+            "Tent Permit",
+            "Food Truck",
+            "Dumpster",
+            "Excavation",
+            "Driveway",
+            "Sign Permit",
+            "Electrical",
+            "Plumbing",
+            "Gas",
+            "Other"
+        ],
+        "departments": [
+            "Inspectional Services",
+            "Licensing Board",
+            "Public Works",
+            "Fire Department",
+            "Building Department"
+        ],
+        "impact_types": [
+            "Time Lost",
+            "Financial Cost",
+            "Business Impact",
+            "Safety Concern",
+            "Legal/Compliance",
+            "Customer Experience",
+            "Project Delay"
+        ],
+        "urgency_levels": [
+            "Low",
+            "Medium",
+            "High"
+        ],
+        "sentiment_options": [
+            "Positive",
+            "Negative",
+            "Neutral"
+        ],
+        "priority_levels": [
+            "High",
+            "Medium",
+            "Low"
+        ]
+    }'::jsonb,
+    true,
+    NOW(),
+    'system',
+    'Initial configuration'
 );

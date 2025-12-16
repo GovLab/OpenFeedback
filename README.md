@@ -76,7 +76,29 @@ AWS_NEO4J_PASSWORD=the_password_you_set_for_neo4j
 
 ---
 
-## Step 4: Start the App
+## Step 4: Set Up Database Tables
+
+The database needs tables created before the app can store data.
+
+### Using pgAdmin (recommended for beginners):
+
+1. In pgAdmin, expand your server → expand "Databases" → click on `openfeedback`
+2. Right-click on `openfeedback` and select "Query Tool"
+3. Open the file `backend/schema.sql` from the project folder (File → Open)
+4. Click the "Execute" button (▶) to run it
+
+You should see "CREATE TABLE" and "INSERT" messages — that means it worked!
+
+### Using psql (command line):
+
+```bash
+cd backend
+psql -U postgres -d openfeedback -f schema.sql
+```
+
+---
+
+## Step 5: Start the App
 
 Make sure both databases are running:
 - PostgreSQL should start automatically after installation
@@ -95,7 +117,7 @@ Wait about 30 seconds for everything to start up.
 
 ---
 
-## Step 5: Use the App
+## Step 6: Use the App
 
 1. Open your web browser
 2. Go to http://localhost:3000
@@ -115,6 +137,9 @@ Wait about 30 seconds for everything to start up.
 - Double-check your passwords in the `.env.local` file match what you set during installation
 - Make sure PostgreSQL is using port 5432 (the default)
 - Make sure Neo4j is using port 7687 (the default)
+
+### "relation feedback2 does not exist" or similar table errors
+- You skipped Step 4! Go back and run schema.sql in pgAdmin
 
 ### "Port already in use" messages
 - This is normal! The app automatically switches to backup ports (8003/3001)
