@@ -38,8 +38,23 @@ CREATE TYPE feedback_source_enum AS ENUM (
     'OpenPermit', 'Email', 'Phone', 'In-Person', 'Website', '311', 'Interview', 'Other'
 );
 
+-- Create system configuration table
+CREATE TABLE system_config (
+    config_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    version INTEGER NOT NULL UNIQUE,
+    config_data JSONB NOT NULL,
+    is_active BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    created_by VARCHAR(100),
+    change_notes TEXT
+);
+
+-- Create indexes for system_config
+CREATE INDEX idx_active_config ON system_config (is_active) WHERE is_active = true;
+CREATE INDEX idx_version ON system_config (version DESC);
+
 -- Create main feedback table
-CREATE TABLE feedback (
+CREATE TABLE feedback2 (
     feedback_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     timestamp_submitted TIMESTAMPTZ DEFAULT NOW(),
     timestamp_processed TIMESTAMPTZ,
@@ -71,5 +86,8 @@ CREATE TABLE feedback (
     
     -- Metadata
     attachment_urls TEXT[],
-    feedback_source feedback_source_enum DEFAULT 'OpenPermit'
+    feedback_source feedback_source_enum DEFAULT 'OpenPermit',
+    
+    -- Configuration version tracking
+    config_version INTEGER REFERENCES system_config(version)
 );
