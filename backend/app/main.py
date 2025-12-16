@@ -134,6 +134,7 @@ app.add_middleware(
     allow_origins=[
         "https://main.d57dpeqds75ja.amplifyapp.com",  # Your Amplify frontend
         "https://main.d3f474el750k1.amplifyapp.com",
+        "https://main.d1kr78wb4i3bb9.amplifyapp.com",
         "http://localhost:3000",  # Local development
         "http://localhost:3001",  # Local development
     ],
