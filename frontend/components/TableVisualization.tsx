@@ -923,7 +923,7 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
               const isNewVersionGroup = !prevFeedback || prevFeedback.config_version !== feedback.config_version;
               
               return (
-                 <>
+              <>
                    {isNewVersionGroup && (
                      <tr key={`separator-${feedback.feedback_id}`}>
                        <td colSpan={8} className="px-6 py-3" style={{
@@ -947,212 +947,212 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
                        </td>
                      </tr>
                    )}
-                   <tr
-                     key={feedback.feedback_id}
+                <tr 
+                  key={feedback.feedback_id} 
                      className={`transition-all ${expandedRows.has(feedback.feedback_id)
-                         ? 'border-l-4 border-r-4 border-b-2 shadow-lg'
-                         : 'hover:bg-blue-50'
-                       }`}
-                     style={{
-                       backgroundColor: expandedRows.has(feedback.feedback_id) ? 'rgba(24, 113, 189, 0.05)' : undefined,
-                       borderLeftColor: expandedRows.has(feedback.feedback_id) ? 'var(--boston-optimistic-blue)' : undefined,
-                       borderRightColor: expandedRows.has(feedback.feedback_id) ? 'var(--boston-optimistic-blue)' : undefined,
-                       borderBottomColor: expandedRows.has(feedback.feedback_id) ? 'rgba(24, 113, 189, 0.2)' : undefined
-                     }}
-                   >
-                     <td className="px-4 py-3 whitespace-nowrap text-center">
-                      <div className="flex flex-col items-center gap-1">
-                        {(() => {
-                          const relativeTime = getRelativeTime(feedback.timestamp_submitted);
+                      ? 'border-l-4 border-r-4 border-b-2 shadow-lg' 
+                      : 'hover:bg-blue-50'
+                  }`}
+                  style={{
+                    backgroundColor: expandedRows.has(feedback.feedback_id) ? 'rgba(24, 113, 189, 0.05)' : undefined,
+                    borderLeftColor: expandedRows.has(feedback.feedback_id) ? 'var(--boston-optimistic-blue)' : undefined,
+                    borderRightColor: expandedRows.has(feedback.feedback_id) ? 'var(--boston-optimistic-blue)' : undefined,
+                    borderBottomColor: expandedRows.has(feedback.feedback_id) ? 'rgba(24, 113, 189, 0.2)' : undefined
+                  }}
+                >
+                  <td className="px-4 py-3 whitespace-nowrap text-center">
+                    <div className="flex flex-col items-center gap-1">
+                      {(() => {
+                        const relativeTime = getRelativeTime(feedback.timestamp_submitted);
                           return relativeTime == '' ? (
+                          <span className="text-xs text-gray-500">
+                            {feedback.timestamp_submitted ? new Date(feedback.timestamp_submitted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+                          </span>
+                        ) : (
+                          <>
+                            <span className="text-xs font-semibold text-gray-900">
+                              {relativeTime}
+                            </span>
                             <span className="text-xs text-gray-500">
                               {feedback.timestamp_submitted ? new Date(feedback.timestamp_submitted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
                             </span>
-                          ) : (
-                            <>
-                              <span className="text-xs font-semibold text-gray-900">
-                                {relativeTime}
-                              </span>
-                              <span className="text-xs text-gray-500">
-                                {feedback.timestamp_submitted ? new Date(feedback.timestamp_submitted).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
-                              </span>
-                            </>
-                          );
-                        })()}
-                        {feedback.followup_opt_in && (
-                          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold" title="Contact info available" style={{ color: 'var(--boston-green)' }}>
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                            </svg>
-                            Contact
+                          </>
+                        );
+                      })()}
+                      {feedback.followup_opt_in && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold" title="Contact info available" style={{ color: 'var(--boston-green)' }}>
+                          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                          </svg>
+                          Contact
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-1 max-w-md">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {feedback.permit_type && (
+                          <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium text-white rounded" style={{ backgroundColor: 'var(--boston-optimistic-blue)' }}>
+                            {feedback.permit_type}
+                          </span>
+                        )}
+                        {feedback.language && feedback.language !== 'en' && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 text-xs font-medium rounded" style={{ backgroundColor: '#ddd6fe', color: '#6b21a8' }}>
+                            {feedback.language.toUpperCase()}
                           </span>
                         )}
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-col gap-1 max-w-md">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {feedback.permit_type && (
-                            <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium text-white rounded" style={{ backgroundColor: 'var(--boston-optimistic-blue)' }}>
-                              {feedback.permit_type}
-                            </span>
-                          )}
-                          {feedback.language && feedback.language !== 'en' && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 text-xs font-medium rounded" style={{ backgroundColor: '#ddd6fe', color: '#6b21a8' }}>
-                              {feedback.language.toUpperCase()}
-                            </span>
+                      {feedback.ai_summary ? (
+                        <p className="text-sm text-gray-900 line-clamp-2">
+                          {feedback.ai_summary}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-gray-700 line-clamp-2">
+                          {feedback.issue_description}
+                        </p>
+                      )}
+                      {feedback.category && (
+                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                          <span className="font-medium">{feedback.category}</span>
+                          {feedback.subcategory && (
+                            <>
+                              <span>•</span>
+                              <span>{feedback.subcategory}</span>
+                            </>
                           )}
                         </div>
-                        {feedback.ai_summary ? (
-                          <p className="text-sm text-gray-900 line-clamp-2">
-                            {feedback.ai_summary}
-                          </p>
-                        ) : (
-                          <p className="text-sm text-gray-700 line-clamp-2">
-                            {feedback.issue_description}
-                          </p>
-                        )}
-                        {feedback.category && (
-                          <div className="flex items-center gap-1 text-xs text-gray-500">
-                            <span className="font-medium">{feedback.category}</span>
-                            {feedback.subcategory && (
-                              <>
-                                <span>•</span>
-                                <span>{feedback.subcategory}</span>
-                              </>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-center">
-                      <span className="text-sm font-medium text-gray-900">
-                        {feedback.department_predicted || <span className="text-gray-400">Unassigned</span>}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex flex-wrap gap-1 justify-center">
-                        {feedback.impact_type && feedback.impact_type.length > 0 ? (
-                          feedback.impact_type.slice(0, 2).map((impact, idx) => (
-                            <span
-                              key={idx}
-                              className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded"
-                              style={{ backgroundColor: 'var(--boston-gray-light)', color: 'var(--boston-optimistic-blue)' }}
-                            >
-                              {impact}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-xs text-gray-400">None</span>
-                        )}
-                        {feedback.impact_type && feedback.impact_type.length > 2 && (
-                          <span className="text-xs text-gray-500 font-medium">
-                            +{feedback.impact_type.length - 2}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-1">
-                        <span className="text-lg" style={getSentimentStyle(feedback.sentiment_score)}>
-                          {getSentimentIcon(feedback.sentiment_score)}
-                        </span>
-                        <span className="text-xs font-medium" style={getSentimentStyle(feedback.sentiment_score)}>
-                          {getSentimentLabel(feedback.sentiment_score)}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
-                      {feedback.urgency_level ? (
-                        <span className="text-white rounded-full px-2.5 py-1 text-xs font-bold" style={getUrgencyStyle(feedback.urgency_level)}>
-                          {feedback.urgency_level}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400">—</span>
                       )}
-                    </td>
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
-                      <span className="text-white rounded-full px-2.5 py-1 text-xs font-semibold" style={getStatusBadgeStyle(feedback.status)}>
-                        {feedback.status}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-center">
+                    <span className="text-sm font-medium text-gray-900">
+                      {feedback.department_predicted || <span className="text-gray-400">Unassigned</span>}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <div className="flex flex-wrap gap-1 justify-center">
+                      {feedback.impact_type && feedback.impact_type.length > 0 ? (
+                        feedback.impact_type.slice(0, 2).map((impact, idx) => (
+                          <span
+                            key={idx}
+                            className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded"
+                    style={{ backgroundColor: 'var(--boston-gray-light)', color: 'var(--boston-optimistic-blue)' }}
+                          >
+                            {impact}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-gray-400">None</span>
+                      )}
+                      {feedback.impact_type && feedback.impact_type.length > 2 && (
+                        <span className="text-xs text-gray-500 font-medium">
+                          +{feedback.impact_type.length - 2}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-center whitespace-nowrap">
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="text-lg" style={getSentimentStyle(feedback.sentiment_score)}>
+                        {getSentimentIcon(feedback.sentiment_score)}
                       </span>
-                    </td>
-                    <td className="px-4 py-3 text-center whitespace-nowrap">
-                      <button
-                        onClick={() => toggleRow(feedback.feedback_id)}
+                      <span className="text-xs font-medium" style={getSentimentStyle(feedback.sentiment_score)}>
+                        {getSentimentLabel(feedback.sentiment_score)}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-center whitespace-nowrap">
+                    {feedback.urgency_level ? (
+                      <span className="text-white rounded-full px-2.5 py-1 text-xs font-bold" style={getUrgencyStyle(feedback.urgency_level)}>
+                        {feedback.urgency_level}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-center whitespace-nowrap">
+                    <span className="text-white rounded-full px-2.5 py-1 text-xs font-semibold" style={getStatusBadgeStyle(feedback.status)}>
+                      {feedback.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-center whitespace-nowrap">
+                    <button
+                      onClick={() => toggleRow(feedback.feedback_id)}
                         className={`font-medium inline-flex items-center justify-center w-8 z-10 h-8 rounded-lg transition-all ${expandedRows.has(feedback.feedback_id)
-                            ? 'text-white shadow-lg'
-                            : 'hover:shadow-xl'
-                          }`}
-                        style={{
-                          backgroundColor: expandedRows.has(feedback.feedback_id) ? 'var(--boston-optimistic-blue)' : 'transparent',
-                          color: expandedRows.has(feedback.feedback_id) ? 'white' : 'var(--boston-optimistic-blue)'
-                        }}
-                        title={expandedRows.has(feedback.feedback_id) ? "Hide details" : "View details"}
-                      >
-                        {expandedRows.has(feedback.feedback_id) ? (
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                          </svg>
-                        ) : (
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
-                        )}
-                      </button>
-                    </td>
-                  </tr>
+                          ? 'text-white shadow-lg'
+                          : 'hover:shadow-xl'
+                      }`}
+                      style={{
+                        backgroundColor: expandedRows.has(feedback.feedback_id) ? 'var(--boston-optimistic-blue)' : 'transparent',
+                        color: expandedRows.has(feedback.feedback_id) ? 'white' : 'var(--boston-optimistic-blue)'
+                      }}
+                      title={expandedRows.has(feedback.feedback_id) ? "Hide details" : "View details"}
+                    >
+                      {expandedRows.has(feedback.feedback_id) ? (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      )}
+                    </button>
+                  </td>
+                </tr>
                 
-                   {/* Expanded Row Details */}
-                   {expandedRows.has(feedback.feedback_id) && (
+                {/* Expanded Row Details */}
+                {expandedRows.has(feedback.feedback_id) && (
                      <tr className="" style={{ backgroundColor: 'rgba(24, 113, 189, 0.03)' }}>
-                       <td colSpan={8} className="px-6 py-4 border-t-0">
-                        <div className="space-y-3">
-                          {/* First Row - Original Feedback and Classification */}
-                          <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                            <OriginalFeedbackCard description={feedback.issue_description} />
-                            <ClassificationCard
-                              permitType={feedback.permit_type}
-                              category={feedback.category}
-                              subcategory={feedback.subcategory}
-                              department={feedback.department_predicted}
-                              impactTypes={feedback.impact_type}
+                    <td colSpan={8} className="px-6 py-4 border-t-0">
+                      <div className="space-y-3">
+                        {/* First Row - Original Feedback and Classification */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                          <OriginalFeedbackCard description={feedback.issue_description} />
+                          <ClassificationCard 
+                            permitType={feedback.permit_type}
+                            category={feedback.category}
+                            subcategory={feedback.subcategory}
+                            department={feedback.department_predicted}
+                            impactTypes={feedback.impact_type}
+                          />
+                        </div>
+
+                        {/* Second Row - AI Summary, System Info, and Contact Info */}
+                        {feedback.ai_summary && (
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                            <AISummaryCard 
+                              summary={feedback.ai_summary}
+                              hasContact={!!(feedback.followup_opt_in && feedback.user_contact_info)}
                             />
-                          </div>
-
-                          {/* Second Row - AI Summary, System Info, and Contact Info */}
-                          {feedback.ai_summary && (
-                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                              <AISummaryCard
-                                summary={feedback.ai_summary}
-                                hasContact={!!(feedback.followup_opt_in && feedback.user_contact_info)}
-                              />
-                              <SystemInfoCard
-                                source={feedback.feedback_source}
-                                language={feedback.language}
-                                timestamp={feedback.timestamp_submitted}
-                                hasContact={!!(feedback.followup_opt_in && feedback.user_contact_info)}
-                              />
-                              {feedback.followup_opt_in && feedback.user_contact_info && (
-                                <ContactInfoCard contactInfo={feedback.user_contact_info} />
-                              )}
-                            </div>
-                          )}
-
-                          {/* System Info if no AI Summary */}
-                          {!feedback.ai_summary && (
-                            <SystemInfoCard
+                            <SystemInfoCard 
                               source={feedback.feedback_source}
                               language={feedback.language}
                               timestamp={feedback.timestamp_submitted}
-                              hasContact={false}
+                              hasContact={!!(feedback.followup_opt_in && feedback.user_contact_info)}
                             />
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </>
+                            {feedback.followup_opt_in && feedback.user_contact_info && (
+                              <ContactInfoCard contactInfo={feedback.user_contact_info} />
+                                      )}
+                                    </div>
+                        )}
+
+                        {/* System Info if no AI Summary */}
+                        {!feedback.ai_summary && (
+                          <SystemInfoCard 
+                            source={feedback.feedback_source}
+                            language={feedback.language}
+                            timestamp={feedback.timestamp_submitted}
+                            hasContact={false}
+                          />
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </>
               )})}
           </tbody>
         </table>
