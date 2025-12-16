@@ -40,9 +40,11 @@ function GraphEmptyState() {
 // ================ Legend Component ================
 interface GraphLegendProps {
   zoomLevel: number;
+  showDeprecated: boolean;
+  onToggleDeprecated: () => void;
 }
 
-function GraphLegend({ zoomLevel }: GraphLegendProps) {
+function GraphLegend({ zoomLevel, showDeprecated, onToggleDeprecated }: GraphLegendProps) {
   return (
     <div className="mb-3 md:mb-4 flex flex-wrap gap-2 md:gap-3 bg-white rounded-lg p-2 md:p-3 lg:p-4 border border-slate-200 overflow-x-auto">
       <div className="flex items-center gap-2 px-2 md:px-3 py-1.5 bg-blue-50 rounded-lg flex-shrink-0">
@@ -57,9 +59,16 @@ function GraphLegend({ zoomLevel }: GraphLegendProps) {
         <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-amber-500 shadow-sm"></div>
         <span className="text-slate-700 text-xs md:text-sm font-medium whitespace-nowrap">Subcategory</span>
       </div>
-      <div className="flex items-center gap-2 px-2 md:px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-300 flex-shrink-0 opacity-60">
+      <div 
+        className={`flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-lg border flex-shrink-0 transition-all cursor-pointer ${showDeprecated ? 'bg-gray-50 border-gray-300 opacity-60' : 'bg-gray-100 border-gray-400 opacity-40'}`} 
+        onClick={onToggleDeprecated}
+        title={showDeprecated ? "Hide deprecated nodes (categories/subcategories not in active config)" : "Show deprecated nodes (categories/subcategories not in active config)"}
+      >
         <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-gray-400 shadow-sm"></div>
         <span className="text-slate-600 text-xs md:text-sm font-medium whitespace-nowrap">Deprecated</span>
+        <div className={`relative w-8 h-4 rounded-full transition-colors ${showDeprecated ? 'bg-blue-500' : 'bg-gray-300'}`}>
+          <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${showDeprecated ? 'translate-x-4' : 'translate-x-0'}`}></div>
+        </div>
       </div>
       <div className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-200 flex-shrink-0">
         <svg className="w-3 h-3 md:w-3.5 md:h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -380,6 +389,7 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set());
   const [highlightedLinks, setHighlightedLinks] = useState<Set<string>>(new Set());
+  const [showDeprecated, setShowDeprecated] = useState<boolean>(true);
 
   // Dynamically import ForceGraph2D on client side
   useEffect(() => {
@@ -444,10 +454,18 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
 
   // Transform data to force-graph format with enhanced properties and circular positioning
   const graphData = useMemo(() => {
+    // Filter out deprecated nodes if toggle is off
+    const visibleNodes = showDeprecated 
+      ? data.nodes 
+      : data.nodes.filter(n => !n.deprecated);
+    
+    // Create a set of visible node IDs for relationship filtering
+    const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
+    
     // Group nodes by type
-    const categoryNodes = data.nodes.filter(n => n.type === "Category");
-    const subcategoryNodes = data.nodes.filter(n => n.type === "Subcategory");
-    const feedbackNodes = data.nodes.filter(n => n.type === "Feedback");
+    const categoryNodes = visibleNodes.filter(n => n.type === "Category");
+    const subcategoryNodes = visibleNodes.filter(n => n.type === "Subcategory");
+    const feedbackNodes = visibleNodes.filter(n => n.type === "Feedback");
     
     // Arrange nodes in circles
     const arrangeInCircle = (nodes: any[], radius: number, startIndex: number) => {
@@ -475,9 +493,15 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
     const feedbackCircle = arrangeInCircle(feedbackNodes, 60, 0);
     
     // Filter relationships to exclude direct connections between Feedback and Category
+    // Also exclude relationships involving deprecated nodes if they're hidden
     const filteredRelationships = data.relationships.filter((rel) => {
       const sourceNode = data.nodes.find(n => n.id === rel.source);
       const targetNode = data.nodes.find(n => n.id === rel.target);
+      
+      // Exclude if either node is not visible (deprecated and hidden)
+      if (!visibleNodeIds.has(rel.source) || !visibleNodeIds.has(rel.target)) {
+        return false;
+      }
       
       // Exclude direct Feedback -> Category connections
       if (sourceNode?.type === "Feedback" && targetNode?.type === "Category") {
@@ -499,7 +523,7 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
       label: rel.type,
     })),
   };
-  }, [data, feedbackCounts]);
+  }, [data, feedbackCounts, showDeprecated]);
 
   // Calculate highlighted nodes and links based on selected node
   const getConnectedNodesAndLinks = useCallback((node: any) => {
@@ -1063,7 +1087,11 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
 
       <div className="flex gap-4 lg:gap-6 h-[400px] md:h-[500px] lg:h-[600px]">
         <div className="flex-1 flex flex-col min-w-0">
-          <GraphLegend zoomLevel={zoomLevel} />
+          <GraphLegend 
+            zoomLevel={zoomLevel} 
+            showDeprecated={showDeprecated}
+            onToggleDeprecated={() => setShowDeprecated(!showDeprecated)}
+          />
 
           <div className="flex-1 border border-slate-200 rounded-xl overflow-hidden bg-gradient-to-br from-slate-50 to-white shadow-inner min-h-0 relative">
             {/* Reset View Button */}
