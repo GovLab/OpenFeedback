@@ -47,3 +47,5 @@ override.tf.json
 *_override.tf.json
 *.ppk
 .cursor/
+.pem
+tfplan

@@ -2,12 +2,23 @@
 # AWS APP RUNNER - FASTAPI BACKEND SERVICE
 # ==============================================================================
 
+# GitHub Connection for App Runner (uses CodeStar Connections)
+# Automatically creates the connection - no manual setup needed!
+resource "aws_codestarconnections_connection" "github" {
+  name          = "${var.project_name}-github-connection"
+  provider_type = "GitHub"
+
+  tags = {
+    Name = "${var.project_name}-github-connection"
+  }
+}
+
 resource "aws_apprunner_service" "backend" {
   service_name = "${var.project_name}-backend"
 
   source_configuration {
     authentication_configuration {
-      connection_arn = var.github_connection_arn
+      connection_arn = local.github_connection_arn
     }
 
     code_repository {

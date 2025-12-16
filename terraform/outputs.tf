@@ -88,6 +88,16 @@ output "apprunner_service_arn" {
   value       = aws_apprunner_service.backend.arn
 }
 
+output "github_connection_arn" {
+  description = "GitHub connection ARN (created automatically)"
+  value       = aws_codestarconnections_connection.github.arn
+}
+
+output "github_connection_status" {
+  description = "GitHub connection status - PENDING means you need to authorize it in AWS Console"
+  value       = aws_codestarconnections_connection.github.connection_status
+}
+
 output "apprunner_service_url" {
   description = "App Runner service URL"
   value       = "https://${aws_apprunner_service.backend.service_url}"

@@ -16,5 +16,8 @@ locals {
     aws_subnet.private_b[0].id,
     aws_subnet.private_c[0].id
   ]
+
+  # GitHub connection ARN: automatically created
+  github_connection_arn = aws_codestarconnections_connection.github.arn
 }
 

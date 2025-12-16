@@ -136,10 +136,7 @@ variable "github_branch" {
   default     = "main"
 }
 
-variable "github_connection_arn" {
-  description = "AWS App Runner GitHub connection ARN (must be created manually first)"
-  type        = string
-}
+# Note: github_connection_arn is no longer needed - connection is created automatically
 
 variable "app_runner_cpu" {
   description = "App Runner CPU units (1024 = 1 vCPU)"
