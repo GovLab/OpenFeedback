@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse, IndividualResponse, ConversationInput, ConversationResponse, AugmentationInput, AugmentationResponse, ConfigResponse, ConfigUpdateRequest, ConfigUpdateResponse, ConfigHistoryResponse, ConfigVersion, SystemConfig, Category
-from .classifier import classify_feedback, chatbot_agent, augment_feedback, determine_permit_context, detect_spam_or_invalid
+from .classifier import classify_feedback, chatbot_agent, augment_feedback, determine_permit_context, detect_spam_or_invalid, clear_config_cache
 from .database import db
 from .postgres_db import postgres_db
 from .file_processor import FileProcessor
@@ -657,6 +657,9 @@ async def update_config(request: ConfigUpdateRequest):
             created_by=request.created_by,
             change_notes=request.change_notes
         )
+        
+        # Clear classifier cache so new config is used immediately
+        clear_config_cache()
         
         logger.info(f"Created new config version {new_version}")
         

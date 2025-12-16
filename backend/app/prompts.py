@@ -1,55 +1,3 @@
-"""
-Centralized AI prompts for the OpenPermit system.
-All LLM prompts used throughout the application are defined here.
-
-This module uses a builder pattern to generate prompts with placeholders,
-providing a clean abstraction for prompt generation.
-
-USAGE:
-------
-Import the singleton instance and call builder methods:
-
-    from app.prompts import prompt_builder
-    
-    # Build a classification prompt
-    prompt = prompt_builder.build_classification_prompt(feedback="My feedback text")
-    
-    # Build a system message
-    system_msg = prompt_builder.build_classification_system_message()
-    
-    # Use in OpenAI API call
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {"role": "system", "content": system_msg},
-            {"role": "user", "content": prompt}
-        ]
-    )
-
-EXTENDING:
-----------
-To add a new prompt:
-
-1. Add a new static method to the PromptBuilder class:
-   
-   @staticmethod
-   def build_your_prompt(param1: str, param2: str) -> str:
-       template = '''Your prompt template with {param1} and {param2}'''
-       return template.format(param1=param1, param2=param2)
-
-2. Use it in your code:
-   
-   prompt = prompt_builder.build_your_prompt(param1="value1", param2="value2")
-
-BENEFITS:
----------
-- Centralized: All prompts in one place for easy maintenance
-- Type-safe: Parameters are explicitly defined with types
-- Testable: Easy to unit test prompt generation
-- Flexible: Easy to add new prompts or modify existing ones
-- Clean: Separates prompt logic from business logic
-"""
-
 from typing import Optional
 
 
@@ -60,51 +8,83 @@ class PromptBuilder:
     """
     
     @staticmethod
-    def build_classification_prompt(feedback: str) -> str:
+    def build_classification_prompt_from_config(feedback: str, config_data: dict = None) -> str:
         """
-        Build a classification prompt for categorizing feedback.
+        Build a classification prompt using dynamic configuration data or hardcoded defaults.
         
         Args:
             feedback: The user feedback text to classify
+            config_data: Optional dictionary containing system configuration. If None, uses hardcoded defaults.
             
         Returns:
-            Formatted prompt string
+            Formatted prompt string with dynamic values from config or defaults
         """
+        # Default hardcoded values (fallback)
+        default_config = {
+            'categories': [
+                {'name': 'Economic & Equity Concerns', 'subcategories': ['High or Unexpected Costs', 'Access or Fairness Barriers']},
+                {'name': 'Communication & Service Problems', 'subcategories': ['Poor Communication / Experience', 'Service Responsiveness & Transparency']},
+                {'name': 'Technology & Access Barriers', 'subcategories': ['Technical / Portal Problems', 'Digital Access & Portal Problems']},
+                {'name': 'Process & Operational Flow Issues', 'subcategories': ['Confusion or Missing Guidance', 'Delays or Waiting Too Long', 'Conflicting Departments / Redundant Steps', 'Procedural & Coordination Issues']},
+                {'name': 'Policy & Rules Clarity', 'subcategories': ['Outdated or Unclear Rules', 'Rules & Policy Gaps']}
+            ],
+            'permit_types': ['Building - Short Form', 'Building - Long Form', 'Use of Premises', 'Liquor License', 'Common Victualler (Food Service)', 'Entertainment License', 'Street Occupancy', 'Resident Parking', 'Business Parking', 'Fire Prevention', 'Fire Alarm', 'Place of Assembly', 'Hot Work', 'Tent Permit', 'Food Truck', 'Dumpster', 'Excavation', 'Driveway', 'Sign Permit', 'Electrical', 'Plumbing', 'Gas', 'Other'],
+            'departments': ['Inspectional Services', 'Licensing Board', 'Public Works', 'Fire Department', 'Building Department'],
+            'impact_types': ['Time Lost', 'Financial Cost', 'Business Impact', 'Safety Concern', 'Legal/Compliance', 'Customer Experience', 'Project Delay'],
+            'sentiment_options': ['Positive', 'Negative', 'Neutral'],
+            'priority_levels': ['High', 'Medium', 'Low'],
+            'urgency_levels': ['Low', 'Medium', 'High']
+        }
+        
+        # Use provided config or defaults
+        if config_data is None:
+            config_data = default_config
+        
+        # Build categories section from config
+        categories_section = []
+        for idx, category in enumerate(config_data.get('categories', []), 1):
+            category_name = category.get('name', '')
+            subcategories = category.get('subcategories', [])
+            if subcategories:
+                subcat_list = '\n   - '.join([''] + subcategories)
+            else:
+                subcat_list = '\n   - (No subcategories)'
+            categories_section.append(f"{idx}. {category_name}:{subcat_list}")
+        
+        categories_text = '\n\n'.join(categories_section) if categories_section else "No categories configured."
+        
+        # Build permit types list
+        permit_types = config_data.get('permit_types', [])
+        permit_types_text = ', '.join([f'"{pt}"' for pt in permit_types]) if permit_types else '"Other"'
+        
+        # Build departments list
+        departments = config_data.get('departments', [])
+        departments_text = ', '.join([f'"{dept}"' for dept in departments]) if departments else "Various departments"
+        
+        # Build impact types list
+        impact_types = config_data.get('impact_types', [])
+        impact_types_text = ', '.join([f'"{it}"' for it in impact_types]) if impact_types else "Various impacts"
+        
+        # Get sentiment and priority options
+        sentiment_options = config_data.get('sentiment_options', ['Positive', 'Negative', 'Neutral'])
+        priority_levels = config_data.get('priority_levels', ['High', 'Medium', 'Low'])
+        urgency_levels = config_data.get('urgency_levels', ['Low', 'Medium', 'High'])
+        
         template = """Analyze the following citizen feedback and classify it into relevant categories and subcategories based on core friction points in the permit process.
 Note: If feedback is vague or lacks detail, make your best assessment based on available information without spending excessive time trying to infer missing context.
 
 Available Categories and Subcategories:
 
-1. Economic & Equity Concerns:
-   - High or Unexpected Costs
-   - Access or Fairness Barriers
-
-2. Communication & Service Problems:
-   - Poor Communication / Experience
-   - Service Responsiveness & Transparency
-
-3. Technology & Access Barriers:
-   - Technical / Portal Problems
-   - Digital Access & Portal Problems
-
-4. Process & Operational Flow Issues:
-   - Confusion or Missing Guidance
-   - Delays or Waiting Too Long
-   - Conflicting Departments / Redundant Steps
-   - Procedural & Coordination Issues
-
-5. Policy & Rules Clarity:
-   - Outdated or Unclear Rules
-   - Rules & Policy Gaps
+{categories}
 
 Also determine:
-- Permit Type: Which Boston permit this relates to (choose most relevant from: "Building - Short Form", "Building - Long Form", "Use of Premises", "Liquor License", "Common Victualler (Food Service)", "Entertainment License", "Street Occupancy", "Resident Parking", "Business Parking", "Fire Prevention", "Fire Alarm", "Place of Assembly", "Hot Work", "Tent Permit", "Food Truck", "Dumpster", "Excavation", "Driveway", "Sign Permit", "Electrical", "Plumbing", "Gas", "Other")
-- Sentiment (Positive, Negative, or Neutral)
-- Priority level (High, Medium, Low)
+- Permit Type: Which Boston permit this relates to (choose most relevant from: {permit_types})
+- Sentiment ({sentiment_options})
+- Priority level ({priority_levels})
 - Summary: 1-2 sentence condensed version
-- Department: Which Boston city department should handle this (e.g., "Inspectional Services", "Licensing Board", "Public Works", "Fire Department", "Building Department", etc.)
-- Urgency: Low, Medium, or High (based on time-sensitivity and impact)
-- Impact Types: What types of impact this has (select from: "Time Lost", "Financial Cost", "Business Impact", "Safety Concern", "Legal/Compliance", "Customer Experience", "Project Delay")
+- Department: Which Boston city department should handle this (e.g., {departments}, etc.)
+- Urgency ({urgency_levels}) - based on time-sensitivity and impact
+- Impact Types: What types of impact this has (select from: {impact_types})
 - Language: Detected language code (e.g., "en", "es", "zh", etc.)
 
 Feedback: {feedback}
@@ -127,7 +107,16 @@ Return ONLY a valid JSON object with this exact structure (no additional text):
 
 Each category should map to its relevant subcategories. Only include categories and subcategories that apply to this feedback."""
         
-        return template.format(feedback=feedback)
+        return template.format(
+            feedback=feedback,
+            categories=categories_text,
+            permit_types=permit_types_text,
+            sentiment_options='|'.join(sentiment_options),
+            priority_levels='|'.join(priority_levels),
+            departments=departments_text,
+            urgency_levels='|'.join(urgency_levels),
+            impact_types=impact_types_text
+        )
     
     @staticmethod
     def build_classification_system_message() -> str:

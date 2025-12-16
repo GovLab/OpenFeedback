@@ -3,20 +3,59 @@ from .config import settings
 from .models import ClassifiedFeedback
 from .prompts import prompt_builder
 from .boston_context_loader import load_boston_context
+from .system_config import system_config_manager
 import json
 import logging
 import re
-from typing import List
+from typing import List, Optional, Dict, Any
 
 # Configure logging for the classifier module
 logger = logging.getLogger(__name__)
 
 client = OpenAI(api_key=settings.openai_api_key)
 
+# Cache for active config to avoid repeated database queries
+_active_config_cache: Optional[Dict[str, Any]] = None
+
+
+def _get_active_config() -> Optional[Dict[str, Any]]:
+    """
+    Get active configuration, using cache if available.
+    
+    Returns:
+        Config data dict or None if not available (will use hardcoded fallback)
+    """
+    global _active_config_cache
+    
+    try:
+        if _active_config_cache is None:
+            config = system_config_manager.get_active_config()
+            if config:
+                _active_config_cache = config['config_data']
+                logger.info("Loaded active configuration from database")
+            else:
+                logger.warning("No active config found, will use hardcoded values")
+                return None
+        return _active_config_cache
+    except Exception as e:
+        logger.error(f"Error loading active config: {str(e)}")
+        logger.warning("Falling back to hardcoded values")
+        return None
+
+
+def clear_config_cache():
+    """
+    Clear the cached configuration. Call this when config is updated.
+    Next classification will reload config from database.
+    """
+    global _active_config_cache
+    _active_config_cache = None
+    logger.info("Configuration cache cleared")
+
 
 async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
     """
-    Classify feedback using OpenAI API.
+    Classify feedback using OpenAI API with dynamic configuration.
     
     Args:
         feedback_text: The feedback text to classify
@@ -26,13 +65,23 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
     """
     logger.debug(f"Classifier function called with feedback: {feedback_text[:100]}...")
     
+    # Try to load active config (will use defaults if None)
+    config_data = _get_active_config()
+    
+    if config_data:
+        logger.debug("Using dynamic configuration from database")
+    else:
+        logger.debug("Using hardcoded configuration defaults (fallback)")
+    
+    prompt = prompt_builder.build_classification_prompt_from_config(feedback_text, config_data)
+    
     try:
         logger.debug(f"Sending request to OpenAI with model: gpt-4o, temperature: 0.3")
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
                 {"role": "system", "content": prompt_builder.build_classification_system_message()},
-                {"role": "user", "content": prompt_builder.build_classification_prompt(feedback=feedback_text)}
+                {"role": "user", "content": prompt}
             ],
             temperature=0.3,
             max_tokens=500  # Increased for additional AI-generated fields
