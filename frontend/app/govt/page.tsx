@@ -6,9 +6,13 @@ import GraphVisualization from "@/components/GraphVisualization";
 import StatsDisplay from "@/components/StatsDisplay";
 import FeedbackTable from "@/components/TableVisualization";
 import Navigation from "@/components/Navigation";
+import SystemConfigManager from "@/components/SystemConfigManager";
 import { api, GraphData, Stats } from "@/lib/api";
 
+type TabType = "dashboard" | "config";
+
 export default function GovtDashboard() {
+  const [activeTab, setActiveTab] = useState<TabType>("dashboard");
   const [graphData, setGraphData] = useState<GraphData>({
     nodes: [],
     relationships: [],
@@ -102,18 +106,70 @@ export default function GovtDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {error && (
-          <div className="mb-6 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-md shadow-sm">
-            <div className="flex items-center gap-2">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="font-medium">{error}</span>
-            </div>
+        {/* Tab Navigation */}
+        <div className="mb-6 border-b" style={{ borderColor: 'var(--boston-gray-medium)' }}>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setActiveTab("dashboard")}
+              className="px-6 py-3 font-medium text-sm transition-colors border-b-2"
+              style={
+                activeTab === "dashboard"
+                  ? { borderColor: 'var(--boston-optimistic-blue)', color: 'var(--boston-optimistic-blue)' }
+                  : { borderColor: 'transparent', color: 'var(--boston-gray-dark)' }
+              }
+              onMouseEnter={(e) => {
+                if (activeTab !== "dashboard") {
+                  e.currentTarget.style.color = 'var(--boston-charles-blue)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== "dashboard") {
+                  e.currentTarget.style.color = 'var(--boston-gray-dark)';
+                }
+              }}
+            >
+              Dashboard
+            </button>
+            <button
+              onClick={() => setActiveTab("config")}
+              className="px-6 py-3 font-medium text-sm transition-colors border-b-2"
+              style={
+                activeTab === "config"
+                  ? { borderColor: 'var(--boston-optimistic-blue)', color: 'var(--boston-optimistic-blue)' }
+                  : { borderColor: 'transparent', color: 'var(--boston-gray-dark)' }
+              }
+              onMouseEnter={(e) => {
+                if (activeTab !== "config") {
+                  e.currentTarget.style.color = 'var(--boston-charles-blue)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (activeTab !== "config") {
+                  e.currentTarget.style.color = 'var(--boston-gray-dark)';
+                }
+              }}
+            >
+              System Configuration
+            </button>
           </div>
-        )}
+        </div>
 
-        {/* Stats Overview */}
+        {activeTab === "config" ? (
+          <SystemConfigManager />
+        ) : (
+          <>
+            {error && (
+              <div className="mb-6 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 rounded-md shadow-sm">
+                <div className="flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="font-medium">{error}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Stats Overview */}
         <div className="mb-8">
           <div className="flex items-center gap-2 mb-4">
             <h2 className="text-xl font-bold text-gray-900">Overview</h2>
@@ -369,11 +425,13 @@ export default function GovtDashboard() {
           )}
         </div>
 
-        {/* Feedback Table */}
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Feedback</h2>
-          <FeedbackTable refreshTrigger={refreshTrigger} />
-        </div>
+            {/* Feedback Table */}
+            <div className="mb-8">
+              <h2 className="text-xl font-bold text-gray-900 mb-4">Recent Feedback</h2>
+              <FeedbackTable refreshTrigger={refreshTrigger} />
+            </div>
+          </>
+        )}
       </main>
 
       {/* Navigation */}
