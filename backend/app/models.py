@@ -91,3 +91,62 @@ class AugmentationInput(BaseModel):
 class AugmentationResponse(BaseModel):
     """Model for feedback augmentation response."""
     additional_note: str
+
+
+# System Configuration Models
+class Category(BaseModel):
+    """Model for a category with subcategories."""
+    name: str
+    subcategories: List[str]
+
+
+class SystemConfig(BaseModel):
+    """Model for system configuration data."""
+    categories: List[Category]
+    permit_types: List[str]
+    departments: List[str]
+    impact_types: List[str]
+    urgency_levels: List[str]
+    sentiment_options: List[str]
+    priority_levels: List[str]
+
+
+class ConfigUpdateRequest(BaseModel):
+    """Model for updating system configuration."""
+    config_data: SystemConfig
+    created_by: Optional[str] = None
+    change_notes: Optional[str] = None
+
+
+class ConfigVersion(BaseModel):
+    """Model for a configuration version."""
+    config_id: str
+    version: int
+    config_data: SystemConfig
+    is_active: bool
+    created_at: Optional[str] = None
+    created_by: Optional[str] = None
+    change_notes: Optional[str] = None
+
+
+class ConfigResponse(BaseModel):
+    """Model for active configuration response."""
+    config_id: str
+    version: int
+    config_data: SystemConfig
+    created_at: Optional[str] = None
+    created_by: Optional[str] = None
+    change_notes: Optional[str] = None
+
+
+class ConfigHistoryResponse(BaseModel):
+    """Model for configuration history response."""
+    versions: List[ConfigVersion]
+    current_version: Optional[int] = None
+
+
+class ConfigUpdateResponse(BaseModel):
+    """Model for configuration update response."""
+    success: bool
+    version: int
+    message: Optional[str] = None

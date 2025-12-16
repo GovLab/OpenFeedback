@@ -5,11 +5,12 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException, File, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse, IndividualResponse, ConversationInput, ConversationResponse, AugmentationInput, AugmentationResponse
+from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse, IndividualResponse, ConversationInput, ConversationResponse, AugmentationInput, AugmentationResponse, ConfigResponse, ConfigUpdateRequest, ConfigUpdateResponse, ConfigHistoryResponse, ConfigVersion, SystemConfig, Category
 from .classifier import classify_feedback, chatbot_agent, augment_feedback, determine_permit_context, detect_spam_or_invalid
 from .database import db
 from .postgres_db import postgres_db
 from .file_processor import FileProcessor
+from .system_config import system_config_manager
 
 
 # Configure logging
@@ -48,6 +49,28 @@ logging.getLogger('openai').setLevel(logging.INFO)  # Reduce OpenAI noise
 
 logger = logging.getLogger(__name__)
 logger.info("Application logging configured with filtered levels")
+
+
+# Helper function for config conversion
+def _dict_to_system_config(config_data_dict: dict) -> SystemConfig:
+    """
+    Convert config_data dict to SystemConfig Pydantic model.
+    
+    Args:
+        config_data_dict: Dictionary with config data
+        
+    Returns:
+        SystemConfig Pydantic model
+    """
+    return SystemConfig(
+        categories=[Category(**cat) for cat in config_data_dict.get('categories', [])],
+        permit_types=config_data_dict.get('permit_types', []),
+        departments=config_data_dict.get('departments', []),
+        impact_types=config_data_dict.get('impact_types', []),
+        urgency_levels=config_data_dict.get('urgency_levels', []),
+        sentiment_options=config_data_dict.get('sentiment_options', []),
+        priority_levels=config_data_dict.get('priority_levels', [])
+    )
 
 
 # Helper function to convert sentiment to numeric score
@@ -579,3 +602,110 @@ async def verify_database_ids():
             "only_in_neo4j": [],
             "status": "ERROR"
         }
+
+
+# System Configuration Endpoints
+@app.get("/api/config", response_model=ConfigResponse)
+async def get_config():
+    """
+    Get the currently active system configuration.
+    
+    Returns:
+        ConfigResponse with active configuration data
+    """
+    try:
+        config = system_config_manager.get_active_config()
+        if not config:
+            raise HTTPException(
+                status_code=404,
+                detail="No active configuration found. Please seed the database with initial config."
+            )
+        
+        # Convert config_data dict to SystemConfig model
+        system_config = _dict_to_system_config(config['config_data'])
+        
+        return ConfigResponse(
+            config_id=config['config_id'],
+            version=config['version'],
+            config_data=system_config,
+            created_at=config['created_at'],
+            created_by=config['created_by'],
+            change_notes=config['change_notes']
+        )
+    except Exception as e:
+        logger.error(f"Error fetching active config: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.put("/api/config", response_model=ConfigUpdateResponse)
+async def update_config(request: ConfigUpdateRequest):
+    """
+    Create a new configuration version and activate it.
+    
+    Args:
+        request: ConfigUpdateRequest with new config data and metadata
+        
+    Returns:
+        ConfigUpdateResponse with new version number
+    """
+    try:
+        # Convert SystemConfig model to dict for storage (Pydantic v2 uses model_dump)
+        config_dict = request.config_data.model_dump()
+        
+        new_version = system_config_manager.create_new_version(
+            config_data=config_dict,
+            created_by=request.created_by,
+            change_notes=request.change_notes
+        )
+        
+        logger.info(f"Created new config version {new_version}")
+        
+        return ConfigUpdateResponse(
+            success=True,
+            version=new_version,
+            message=f"Configuration updated successfully. New version: {new_version}"
+        )
+    except Exception as e:
+        logger.error(f"Error creating new config version: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/config/history", response_model=ConfigHistoryResponse)
+async def get_config_history():
+    """
+    Get configuration version history.
+    
+    Returns:
+        ConfigHistoryResponse with all versions and current version number
+    """
+    try:
+        history = system_config_manager.get_config_history()
+        
+        # Convert to ConfigVersion models
+        versions = []
+        current_version = None
+        
+        for version_data in history:
+            system_config = _dict_to_system_config(version_data['config_data'])
+            
+            version = ConfigVersion(
+                config_id=version_data['config_id'],
+                version=version_data['version'],
+                config_data=system_config,
+                is_active=version_data['is_active'],
+                created_at=version_data['created_at'],
+                created_by=version_data['created_by'],
+                change_notes=version_data['change_notes']
+            )
+            
+            versions.append(version)
+            if version_data['is_active']:
+                current_version = version_data['version']
+        
+        return ConfigHistoryResponse(
+            versions=versions,
+            current_version=current_version
+        )
+    except Exception as e:
+        logger.error(f"Error fetching config history: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

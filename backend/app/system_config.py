@@ -6,6 +6,7 @@ Manages versioned configuration with only one active version at a time.
 """
 
 from sqlalchemy import text
+from sqlalchemy.dialects.postgresql import JSONB
 from typing import Optional, Dict, Any, List
 from contextlib import contextmanager
 import logging
@@ -25,6 +26,28 @@ class SystemConfigManager:
     def get_session(self):
         """Context manager for database sessions."""
         return self.postgres_db.get_session()
+    
+    @staticmethod
+    def _parse_jsonb(jsonb_data: Any) -> Dict[str, Any]:
+        """
+        Parse JSONB data from PostgreSQL (handles string or dict).
+        
+        Args:
+            jsonb_data: JSONB data from database (can be string, dict, or other)
+            
+        Returns:
+            Parsed dictionary
+        """
+        if isinstance(jsonb_data, dict):
+            return jsonb_data
+        elif isinstance(jsonb_data, str):
+            return json.loads(jsonb_data)
+        else:
+            # Try to convert other types
+            try:
+                return dict(jsonb_data)
+            except (TypeError, ValueError):
+                return json.loads(str(jsonb_data))
     
     def get_active_config(self) -> Optional[Dict[str, Any]]:
         """
@@ -56,7 +79,7 @@ class SystemConfigManager:
                 return {
                     "config_id": str(row[0]),
                     "version": row[1],
-                    "config_data": row[2],  # JSONB is automatically parsed to dict
+                    "config_data": self._parse_jsonb(row[2]),
                     "created_at": row[3].isoformat() if row[3] else None,
                     "created_by": row[4],
                     "change_notes": row[5]
@@ -101,18 +124,23 @@ class SystemConfigManager:
                 )
                 
                 # Insert new version as active
-                session.execute(
-                    text("""
-                        INSERT INTO system_config (version, config_data, is_active, created_by, change_notes)
-                        VALUES (:version, :config_data::jsonb, true, :created_by, :change_notes)
-                    """),
-                    {
-                        "version": new_version,
-                        "config_data": json.dumps(config_data),  # Convert dict to JSON string
-                        "created_by": created_by,
-                        "change_notes": change_notes
-                    }
+                # Use SQLAlchemy's JSONB type for proper parameter binding
+                # Convert dict to JSON string, then PostgreSQL will handle JSONB conversion
+                config_json_str = json.dumps(config_data)
+                
+                # Use bindparam with explicit JSONB type
+                from sqlalchemy import bindparam
+                stmt = text("""
+                    INSERT INTO system_config (version, config_data, is_active, created_by, change_notes)
+                    VALUES (:version, :config_data, true, :created_by, :change_notes)
+                """).bindparams(
+                    bindparam("version", new_version),
+                    bindparam("config_data", config_json_str, type_=JSONB),
+                    bindparam("created_by", created_by),
+                    bindparam("change_notes", change_notes)
                 )
+                
+                session.execute(stmt)
                 
                 logger.info(f"Created new config version {new_version}")
                 return new_version
@@ -152,7 +180,7 @@ class SystemConfigManager:
                     versions.append({
                         "config_id": str(row[0]),
                         "version": row[1],
-                        "config_data": row[2],
+                        "config_data": self._parse_jsonb(row[2]),
                         "is_active": row[3],
                         "created_at": row[4].isoformat() if row[4] else None,
                         "created_by": row[5],
@@ -197,7 +225,7 @@ class SystemConfigManager:
                 return {
                     "config_id": str(row[0]),
                     "version": row[1],
-                    "config_data": row[2],
+                    "config_data": self._parse_jsonb(row[2]),
                     "is_active": row[3],
                     "created_at": row[4].isoformat() if row[4] else None,
                     "created_by": row[5],

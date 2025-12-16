@@ -1,4 +1,8 @@
-// System Configuration API Types and Mock Functions
+// System Configuration API Types and Functions
+
+import axios from "axios";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8003";
 
 export interface Category {
   name: string;
@@ -115,44 +119,36 @@ const MOCK_CONFIG: SystemConfig = {
   priority_levels: ["High", "Medium", "Low"]
 };
 
-// Mock API functions (will be replaced with real API calls in Phase 4)
+// Real API functions
 export const configApi = {
   getConfig: async (): Promise<SystemConfig> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return MOCK_CONFIG;
+    const response = await axios.get(`${API_URL}/api/config`, {
+      // Prevent redirect on trailing slash
+      maxRedirects: 0,
+      validateStatus: (status) => status < 400
+    });
+    return response.data.config_data;
   },
 
-  updateConfig: async (config: SystemConfig, changeNotes?: string): Promise<{ success: boolean; version: number }> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    console.log("Mock: Saving config", config);
-    console.log("Mock: Change notes", changeNotes);
-    return { success: true, version: 2 };
+  updateConfig: async (
+    config: SystemConfig, 
+    changeNotes?: string,
+    createdBy?: string
+  ): Promise<{ success: boolean; version: number }> => {
+    const response = await axios.put(`${API_URL}/api/config`, {
+      config_data: config,
+      change_notes: changeNotes,
+      created_by: createdBy
+    });
+    return {
+      success: response.data.success,
+      version: response.data.version
+    };
   },
 
   getConfigHistory: async (): Promise<ConfigHistoryResponse> => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 200));
-    return {
-      versions: [
-        {
-          version: 1,
-          created_at: "2025-01-01T10:00:00Z",
-          created_by: "admin@boston.gov",
-          change_notes: "Initial configuration",
-          is_active: false
-        },
-        {
-          version: 2,
-          created_at: new Date().toISOString(),
-          created_by: "admin@boston.gov",
-          change_notes: "Updated categories",
-          is_active: true
-        }
-      ],
-      current_version: 2
-    };
+    const response = await axios.get(`${API_URL}/api/config/history`);
+    return response.data;
   }
 };
 
