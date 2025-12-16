@@ -104,9 +104,14 @@ class Neo4jDatabase:
         
         return feedback_id
     
-    def get_graph_data(self) -> GraphData:
+    def get_graph_data(self, active_config = None) -> GraphData:
         """
-        Retrieve all graph data for visualization.
+        Retrieve graph data for visualization, filtered by active config.
+        
+        Args:
+            active_config: Optional dict containing active system configuration.
+                         If provided, Category/Subcategory nodes not in active config
+                         will be marked as deprecated.
         
         Returns:
             GraphData object containing nodes and relationships
@@ -116,6 +121,21 @@ class Neo4jDatabase:
         
         nodes = []
         relationships = []
+        
+        # Build sets of active categories and subcategories from config
+        active_categories = set()
+        active_subcategories = set()
+        
+        if active_config and active_config.get('config_data'):
+            config_data = active_config['config_data']
+            for category in config_data.get('categories', []):
+                category_name = category.get('name', '')
+                if category_name:
+                    active_categories.add(category_name)
+                    # Add all subcategories for this category
+                    for subcat in category.get('subcategories', []):
+                        if subcat:
+                            active_subcategories.add(subcat)
         
         with self.driver.session() as session:
             # Get all nodes
@@ -147,9 +167,20 @@ class Neo4jDatabase:
                             node_data["timestamp"] = props["timestamp"].isoformat()
                         except:
                             node_data["timestamp"] = str(props["timestamp"])
+                    # Feedback nodes are never deprecated
+                    node_data["deprecated"] = False
                 else:
                     # For Category and Subcategory nodes
-                    node_data["name"] = props.get("name")
+                    node_name = props.get("name")
+                    node_data["name"] = node_name
+                    
+                    # Mark as deprecated if not in active config
+                    if "Category" in labels:
+                        node_data["deprecated"] = node_name not in active_categories if active_categories else False
+                    elif "Subcategory" in labels:
+                        node_data["deprecated"] = node_name not in active_subcategories if active_subcategories else False
+                    else:
+                        node_data["deprecated"] = False
                 
                 nodes.append(GraphNode(**node_data))
             

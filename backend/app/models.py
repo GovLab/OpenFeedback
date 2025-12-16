@@ -33,6 +33,7 @@ class GraphNode(BaseModel):
     sentiment: Optional[str] = None  # Sentiment (only for Feedback nodes)
     timestamp: Optional[str] = None  # Timestamp (only for Feedback nodes)
     name: Optional[str] = None  # Name (only for Category/Subcategory nodes)
+    deprecated: Optional[bool] = False  # True if category/subcategory is not in active config
 
 
 class GraphRelationship(BaseModel):

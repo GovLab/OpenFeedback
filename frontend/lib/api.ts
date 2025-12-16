@@ -93,6 +93,7 @@ export interface GraphNode {
   sentiment?: string;  // Sentiment (only for Feedback nodes)
   timestamp?: string;  // Timestamp (only for Feedback nodes)
   name?: string;  // Name (only for Category/Subcategory nodes)
+  deprecated?: boolean;  // True if category/subcategory is not in active config
 }
 
 export interface GraphRelationship {

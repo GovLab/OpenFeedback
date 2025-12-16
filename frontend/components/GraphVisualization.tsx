@@ -11,8 +11,9 @@ interface EnhancedNode {
   name: string;
   type: string;
   color: string;
-  size: number;
+  size?: number;
   feedbackCount: number;
+  deprecated?: boolean;
   x?: number;
   y?: number;
 }
@@ -55,6 +56,10 @@ function GraphLegend({ zoomLevel }: GraphLegendProps) {
       <div className="flex items-center gap-2 px-2 md:px-3 py-1.5 bg-amber-50 rounded-lg flex-shrink-0">
         <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-amber-500 shadow-sm"></div>
         <span className="text-slate-700 text-xs md:text-sm font-medium whitespace-nowrap">Subcategory</span>
+      </div>
+      <div className="flex items-center gap-2 px-2 md:px-3 py-1.5 bg-gray-50 rounded-lg border border-gray-300 flex-shrink-0 opacity-60">
+        <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-gray-400 shadow-sm"></div>
+        <span className="text-slate-600 text-xs md:text-sm font-medium whitespace-nowrap">Deprecated</span>
       </div>
       <div className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-200 flex-shrink-0">
         <svg className="w-3 h-3 md:w-3.5 md:h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -450,11 +455,13 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
         const angle = (2 * Math.PI * (startIndex + index)) / Math.max(nodes.length, 1);
         // Use 'text' for Feedback nodes, 'name' for Category/Subcategory nodes
         const displayName = node.type === "Feedback" ? node.text : node.name;
+        const isDeprecated = node.deprecated === true;
         return {
       id: node.id,
       name: displayName,
       type: node.type,
-      color: getNodeColor(node.type),
+      color: getNodeColor(node.type, isDeprecated),
+      deprecated: isDeprecated,
           feedbackCount: feedbackCounts[node.id] || 0,
           x: Math.cos(angle) * radius,
           y: Math.sin(angle) * radius,
@@ -582,7 +589,11 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
     }
   }, [selectedNode, getConnectedNodesAndLinks]);
 
-  function getNodeColor(type: string): string {
+  function getNodeColor(type: string, deprecated: boolean = false): string {
+    if (deprecated) {
+      // Gray out deprecated nodes
+      return "#9ca3af"; // gray-400
+    }
     const colors: { [key: string]: string } = {
       Feedback: "#3b82f6", // blue
       Category: "#10b981", // green
@@ -592,7 +603,11 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
     return colors[type] || colors.Unknown;
   }
 
-  function getNodeColorLight(type: string): string {
+  function getNodeColorLight(type: string, deprecated: boolean = false): string {
+    if (deprecated) {
+      // Light gray for deprecated nodes
+      return "#d1d5db"; // gray-300
+    }
     const colors: { [key: string]: string } = {
       Feedback: "#93c5fd", // blue-300
       Category: "#6ee7b7", // green-300
@@ -806,8 +821,7 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
             const nodeA = nodes[i] as any;
             if (!nodeA.x || !nodeA.y || !isFinite(nodeA.x) || !isFinite(nodeA.y)) continue;
             
-            const enhancedA = graphData.nodes.find(n => n.id === nodeA.id) as EnhancedNode;
-            const sizeA = enhancedA ? getNodeSize(enhancedA) : 10;
+            const sizeA = getNodeSize(nodeA as EnhancedNode);
             // Larger padding for circular layout with labels
             const paddingA = nodeA.type === "Category" ? 55 : nodeA.type === "Subcategory" ? 45 : 30;
             const radiusA = sizeA + paddingA;
@@ -816,8 +830,7 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
               const nodeB = nodes[j] as any;
               if (!nodeB.x || !nodeB.y || !isFinite(nodeB.x) || !isFinite(nodeB.y)) continue;
               
-              const enhancedB = graphData.nodes.find(n => n.id === nodeB.id) as EnhancedNode;
-              const sizeB = enhancedB ? getNodeSize(enhancedB) : 10;
+              const sizeB = getNodeSize(nodeB as EnhancedNode);
               const paddingB = nodeB.type === "Category" ? 55 : nodeB.type === "Subcategory" ? 45 : 30;
               const radiusB = sizeB + paddingB;
               
@@ -874,8 +887,7 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
       return;
     }
 
-    const enhancedNode = graphData.nodes.find(n => n.id === node.id) as EnhancedNode;
-    const size = getNodeSize({ ...node, ...enhancedNode });
+    const size = getNodeSize(node as EnhancedNode);
     const isSelected = selectedNode?.id === node.id;
     const isHovered = hoveredNode?.id === node.id;
     const isHighlighted = highlightedNodes.has(node.id);
@@ -883,7 +895,9 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
     
     // If there's a selection and this node is not highlighted, fade it out
     const shouldFade = hasSelection && !isHighlighted;
-    const nodeOpacity = shouldFade ? 0.15 : 1;
+    // Deprecated nodes are always slightly faded
+    const baseOpacity = node.deprecated ? 0.5 : 1;
+    const nodeOpacity = shouldFade ? 0.15 : baseOpacity;
     
     // Apply opacity for faded nodes
     ctx.globalAlpha = nodeOpacity;
@@ -892,7 +906,7 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
     if ((isSelected || isHovered) || (isHighlighted && hasSelection && !isSelected)) {
       ctx.beginPath();
       ctx.arc(node.x, node.y, size + 6, 0, 2 * Math.PI, false);
-      ctx.fillStyle = getNodeColorLight(node.type);
+      ctx.fillStyle = getNodeColorLight(node.type, node.deprecated);
       ctx.globalAlpha = nodeOpacity * 0.3;
       ctx.fill();
       ctx.globalAlpha = nodeOpacity;
@@ -907,7 +921,7 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
       node.y,
       size
     );
-    gradient.addColorStop(0, getNodeColorLight(node.type));
+    gradient.addColorStop(0, getNodeColorLight(node.type, node.deprecated));
     gradient.addColorStop(1, node.color);
 
                 ctx.beginPath();
@@ -921,7 +935,7 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
     ctx.stroke();
 
     // Draw feedback count badge for category and subcategory nodes
-    if ((node.type === "Category" || node.type === "Subcategory") && enhancedNode?.feedbackCount > 0) {
+    if ((node.type === "Category" || node.type === "Subcategory") && node.feedbackCount > 0) {
       const badgeSize = size * 0.6;
       const badgeX = node.x + size * 0.6;
       const badgeY = node.y - size * 0.6;
@@ -942,7 +956,7 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
       ctx.font = `bold ${(badgeSize * 1.3) / globalScale}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(enhancedNode.feedbackCount.toString(), badgeX, badgeY);
+      ctx.fillText(node.feedbackCount.toString(), badgeX, badgeY);
     }
 
     // Label rendering logic based on zoom level and node type
@@ -964,7 +978,10 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
       const labelY = node.y + size + bckgHeight / 2 + 8;
 
       // Get type-specific colors for background and text
-      const getLabelBackgroundColor = (type: string) => {
+      const getLabelBackgroundColor = (type: string, deprecated: boolean = false) => {
+        if (deprecated) {
+          return "rgba(156, 163, 175, 0.2)"; // gray-400 with 20% opacity
+        }
         const colors: { [key: string]: string } = {
           Feedback: "rgba(147, 197, 253, 0.2)", // blue-300 with 20% opacity
           Category: "rgba(110, 231, 183, 0.2)", // green-300 with 20% opacity
@@ -982,7 +999,7 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
       
       ctx.fillStyle = isSelected || isHovered 
         ? "rgba(30, 41, 59, 0.85)" 
-        : getLabelBackgroundColor(node.type);
+        : getLabelBackgroundColor(node.type, node.deprecated);
       ctx.beginPath();
       ctx.roundRect(
         node.x - bckgWidth / 2,
@@ -1006,12 +1023,29 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
                   ctx.textAlign = "center";
                   ctx.textBaseline = "middle";
       ctx.fillStyle = isSelected || isHovered ? "rgba(255, 255, 255, 0.95)" : node.color;
+      
+      // Draw strikethrough for deprecated nodes
+      if (node.deprecated && !isSelected && !isHovered) {
+        ctx.strokeStyle = node.color;
+        ctx.lineWidth = 2 / globalScale;
+        ctx.beginPath();
+        ctx.moveTo(node.x - bckgWidth / 2 + 4 / globalScale, labelY);
+        ctx.lineTo(node.x + bckgWidth / 2 - 4 / globalScale, labelY);
+        ctx.stroke();
+        ctx.globalAlpha = 0.6; // Reduce opacity for deprecated nodes
+      }
+      
       ctx.fillText(label, node.x, labelY);
+      
+      // Reset opacity after drawing deprecated text
+      if (node.deprecated && !isSelected && !isHovered) {
+        ctx.globalAlpha = nodeOpacity;
+      }
     }
     
     // Reset global alpha
     ctx.globalAlpha = 1;
-  }, [graphData.nodes, getNodeSize, selectedNode, hoveredNode, highlightedNodes]);
+  }, [graphData, getNodeSize, selectedNode, hoveredNode, highlightedNodes]);
 
   if (data.nodes.length === 0) {
     return <GraphEmptyState />;

@@ -496,13 +496,17 @@ async def classify_feedback_file(file: UploadFile = File(...)):
 @app.get("/api/graph", response_model=GraphData)
 async def get_graph():
     """
-    Retrieve graph data for visualization.
+    Retrieve graph data for visualization, filtered by active config.
+    Category/Subcategory nodes not in active config are marked as deprecated.
     
     Returns:
         GraphData object containing nodes and relationships
     """
     try:
-        graph_data = db.get_graph_data()
+        # Get active config to filter graph nodes
+        active_config = system_config_manager.get_active_config()
+        
+        graph_data = db.get_graph_data(active_config=active_config)
         return graph_data
     except Exception as e:
         logger.error(f"Error retrieving graph data: {str(e)}")
