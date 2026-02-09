@@ -82,7 +82,7 @@ resource "aws_iam_role_policy" "apprunner_secrets" {
       Action = ["secretsmanager:GetSecretValue", "secretsmanager:DescribeSecret"]
       Resource = [
         aws_secretsmanager_secret.app_secrets.arn,
-        "arn:aws:secretsmanager:${var.aws_region}:123456789012:secret:test-tf-aws-deploy-secrets-*"
+        "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.project_name}-secrets-*"
       ]
     }]
   })

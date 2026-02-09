@@ -129,15 +129,13 @@ async def health():
     return {"status": "ok"}
 
 # Configure CORS to allow frontend communication
+import os
+cors_origins_str = os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3001")
+cors_origins = [origin.strip() for origin in cors_origins_str.split(",") if origin.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://main.d57dpeqds75ja.amplifyapp.com",  # Your Amplify frontend
-        "https://main.d3f474el750k1.amplifyapp.com",
-        "https://main.d1kr78wb4i3bb9.amplifyapp.com",
-        "http://localhost:3000",  # Local development
-        "http://localhost:3001",  # Local development
-    ],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
