@@ -4,7 +4,7 @@ import logging
 from typing import Optional, List
 from fastapi import UploadFile, HTTPException
 import aiofiles
-from PyPDF2 import PdfReader
+from pypdf import PdfReader
 import docx
 from openai import OpenAI
 from .config import settings

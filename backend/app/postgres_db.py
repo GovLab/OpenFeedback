@@ -4,12 +4,15 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import func
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Optional, Dict, Any
 import uuid
 import logging
 from .config import settings
 
 logger = logging.getLogger(__name__)
+
+SCHEMA_PATH = Path(__file__).resolve().parent.parent / "schema.sql"
 
 # Create database engine
 try:
@@ -82,6 +85,7 @@ class PostgresDB:
             return
         
         try:
+            self._bootstrap_schema()
             Base.metadata.create_all(bind=engine)
             logger.info("✅ PostgreSQL tables created/verified successfully")
         except Exception as e:
@@ -90,6 +94,21 @@ class PostgresDB:
             logger.warning("Server will continue to run, but PostgreSQL operations will fail")
             # Don't raise - allow server to start even if database is unavailable
     
+    def _bootstrap_schema(self):
+        """Run schema.sql on an empty database so enums, FKs and the seed config exist."""
+        with self.engine.connect() as conn:
+            has_schema = conn.exec_driver_sql("SELECT to_regclass('public.system_config')").scalar()
+        if has_schema:
+            return
+        logger.info("Empty database detected: applying schema.sql")
+        raw = self.engine.raw_connection()
+        try:
+            with raw.cursor() as cursor:
+                cursor.execute(SCHEMA_PATH.read_text())
+            raw.commit()
+        finally:
+            raw.close()
+
     @contextmanager
     def get_session(self):
         """Context manager for database sessions."""
