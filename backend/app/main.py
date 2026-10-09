@@ -2,15 +2,16 @@ from contextlib import asynccontextmanager
 import logging
 import asyncio
 from datetime import datetime
-from fastapi import FastAPI, HTTPException, File, UploadFile, Request
+from fastapi import FastAPI, HTTPException, File, UploadFile, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse, IndividualResponse, ConversationInput, ConversationResponse, AugmentationInput, AugmentationResponse, ConfigResponse, ConfigUpdateRequest, ConfigUpdateResponse, ConfigHistoryResponse, ConfigVersion, SystemConfig, Category
+from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse, IndividualResponse, ConversationInput, ConversationResponse, AugmentationInput, AugmentationResponse, ConfigResponse, ConfigUpdateRequest, ConfigUpdateResponse, ConfigHistoryResponse, ConfigVersion, SystemConfig, Category, StaffLoginInput, StaffLoginResponse
 from .classifier import classify_feedback, chatbot_agent, augment_feedback, determine_permit_context, detect_spam_or_invalid, clear_config_cache
 from .database import db
 from .postgres_db import postgres_db
 from .file_processor import FileProcessor
 from .system_config import system_config_manager
+from .auth import require_staff, rate_limit_public, check_staff_password, issue_token
 
 
 # Configure logging
@@ -118,8 +119,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     return JSONResponse(
         status_code=500,
         content={
-            "detail": "An internal server error occurred. The server continues to run.",
-            "error_type": type(exc).__name__
+            "detail": "An internal server error occurred. The server continues to run."
         }
     )
 
@@ -142,6 +142,19 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
+MAX_FEEDBACK_PAGE = 500
+
+
+@app.post("/api/staff/login", response_model=StaffLoginResponse, dependencies=[Depends(rate_limit_public)])
+async def staff_login(credentials: StaffLoginInput):
+    """Exchange the shared staff password for a signed session token."""
+    if not check_staff_password(credentials.password):
+        logger.warning("Failed staff login attempt")
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    token, expires_at = issue_token()
+    return StaffLoginResponse(token=token, expires_at=expires_at)
+
+
 # Root endpoint
 @app.get("/")
 async def root():
@@ -159,7 +172,7 @@ async def root():
     }
 
 
-@app.post("/api/feedback-agent")
+@app.post("/api/feedback-agent", dependencies=[Depends(rate_limit_public)])
 async def feedback_agent(conversation: ConversationInput):
     """
     Unified intelligent agent that handles feedback quality checking and dynamic questioning.
@@ -223,10 +236,10 @@ async def feedback_agent(conversation: ConversationInput):
         
     except Exception as e:
         logger.error(f"❌ Error in feedback agent: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
 
 
-@app.post("/api/augment-feedback", response_model=AugmentationResponse)
+@app.post("/api/augment-feedback", response_model=AugmentationResponse, dependencies=[Depends(rate_limit_public)])
 async def augment_feedback_endpoint(input_data: AugmentationInput):
     """
     Use AI to generate an additional note from conversation details.
@@ -252,10 +265,10 @@ async def augment_feedback_endpoint(input_data: AugmentationInput):
         
     except Exception as e:
         logger.error(f"Error generating additional note: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
 
 
-@app.post("/api/submit-feedback", response_model=ClassifiedFeedback)
+@app.post("/api/submit-feedback", response_model=ClassifiedFeedback, dependencies=[Depends(rate_limit_public)])
 async def submit_feedback(feedback: FeedbackInput):
     """
     Submit feedback for classification and storage in both PostgreSQL and Neo4j.
@@ -306,7 +319,7 @@ async def submit_feedback(feedback: FeedbackInput):
                 if name:
                     user_contact_info['name'] = name
                     
-                logger.info(f"User opted in for follow-up. Email: {user_contact_info.get('email')}, Name provided: {bool(name)}")
+                logger.info("User opted in for follow-up contact")
             else:
                 logger.info("User opted out of follow-up contact")
         
@@ -359,9 +372,9 @@ async def submit_feedback(feedback: FeedbackInput):
     except Exception as e:
         logger.error(f"Error processing feedback submission: {str(e)}")
         logger.debug(f"Exception type: {type(e).__name__}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
 
-@app.post("/api/upload-feedback", response_model=FileUploadResponse)
+@app.post("/api/upload-feedback", response_model=FileUploadResponse, dependencies=[Depends(require_staff)])
 async def upload_feedback_file(file: UploadFile = File(...), store_in_database: bool = True):
     """
     Upload a file (PDF, TXT, or DOCX) for feedback processing.
@@ -448,9 +461,8 @@ async def upload_feedback_file(file: UploadFile = File(...), store_in_database: 
             
             logger.info(f"Feedback storage completed. Count: {len(feedback_ids)}")
         
-        logger.info("================================================")
-        logger.info("Not storing feedbacks in database")
-        logger.info("================================================")
+        else:
+            logger.info("Classification only: not storing feedbacks in database")
         
         # Create individual responses for each feedback
         individual_responses = []
@@ -473,9 +485,9 @@ async def upload_feedback_file(file: UploadFile = File(...), store_in_database: 
     except Exception as e:
         logger.error(f"Error processing file upload: {str(e)}")
         logger.debug(f"Exception type: {type(e).__name__}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
 
-@app.post("/api/classify-feedback", response_model=FileUploadResponse)
+@app.post("/api/classify-feedback", response_model=FileUploadResponse, dependencies=[Depends(require_staff)])
 async def classify_feedback_file(file: UploadFile = File(...)):
     """
     Classify feedback from an uploaded file.
@@ -490,9 +502,9 @@ async def classify_feedback_file(file: UploadFile = File(...)):
         return response
     except Exception as e:
         logger.error(f"Error classifying feedback file: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
 
-@app.get("/api/graph", response_model=GraphData)
+@app.get("/api/graph", response_model=GraphData, dependencies=[Depends(require_staff)])
 async def get_graph():
     """
     Retrieve graph data for visualization, filtered by active config.
@@ -512,7 +524,7 @@ async def get_graph():
         # Return empty graph data instead of crashing
         return GraphData(nodes=[], relationships=[])
 
-@app.get("/api/stats")
+@app.get("/api/stats", dependencies=[Depends(require_staff)])
 async def get_stats():
     """
     Get statistics about feedback.
@@ -537,7 +549,7 @@ async def get_stats():
         }
 
 
-@app.get("/api/postgres/feedback")
+@app.get("/api/postgres/feedback", dependencies=[Depends(require_staff)])
 async def get_all_postgres_feedback(limit: int = 100, offset: int = 0):
     """
     Get all feedback from PostgreSQL with pagination.
@@ -550,7 +562,8 @@ async def get_all_postgres_feedback(limit: int = 100, offset: int = 0):
         List of feedback records
     """
     try:
-        feedbacks = postgres_db.get_all_feedback(limit=limit, offset=offset)
+        limit = min(max(limit, 1), MAX_FEEDBACK_PAGE)
+        feedbacks = postgres_db.get_all_feedback(limit=limit, offset=max(offset, 0))
         return {
             "feedbacks": feedbacks,
             "count": len(feedbacks),
@@ -568,7 +581,7 @@ async def get_all_postgres_feedback(limit: int = 100, offset: int = 0):
         }
 
 
-@app.get("/api/verify-ids")
+@app.get("/api/verify-ids", dependencies=[Depends(require_staff)])
 async def verify_database_ids():
     """
     Verify that IDs match between PostgreSQL and Neo4j databases.
@@ -623,7 +636,7 @@ async def verify_database_ids():
 
 
 # System Configuration Endpoints
-@app.get("/api/config", response_model=ConfigResponse)
+@app.get("/api/config", response_model=ConfigResponse, dependencies=[Depends(require_staff)])
 async def get_config():
     """
     Get the currently active system configuration.
@@ -652,10 +665,10 @@ async def get_config():
         )
     except Exception as e:
         logger.error(f"Error fetching active config: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
 
 
-@app.put("/api/config", response_model=ConfigUpdateResponse)
+@app.put("/api/config", response_model=ConfigUpdateResponse, dependencies=[Depends(require_staff)])
 async def update_config(request: ConfigUpdateRequest):
     """
     Create a new configuration version and activate it.
@@ -688,10 +701,10 @@ async def update_config(request: ConfigUpdateRequest):
         )
     except Exception as e:
         logger.error(f"Error creating new config version: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
 
 
-@app.get("/api/config/history", response_model=ConfigHistoryResponse)
+@app.get("/api/config/history", response_model=ConfigHistoryResponse, dependencies=[Depends(require_staff)])
 async def get_config_history():
     """
     Get configuration version history.
@@ -729,10 +742,10 @@ async def get_config_history():
         )
     except Exception as e:
         logger.error(f"Error fetching config history: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
 
 
-@app.get("/api/config/{version}", response_model=ConfigResponse)
+@app.get("/api/config/{version}", response_model=ConfigResponse, dependencies=[Depends(require_staff)])
 async def get_config_by_version(version: int):
     """
     Get a specific configuration version by version number.
@@ -764,10 +777,10 @@ async def get_config_by_version(version: int):
         )
     except Exception as e:
         logger.error(f"Error fetching config version {version}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
 
 
-@app.put("/api/config/activate/{version}", response_model=ConfigUpdateResponse)
+@app.put("/api/config/activate/{version}", response_model=ConfigUpdateResponse, dependencies=[Depends(require_staff)])
 async def activate_config_version(version: int):
     """
     Activate a specific configuration version (rollback).
@@ -800,10 +813,10 @@ async def activate_config_version(version: int):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error activating config version {version}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
 
 
-@app.delete("/api/config/{version}", response_model=ConfigUpdateResponse)
+@app.delete("/api/config/{version}", response_model=ConfigUpdateResponse, dependencies=[Depends(require_staff)])
 async def delete_config_version(version: int):
     """
     Delete a configuration version.
@@ -834,4 +847,4 @@ async def delete_config_version(version: int):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Error deleting config version {version}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
