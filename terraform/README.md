@@ -1,3 +1,5 @@
+> **Legacy.** This guide covers the original `prod/` and `test/` setups in us-east-2, which are no longer deployed. The current setup is [`demo/`](demo/README.md).
+
 # OpenPermit Deployment Guide
 
 Deploy OpenPermit to AWS using Terraform.

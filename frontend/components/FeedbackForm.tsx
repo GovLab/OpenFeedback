@@ -334,6 +334,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
             )}
             
             <textarea
+              maxLength={5000}
               ref={textareaRef}
               id="feedback"
               value={feedback}

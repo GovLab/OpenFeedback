@@ -1,11 +1,25 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
+
+MAX_FEEDBACK_CHARS = 5000
+MAX_CONVERSATION_TURNS = 20
 
 
 class FeedbackInput(BaseModel):
     """Model for feedback input from user."""
-    text: str
+    text: str = Field(min_length=1, max_length=MAX_FEEDBACK_CHARS)
     contact_info: Optional[Dict] = None  # User contact information if opted in
+
+
+class StaffLoginInput(BaseModel):
+    """Shared staff password submitted from the dashboard login form."""
+    password: str = Field(min_length=1, max_length=200)
+
+
+class StaffLoginResponse(BaseModel):
+    """Signed session token for staff-only endpoints."""
+    token: str
+    expires_at: int
 
 class ClassifiedFeedback(BaseModel):
     """Model for classified feedback with AI-generated fields."""
@@ -66,14 +80,14 @@ class FileUploadResponse(BaseModel):
 class ConversationMessage(BaseModel):
     """Model for a message in chatbot conversation."""
     role: str  # "user" or "assistant"
-    content: str
+    content: str = Field(max_length=MAX_FEEDBACK_CHARS)
 
 
 class ConversationInput(BaseModel):
     """Model for chatbot conversation input."""
-    original_feedback: str
+    original_feedback: str = Field(min_length=1, max_length=MAX_FEEDBACK_CHARS)
     category_map: Optional[Dict[str, List[str]]] = {}
-    conversation_history: List[ConversationMessage]
+    conversation_history: List[ConversationMessage] = Field(max_length=MAX_CONVERSATION_TURNS)
 
 
 class ConversationResponse(BaseModel):
@@ -86,8 +100,8 @@ class ConversationResponse(BaseModel):
 
 class AugmentationInput(BaseModel):
     """Model for feedback augmentation input."""
-    original_feedback: str
-    conversation_history: List[ConversationMessage]
+    original_feedback: str = Field(min_length=1, max_length=MAX_FEEDBACK_CHARS)
+    conversation_history: List[ConversationMessage] = Field(max_length=MAX_CONVERSATION_TURNS)
 
 
 class AugmentationResponse(BaseModel):

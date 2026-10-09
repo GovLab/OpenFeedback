@@ -51,6 +51,10 @@ class Settings(BaseSettings):
     postgres_user: str
     postgres_password: str
     
+    # Staff dashboard login
+    staff_password: str
+    session_secret: str
+
     # Application Settings
     debug: bool = False
     app_env: str = "development"
@@ -96,4 +100,10 @@ def load_settings():
         return Settings()
 
 
+MIN_SESSION_SECRET_LENGTH = 32
+
 settings = load_settings()
+if len(settings.session_secret) < MIN_SESSION_SECRET_LENGTH:
+    raise RuntimeError(f"SESSION_SECRET must be at least {MIN_SESSION_SECRET_LENGTH} characters")
+if not settings.staff_password:
+    raise RuntimeError("STAFF_PASSWORD must be set")
