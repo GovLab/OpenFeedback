@@ -1,8 +1,7 @@
 // System Configuration API Types and Functions
 
-import axios from "axios";
+import { http, API_URL } from "./http";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8003";
 
 export interface Category {
   name: string;
@@ -37,7 +36,7 @@ export interface ConfigHistoryResponse {
 // API functions
 export const configApi = {
   getConfig: async (): Promise<SystemConfig> => {
-    const response = await axios.get(`${API_URL}/api/config`, {
+    const response = await http.get(`${API_URL}/api/config`, {
       // Prevent redirect on trailing slash
       maxRedirects: 0,
       validateStatus: (status) => status < 400
@@ -50,7 +49,7 @@ export const configApi = {
     changeNotes?: string,
     createdBy?: string
   ): Promise<{ success: boolean; version: number }> => {
-    const response = await axios.put(`${API_URL}/api/config`, {
+    const response = await http.put(`${API_URL}/api/config`, {
       config_data: config,
       change_notes: changeNotes,
       created_by: createdBy
@@ -62,17 +61,17 @@ export const configApi = {
   },
 
   getConfigHistory: async (): Promise<ConfigHistoryResponse> => {
-    const response = await axios.get(`${API_URL}/api/config/history`);
+    const response = await http.get(`${API_URL}/api/config/history`);
     return response.data;
   },
 
   getConfigByVersion: async (version: number): Promise<SystemConfig> => {
-    const response = await axios.get(`${API_URL}/api/config/${version}`);
+    const response = await http.get(`${API_URL}/api/config/${version}`);
     return response.data.config_data;
   },
 
   activateVersion: async (version: number): Promise<{ success: boolean; version: number }> => {
-    const response = await axios.put(`${API_URL}/api/config/activate/${version}`);
+    const response = await http.put(`${API_URL}/api/config/activate/${version}`);
     return {
       success: response.data.success,
       version: response.data.version
@@ -80,7 +79,7 @@ export const configApi = {
   },
 
   deleteVersion: async (version: number): Promise<{ success: boolean; version: number }> => {
-    const response = await axios.delete(`${API_URL}/api/config/${version}`);
+    const response = await http.delete(`${API_URL}/api/config/${version}`);
     return {
       success: response.data.success,
       version: response.data.version

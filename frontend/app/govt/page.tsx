@@ -7,11 +7,29 @@ import StatsDisplay from "@/components/StatsDisplay";
 import FeedbackTable from "@/components/TableVisualization";
 import Navigation from "@/components/Navigation";
 import SystemConfigManager from "@/components/SystemConfigManager";
+import StaffLogin from "@/components/StaffLogin";
 import { api, GraphData, Stats } from "@/lib/api";
+import { getStaffToken, clearStaffToken, STAFF_LOGOUT_EVENT } from "@/lib/http";
 
 type TabType = "dashboard" | "config";
 
-export default function GovtDashboard() {
+export default function GovtPage() {
+  // null until we've checked sessionStorage, so the login form doesn't flash
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setIsLoggedIn(Boolean(getStaffToken()));
+    const handleLogout = () => setIsLoggedIn(false);
+    window.addEventListener(STAFF_LOGOUT_EVENT, handleLogout);
+    return () => window.removeEventListener(STAFF_LOGOUT_EVENT, handleLogout);
+  }, []);
+
+  if (isLoggedIn === null) return null;
+  if (!isLoggedIn) return <StaffLogin onLoggedIn={() => setIsLoggedIn(true)} />;
+  return <GovtDashboard />;
+}
+
+function GovtDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
   const [graphData, setGraphData] = useState<GraphData>({
     nodes: [],
@@ -88,7 +106,7 @@ export default function GovtDashboard() {
       {/* Header */}
       <header className="bg-gradient-to-r from-slate-800 to-slate-700 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">
                 Permit Feedback Analytics
@@ -97,9 +115,17 @@ export default function GovtDashboard() {
                 Analyze submissions, identify recurring issues, and coordinate agency responses.
               </p>
             </div>
-            <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-white text-sm font-medium">Live Data</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <span className="text-white text-sm font-medium">Live Data</span>
+              </div>
+              <button
+                onClick={clearStaffToken}
+                className="text-white text-sm font-medium bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-colors"
+              >
+                Sign out
+              </button>
             </div>
           </div>
         </div>

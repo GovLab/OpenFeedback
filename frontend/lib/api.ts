@@ -1,12 +1,11 @@
-import axios from "axios";
+import { http, API_URL } from "./http";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8003";
 
 export const api = {
   submitFeedback: async (
     feedback: FeedbackInput
   ): Promise<ClassifiedFeedback> => {
-    const response = await axios.post(`${API_URL}/api/submit-feedback`, feedback);
+    const response = await http.post(`${API_URL}/api/submit-feedback`, feedback);
     return response.data;
   },
 
@@ -14,7 +13,7 @@ export const api = {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await axios.post(
+    const response = await http.post(
       `${API_URL}/api/upload-feedback`,
       formData,
       {
@@ -30,7 +29,7 @@ export const api = {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await axios.post(
+    const response = await http.post(
       `${API_URL}/api/classify-feedback`,
       formData,
       {
@@ -43,24 +42,24 @@ export const api = {
   },
 
   getGraph: async (): Promise<GraphData> => {
-    const response = await axios.get(`${API_URL}/api/graph`);
+    const response = await http.get(`${API_URL}/api/graph`);
     return response.data;
   },
 
   getStats: async (): Promise<Stats> => {
-    const response = await axios.get(`${API_URL}/api/stats`);
+    const response = await http.get(`${API_URL}/api/stats`);
     return response.data;
   },
 
   feedbackAgent: async (
     input: ConversationInput
   ): Promise<ConversationResponse> => {
-    const response = await axios.post(`${API_URL}/api/feedback-agent`, input);
+    const response = await http.post(`${API_URL}/api/feedback-agent`, input);
     return response.data;
   },
 
   getAllFeedback: async (limit: number = 100, offset: number = 0): Promise<FeedbackListResponse> => {
-    const response = await axios.get(`${API_URL}/api/postgres/feedback`, {
+    const response = await http.get(`${API_URL}/api/postgres/feedback`, {
       params: { limit, offset }
     });
     return response.data;
@@ -69,7 +68,7 @@ export const api = {
   augmentFeedback: async (
     input: AugmentationInput
   ): Promise<AugmentationResponse> => {
-    const response = await axios.post(`${API_URL}/api/augment-feedback`, input);
+    const response = await http.post(`${API_URL}/api/augment-feedback`, input);
     return response.data;
   },
 };
