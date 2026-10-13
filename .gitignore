@@ -61,3 +61,6 @@ tfplan
 
 # Cursor
 .cursor/
+
+# /brag launch-video working files
+brag-output*/
