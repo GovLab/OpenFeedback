@@ -2,7 +2,8 @@ from openai import OpenAI
 from .config import settings
 from .models import ClassifiedFeedback
 from .prompts import prompt_builder
-from .boston_context_loader import load_boston_context
+from .context_loader import load_context
+from .config import topic
 from .system_config import system_config_manager
 import json
 import logging
@@ -151,9 +152,9 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
         logger.debug(f"Exception details: {type(e).__name__}: {str(e)}")
         raise Exception(f"Error classifying feedback: {str(e)}")
 
-def determine_permit_context(feedback_text: str, category_map: dict = None) -> str:
+def determine_topic_context(feedback_text: str, category_map: dict = None) -> str:
     """
-    One-time function to determine which Boston permit context to load.
+    One-time function to determine which background notes to load for the active topic.
     Uses AI with tool calling to intelligently select the right category.
     
     Args:
@@ -161,10 +162,10 @@ def determine_permit_context(feedback_text: str, category_map: dict = None) -> s
         category_map: Optional pre-classified category map from classify_feedback
         
     Returns:
-        The loaded Boston permit context text (or empty string if none needed)
+        The loaded context text (or empty string if none needed)
     """
     logger.info("=" * 60)
-    logger.info("==== PERMIT CONTEXT DETERMINATION (Tool Calling) ====")
+    logger.info("==== TOPIC CONTEXT DETERMINATION (Tool Calling) ====")
     logger.info("=" * 60)
     
     if not settings.openai_api_key:
@@ -175,20 +176,21 @@ def determine_permit_context(feedback_text: str, category_map: dict = None) -> s
     if category_map:
         logger.info(f"Pre-classified categories available: {list(category_map.keys())}")
     
-    # Define tool for accessing Boston permit context
+    # Define tool for accessing the topic's background notes
+    category_descriptions = ", ".join(f"{name} ({description})" for name, description in topic.context_categories.items())
     tools = [
         {
             "type": "function",
             "function": {
-                "name": "get_boston_permit_context",
-                "description": "Get detailed information about Boston permit processes and requirements for a specific category. Choose the most relevant category based on the feedback.",
+                "name": "get_context",
+                "description": f"Get background information about {topic.subject} for a specific category. Choose the most relevant category based on the feedback.",
                 "parameters": {
                     "type": "object",
                     "properties": {
                         "category": {
                             "type": "string",
-                            "enum": ["general_info", "home_renovations", "events_entertainment", "restaurants_bars", "construction_contractors"],
-                            "description": "Which permit category: general_info (contacts/portals), home_renovations (kitchen/bathroom/residential), events_entertainment (parties/venues/clubs), restaurants_bars (food businesses/liquor), construction_contractors (hot work/dumpsters/contractors)"
+                            "enum": list(topic.context_categories),
+                            "description": f"Which category: {category_descriptions}"
                         }
                     },
                     "required": ["category"]
@@ -211,15 +213,15 @@ def determine_permit_context(feedback_text: str, category_map: dict = None) -> s
             messages=[
                 {
                     "role": "system", 
-                    "content": "You are a permit category classifier. Based on feedback, select the most relevant Boston permit context category to help answer follow-up questions."
+                    "content": f"You are a feedback category classifier for {topic.subject}. Based on feedback, select the most relevant background category to help ask follow-up questions."
                 },
                 {
                     "role": "user", 
-                    "content": f"Feedback: {feedback_text}{category_hint}\n\nWhich permit context category is most relevant?"
+                    "content": f"Feedback: {feedback_text}{category_hint}\n\nWhich context category is most relevant?"
                 }
             ],
             tools=tools,
-            tool_choice={"type": "function", "function": {"name": "get_boston_permit_context"}}
+            tool_choice={"type": "function", "function": {"name": "get_context"}}
         )
         
         logger.info(f"📨 OpenAI response received:")
@@ -234,10 +236,10 @@ def determine_permit_context(feedback_text: str, category_map: dict = None) -> s
             category = json.loads(tool_call.function.arguments)["category"]
             
             logger.info(f"✓ AI selected category: '{category}'")
-            logger.info(f"📄 Loading Boston permit context from file...")
+            logger.info(f"📄 Loading {topic.key} context from file...")
             
             # Load and return the context
-            context_content = load_boston_context(category)
+            context_content = load_context(category)
             context_length = len(context_content)
             logger.info(f"✓ Context loaded: {context_length} characters")
             logger.info("=" * 60)
@@ -249,14 +251,14 @@ def determine_permit_context(feedback_text: str, category_map: dict = None) -> s
             return ""
             
     except Exception as e:
-        logger.error(f"❌ Error determining permit context: {str(e)}")
+        logger.error(f"❌ Error determining topic context: {str(e)}")
         logger.info("=" * 60)
         return ""
 
 
 def detect_spam_or_invalid(feedback_text: str) -> dict:
     """
-    Detect if feedback is spam, outlandish, or non-permit-related.
+    Detect if feedback is spam, outlandish, or off-topic.
     
     Args:
         feedback_text: The feedback text to check
@@ -281,7 +283,7 @@ def detect_spam_or_invalid(feedback_text: str) -> dict:
             messages=[
                 {
                     "role": "system",
-                    "content": "You are a spam detection system for Boston city permit feedback. You identify spam, outlandish content, or feedback completely unrelated to permits."
+                    "content": f"You are a spam detection system for city feedback about {topic.subject}. You identify spam, outlandish content, or feedback completely unrelated to the topic."
                 },
                 {
                     "role": "user",
@@ -312,14 +314,14 @@ def detect_spam_or_invalid(feedback_text: str) -> dict:
         return {"is_invalid": False}
 
 
-def chatbot_agent(original_feedback: str, conversation_history: List, permit_context: str = "") -> dict:
+def chatbot_agent(original_feedback: str, conversation_history: List, topic_context: str = "") -> dict:
     """
     Intelligent chatbot agent that evaluates feedback quality and asks follow-up questions.
     
     Args:
         original_feedback: The original feedback text
         conversation_history: List of previous conversation messages
-        permit_context: Pre-loaded Boston permit context (loaded once at start)
+        topic_context: Pre-loaded background notes for the topic (loaded once at start)
         
     Returns:
         Dict with needs_followup, message, and quality_score
@@ -333,7 +335,7 @@ def chatbot_agent(original_feedback: str, conversation_history: List, permit_con
     
     logger.info(f"Feedback preview: {original_feedback[:100]}...")
     logger.info(f"Conversation history: {len(conversation_history)} messages")
-    logger.info(f"Permit context: {'Available (' + str(len(permit_context)) + ' chars)' if permit_context else 'Not provided'}")
+    logger.info(f"Topic context: {'Available (' + str(len(topic_context)) + ' chars)' if topic_context else 'Not provided'}")
     
     # Build conversation context with clear structure
     context_parts = [f"=== ORIGINAL FEEDBACK ===\n{original_feedback}"]
@@ -354,14 +356,16 @@ def chatbot_agent(original_feedback: str, conversation_history: List, permit_con
         logger.info(f"Conversation has {question_num - 1} Q&A pairs")
     context = "\n".join(context_parts)
     
-    # Build system message with permit context if available
+    # Build system message with topic context if available
     base_system_message = prompt_builder.build_chatbot_agent_system_message()
-    if permit_context:
-        system_message = f"{base_system_message}\n\n=== BOSTON PERMIT CONTEXT ===\n{permit_context}\n=== END CONTEXT ===\n\nUse this context to ask informed questions about the specific permit process."
+    if topic_context:
+        system_message = f"{base_system_message}\n\n=== BACKGROUND NOTES ===\n{topic_context}\n=== END NOTES ===\n\nUse these notes to ask informed, specific questions."
     else:
         system_message = base_system_message
     
-    prompt = prompt_builder.build_chatbot_agent_prompt(context=context)
+    config_data, _ = _get_active_config()
+    item_types = (config_data or {}).get("permit_types", [])
+    prompt = prompt_builder.build_chatbot_agent_prompt(context=context, item_types=item_types)
     
     logger.info("🤖 Calling OpenAI (gpt-4o-mini) for quality evaluation...")
     logger.info("   - No tools involved (context already in system prompt)")

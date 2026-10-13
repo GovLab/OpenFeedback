@@ -104,6 +104,15 @@ class Neo4jDatabase:
         
         return feedback_id
     
+    def delete_feedback(self, feedback_id: str) -> bool:
+        """Delete one Feedback node and its relationships. Shared category nodes stay."""
+        with self.driver.session() as session:
+            result = session.run(
+                "MATCH (f:Feedback {id: $id}) DETACH DELETE f RETURN count(f) AS deleted",
+                id=feedback_id,
+            )
+            return result.single()["deleted"] > 0
+
     def get_graph_data(self, active_config = None) -> GraphData:
         """
         Retrieve graph data for visualization, filtered by active config.

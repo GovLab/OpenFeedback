@@ -5,6 +5,8 @@ import json
 import boto3
 from botocore.exceptions import ClientError
 
+from .topics import get_topic
+
 
 def get_secret():
     """Fetch secrets from AWS Secrets Manager."""
@@ -54,6 +56,9 @@ class Settings(BaseSettings):
     # Staff dashboard login
     staff_password: str
     session_secret: str
+
+    # Which topic profile the AI prompts use: "permits" or "parks"
+    topic: str = "permits"
 
     # Application Settings
     debug: bool = False
@@ -107,3 +112,5 @@ if len(settings.session_secret) < MIN_SESSION_SECRET_LENGTH:
     raise RuntimeError(f"SESSION_SECRET must be at least {MIN_SESSION_SECRET_LENGTH} characters")
 if not settings.staff_password:
     raise RuntimeError("STAFF_PASSWORD must be set")
+
+topic = get_topic(settings.topic)
