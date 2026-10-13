@@ -5,31 +5,8 @@
 -- ENUM TYPES
 -- ============================================
 
-CREATE TYPE permit_type_enum AS ENUM (
-    'Building - Short Form',
-    'Building - Long Form',
-    'Use of Premises',
-    'Liquor License',
-    'Common Victualler (Food Service)',
-    'Entertainment License',
-    'Street Occupancy',
-    'Resident Parking',
-    'Business Parking',
-    'Fire Prevention',
-    'Fire Alarm',
-    'Place of Assembly',
-    'Hot Work',
-    'Tent Permit',
-    'Food Truck',
-    'Dumpster',
-    'Excavation',
-    'Driveway',
-    'Sign Permit',
-    'Electrical',
-    'Plumbing',
-    'Gas',
-    'Other'
-);
+-- permit_type holds the topic's item type (a permit type, a park feature, ...),
+-- so it is free text checked against the active system config, not an enum.
 
 CREATE TYPE urgency_level_enum AS ENUM ('Low', 'Medium', 'High');
 
@@ -66,7 +43,7 @@ CREATE TABLE feedback2 (
     timestamp_processed TIMESTAMPTZ,
     
     -- User inputs
-    permit_type permit_type_enum,
+    permit_type VARCHAR(100),
     category VARCHAR(100),
     subcategory VARCHAR(100),
     issue_description TEXT NOT NULL,

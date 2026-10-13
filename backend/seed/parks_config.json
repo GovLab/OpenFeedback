@@ -1,0 +1,15 @@
+{
+  "categories": [
+    {"name": "Maintenance & Cleanliness", "subcategories": ["Broken or Damaged Equipment", "Litter, Trash & Graffiti", "Grass, Trees & Landscaping"]},
+    {"name": "Safety & Security", "subcategories": ["Lighting & Visibility", "Unsafe Surfaces or Equipment", "Personal Safety Concerns"]},
+    {"name": "Accessibility & Inclusion", "subcategories": ["Physical Accessibility", "Access for Kids, Seniors & Families", "Language & Information Access"]},
+    {"name": "Amenities & Facilities", "subcategories": ["Restrooms & Water Fountains", "Seating, Shade & Picnic Areas", "Sports Fields & Courts"]},
+    {"name": "Programs & Community Use", "subcategories": ["Programs, Events & Activities", "Scheduling & Reservations", "Communication & Responsiveness"]}
+  ],
+  "permit_types": ["Playground", "Splash Pad / Spray Deck", "Sports Field", "Basketball / Tennis Court", "Dog Park", "Walking Path / Trail", "Restrooms", "Picnic Area", "Community Garden", "Pool / Beach", "Lighting", "Trees & Landscaping", "Benches & Seating", "Water Fountain", "Parking & Access", "Other"],
+  "departments": ["Parks & Recreation", "Public Works", "Boston Centers for Youth & Families", "Boston Police", "Office of Neighborhood Services", "Disabilities Commission", "Environment Department"],
+  "impact_types": ["Child Safety", "Accessibility Barrier", "Health & Wellbeing", "Reduced Park Use", "Environmental Impact", "Community Connection", "Cost to Families"],
+  "urgency_levels": ["Low", "Medium", "High"],
+  "sentiment_options": ["Positive", "Negative", "Neutral"],
+  "priority_levels": ["High", "Medium", "Low"]
+}

@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import uuid
 import logging
 import asyncio
 from datetime import datetime
@@ -6,11 +7,12 @@ from fastapi import FastAPI, HTTPException, File, UploadFile, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse, IndividualResponse, ConversationInput, ConversationResponse, AugmentationInput, AugmentationResponse, ConfigResponse, ConfigUpdateRequest, ConfigUpdateResponse, ConfigHistoryResponse, ConfigVersion, SystemConfig, Category, StaffLoginInput, StaffLoginResponse
-from .classifier import classify_feedback, chatbot_agent, augment_feedback, determine_permit_context, detect_spam_or_invalid, clear_config_cache
+from .classifier import classify_feedback, chatbot_agent, augment_feedback, determine_topic_context, detect_spam_or_invalid, clear_config_cache
 from .database import db
 from .postgres_db import postgres_db
 from .file_processor import FileProcessor
 from .system_config import system_config_manager
+from .config import topic
 from .auth import require_staff, rate_limit_public, check_staff_password, issue_token
 
 
@@ -198,28 +200,28 @@ async def feedback_agent(conversation: ConversationInput):
             if spam_check.get("is_invalid", False):
                 logger.info("⚠️ Feedback detected as spam/invalid - returning early")
                 return {
-                    "message": "We cannot allow non-permit related feedback or other contect.",
+                    "message": topic.rejection_message,
                     "needs_followup": False,
                     "quality_score": 0,
                     "is_invalid": True
                 }
             
-            # Determine permit context only on first call
-            logger.info("📍 FIRST TURN: Will determine permit context")
-            permit_context = determine_permit_context(
+            # Determine topic context only on first call
+            logger.info("📍 FIRST TURN: Will determine topic context")
+            topic_context = determine_topic_context(
                 conversation.original_feedback,
                 conversation.category_map
             )
         else:
-            logger.info("📍 SUBSEQUENT TURN: Skipping spam check and permit context (already loaded)")
-            permit_context = ""
+            logger.info("📍 SUBSEQUENT TURN: Skipping spam check and topic context (already loaded)")
+            topic_context = ""
             logger.info("=" * 60)
         
-        # Call the chatbot agent with permit context
+        # Call the chatbot agent with topic context
         result = chatbot_agent(
             conversation.original_feedback,
             conversation.conversation_history,
-            permit_context
+            topic_context
         )
         
         # Ensure is_invalid is set in result
@@ -579,6 +581,23 @@ async def get_all_postgres_feedback(limit: int = 100, offset: int = 0):
             "limit": limit,
             "offset": offset
         }
+
+
+@app.delete("/api/feedback/{feedback_id}", dependencies=[Depends(require_staff)])
+async def delete_feedback(feedback_id: str):
+    """Remove one feedback item from both databases (e.g. spam or a test entry)."""
+    try:
+        uuid.UUID(feedback_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid feedback ID")
+
+    deleted_postgres = postgres_db.delete_feedback(feedback_id)
+    deleted_neo4j = db.delete_feedback(feedback_id)
+    if not (deleted_postgres or deleted_neo4j):
+        raise HTTPException(status_code=404, detail="Feedback not found")
+
+    logger.info(f"Deleted feedback {feedback_id} (postgres={deleted_postgres}, neo4j={deleted_neo4j})")
+    return {"deleted": True, "postgres": deleted_postgres, "neo4j": deleted_neo4j}
 
 
 @app.get("/api/verify-ids", dependencies=[Depends(require_staff)])

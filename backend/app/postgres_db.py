@@ -99,6 +99,7 @@ class PostgresDB:
         with self.engine.connect() as conn:
             has_schema = conn.exec_driver_sql("SELECT to_regclass('public.system_config')").scalar()
         if has_schema:
+            self._migrate_permit_type_to_text()
             return
         logger.info("Empty database detected: applying schema.sql")
         raw = self.engine.raw_connection()
@@ -108,6 +109,17 @@ class PostgresDB:
             raw.commit()
         finally:
             raw.close()
+
+    def _migrate_permit_type_to_text(self):
+        """Older databases stored permit_type as a permits-only enum; loosen it to text."""
+        with self.engine.begin() as conn:
+            udt = conn.exec_driver_sql(
+                "SELECT udt_name FROM information_schema.columns "
+                "WHERE table_name = 'feedback2' AND column_name = 'permit_type'"
+            ).scalar()
+            if udt == "permit_type_enum":
+                logger.info("Migrating feedback2.permit_type from enum to VARCHAR(100)")
+                conn.exec_driver_sql("ALTER TABLE feedback2 ALTER COLUMN permit_type TYPE VARCHAR(100)")
 
     @contextmanager
     def get_session(self):

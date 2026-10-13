@@ -10,6 +10,7 @@ import SystemConfigManager from "@/components/SystemConfigManager";
 import StaffLogin from "@/components/StaffLogin";
 import { api, GraphData, Stats } from "@/lib/api";
 import { getStaffToken, clearStaffToken, STAFF_LOGOUT_EVENT } from "@/lib/http";
+import { topic, showSampleDataNotice } from "@/lib/topic";
 
 type TabType = "dashboard" | "config";
 
@@ -109,17 +110,27 @@ function GovtDashboard() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-white mb-2">
-                Permit Feedback Analytics
+                {topic.dashboardTitle}
               </h1>
               <p className="text-slate-200">
                 Analyze submissions, identify recurring issues, and coordinate agency responses.
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-white text-sm font-medium">Live Data</span>
-              </div>
+              {showSampleDataNotice ? (
+                <div
+                  className="flex items-center gap-2 bg-amber-400/20 px-4 py-2 rounded-lg"
+                  title="This dashboard shows made-up feedback for demonstration"
+                >
+                  <div className="w-2 h-2 bg-amber-300 rounded-full"></div>
+                  <span className="text-amber-100 text-sm font-medium">Sample Data</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-white text-sm font-medium">Live Data</span>
+                </div>
+              )}
               <button
                 onClick={clearStaffToken}
                 className="text-white text-sm font-medium bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition-colors"

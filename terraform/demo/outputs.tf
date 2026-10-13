@@ -34,3 +34,11 @@ output "neo4j_shell" {
 output "aws_region" {
   value = var.aws_region
 }
+
+output "topic" {
+  value = var.topic
+}
+
+output "show_sample_data_notice" {
+  value = var.show_sample_data_notice
+}

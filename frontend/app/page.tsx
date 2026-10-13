@@ -4,6 +4,7 @@ import { useState } from "react";
 import FeedbackForm from "@/components/FeedbackForm";
 import SuccessMessage from "@/components/SuccessMessage";
 import Navigation from "@/components/Navigation";
+import { topic } from "@/lib/topic";
 
 export default function Home() {
   const [showSuccess, setShowSuccess] = useState(false);
@@ -23,7 +24,7 @@ export default function Home() {
         {/* Minimal Header - centered and clean */}
         <div className="text-center mb-6">
           <h1 className="text-3xl sm:text-4xl font-semibold mb-2 tracking-tight" style={{ color: 'var(--boston-charles-blue)' }}>
-            Boston Permit Feedback
+            {topic.appTitle}
           </h1>
           <p className="text-base text-slate-600">
             We want to hear from you!

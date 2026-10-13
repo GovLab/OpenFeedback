@@ -163,6 +163,7 @@ resource "aws_apprunner_service" "backend" {
         runtime_environment_variables = {
           APP_ENV              = "production"
           CORS_ALLOWED_ORIGINS = local.frontend_url
+          TOPIC                = var.topic
         }
 
         runtime_environment_secrets = merge(

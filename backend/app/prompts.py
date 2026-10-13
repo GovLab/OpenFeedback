@@ -1,5 +1,7 @@
 from typing import Optional
 
+from .config import topic
+
 
 class PromptBuilder:
     """
@@ -70,7 +72,7 @@ class PromptBuilder:
         priority_levels = config_data.get('priority_levels', ['High', 'Medium', 'Low'])
         urgency_levels = config_data.get('urgency_levels', ['Low', 'Medium', 'High'])
         
-        template = """Analyze the following citizen feedback and classify it into relevant categories and subcategories based on core friction points in the permit process.
+        template = """Analyze the following citizen feedback about {subject} and classify it into relevant categories and subcategories based on the core problems it describes.
 Note: If feedback is vague or lacks detail, make your best assessment based on available information without spending excessive time trying to infer missing context.
 
 Available Categories and Subcategories:
@@ -78,7 +80,7 @@ Available Categories and Subcategories:
 {categories}
 
 Also determine:
-- Permit Type: Which Boston permit this relates to (choose most relevant from: {permit_types})
+- {item_label}: {item_question} (choose most relevant from: {permit_types})
 - Sentiment ({sentiment_options})
 - Priority level ({priority_levels})
 - Summary: 1-2 sentence condensed version
@@ -91,7 +93,7 @@ Feedback: {feedback}
 
 Return ONLY a valid JSON object with this exact structure (no additional text):
 {{
-    "permit_type": "Permit Type Name",
+    "permit_type": "{item_label} Name",
     "category_map": {{
         "Category Name 1": ["Subcategory 1", "Subcategory 2"],
         "Category Name 2": ["Subcategory 3"]
@@ -108,6 +110,9 @@ Return ONLY a valid JSON object with this exact structure (no additional text):
 Each category should map to its relevant subcategories. Only include categories and subcategories that apply to this feedback."""
         
         return template.format(
+            subject=topic.subject,
+            item_label=topic.item_label,
+            item_question=topic.item_question,
             feedback=feedback,
             categories=categories_text,
             permit_types=permit_types_text,
@@ -126,15 +131,16 @@ Each category should map to its relevant subcategories. Only include categories 
         Returns:
             System message string
         """
-        return "You are a government permit system feedback classification assistant for analyzing citizen feedback. You return only valid JSON responses."
+        return f"You are a city government feedback classification assistant for analyzing citizen feedback about {topic.subject}. You return only valid JSON responses."
     
     @staticmethod
-    def build_chatbot_agent_prompt(context: str) -> str:
+    def build_chatbot_agent_prompt(context: str, item_types: list) -> str:
         """
         Build a prompt for the chatbot agent to evaluate feedback quality.
         
         Args:
             context: The conversation context including original feedback and history
+            item_types: Valid item types (permit types, park features) from the active config
             
         Returns:
             Formatted prompt string
@@ -159,27 +165,16 @@ IMPORTANT - How to use this context:
   * If the user has already provided sufficient detail across the conversation, mark needs_followup as false
 
 === REQUIRED INFORMATION ===
-1. Permit Type - Which Boston permit applies
-2. Problem Type - Cost, time, process, or policy issue
-3. Concrete Details - Specific numbers, timeframes, or examples
+{required_info}
 
-VALID PERMIT TYPES:
-"Building - Short Form", "Building - Long Form", "Use of Premises", "Liquor License", "Common Victualler (Food Service)", "Entertainment License", "Street Occupancy", "Resident Parking", "Business Parking", "Fire Prevention", "Fire Alarm", "Place of Assembly", "Hot Work", "Tent Permit", "Food Truck", "Dumpster", "Excavation", "Driveway", "Sign Permit", "Electrical", "Plumbing", "Gas", "Other"
+VALID {item_label_upper}S:
+{item_types}
 
-PERMIT CLASSIFICATION HINTS:
-- "renovation/construction" → Building permit
-- "bar/restaurant/café" → Liquor License or Common Victualler
-- "event/concert" → Entertainment License
-- "parking" → Resident/Business Parking
-- "digging/roadwork" → Excavation
-- "sign/storefront" → Sign Permit
-- "electrical/plumbing/gas" → Respective permits
-- Unclear → Ask what activity/work they're describing
+{item_label_upper} CLASSIFICATION HINTS:
+{item_hints}
 
 SUFFICIENT FEEDBACK (6+):
-✓ "Building permit took 6 weeks, expected 2-3"
-✓ "Liquor license fee was $500, seemed high"
-✓ "Application form didn't explain when inspection was needed"
+{sufficient_examples}
 
 INSUFFICIENT (need follow-up):
 ✗ "It was expensive" → Ask: How much or what specifically?
@@ -197,8 +192,8 @@ FOLLOW-UP STRATEGY:
 
 QUALITY SCORING:
 - 1-4: Single words, vague complaints
-- 5: Has problem category OR permit but missing details
-- 6-7: Has permit + problem type + ANY specific detail
+- 5: Has problem category OR {item_label_lower} but missing details
+- 6-7: Has {item_label_lower} + problem type + ANY specific detail
 - 8-9: Multiple specific details
 - 10: Comprehensive, actionable data
 
@@ -211,7 +206,7 @@ Respond in JSON:
 
 IF ENOUGH DETAIL (score 6+):
 - Set needs_followup to false
-- Thank them: "Thank you - this is really helpful for improving the process!"
+- Thank them: "Thank you - this is really helpful for making things better!"
 
 Respond in this JSON format:
 {{
@@ -221,23 +216,24 @@ Respond in this JSON format:
 }}
 
 Quality score explanation (ANALYST STANDARDS - Be balanced):
-- 1-2: Single words ("bad", "slow") or completely unintelligible
-- 3-4: Vague complaints without specifics ("it was expensive", "took too long", "confusing process")
-- 5: Has problem category but missing key details ("application fee was high" - how high? which permit?) OR has permit + vague problem
-- 6-7: Has permit + problem type + ANY specific detail (timeframe OR cost OR process step)
-       Examples: "Building permit took 8 weeks" or "Liquor license fee was $800" or "Application process was confusing"
-- 8-9: Has permit + problem type + MULTIPLE specific details that can be analyzed
-       Examples: "Building permit took 8 weeks, expected 3-4, mostly waiting for inspection"
-- 10: Comprehensive, actionable data with permit, problem, specifics, and context
-      Example: "Building permit for kitchen renovation cost $500 fee plus $300 for required fire inspection, took 6 weeks total with 4 weeks just waiting for inspection appointment"
+{quality_scoring}
 """
         
-        return template.format(context=context)
+        return template.format(
+            context=context,
+            required_info=topic.required_info,
+            item_label_upper=topic.item_label.upper(),
+            item_label_lower=topic.item_label.lower(),
+            item_types=", ".join(f'"{item}"' for item in item_types) or '"Other"',
+            item_hints=topic.item_hints,
+            sufficient_examples=topic.sufficient_examples,
+            quality_scoring=topic.quality_scoring,
+        )
     
     @staticmethod
     def build_spam_detection_prompt(feedback: str) -> str:
         """
-        Build a prompt for detecting spam/outlandish/non-permit-related feedback.
+        Build a prompt for detecting spam, outlandish or off-topic feedback.
         
         Args:
             feedback: The feedback text to check
@@ -246,25 +242,15 @@ Quality score explanation (ANALYST STANDARDS - Be balanced):
             Formatted prompt string
         """
         template = """Analyze the following feedback and determine if it is:
-1. SPAM - Random text, gibberish, promotional content, or completely unrelated to permits
+1. SPAM - Random text, gibberish, promotional content, or completely unrelated to {subject}
 2. OUTLANDISH - Clearly fake, trolling, or nonsensical content
-3. NON-PERMIT-RELATED - Not related to Boston city permits, licenses, or government services at all
+3. OFF-TOPIC - Not related to {subject} or city government services at all
 
-VALID PERMIT-RELATED TOPICS include:
-- Building permits, construction, renovations
-- Business licenses (liquor, food service, entertainment)
-- Parking permits (resident, business)
-- Fire department permits (hot work, fire alarms)
-- Public works permits (excavation, dumpsters, street occupancy)
-- Sign permits, electrical, plumbing, gas permits
-- Any Boston city government permit or licensing process
+VALID TOPICS include:
+{valid_topics}
 
-INVALID (spam/outlandish/non-permit-related) examples:
-- Random text: "asdfghjkl" or "test test test"
-- Completely unrelated: "I love pizza", "Weather is nice today"
-- Promotional/spam: "Buy now!", "Click here for deals"
-- Trolling: "This system is stupid and you're all idiots" (without any permit context)
-- Personal rants unrelated to permits: "My neighbor is annoying"
+INVALID (spam/outlandish/off-topic) examples:
+{invalid_examples}
 
 Feedback to analyze:
 {feedback}
@@ -275,9 +261,14 @@ Return ONLY a valid JSON object:
     "reason": "Brief explanation (only if is_invalid is true)"
 }}
 
-is_invalid should be TRUE only if the feedback is clearly spam, outlandish, or completely unrelated to permits. Be lenient - if there's ANY possible connection to permits, mark as false."""
+is_invalid should be TRUE only if the feedback is clearly spam, outlandish, or completely unrelated to {subject}. Be lenient - if there's ANY possible connection, mark as false."""
         
-        return template.format(feedback=feedback)
+        return template.format(
+            feedback=feedback,
+            subject=topic.subject,
+            valid_topics=topic.valid_topics,
+            invalid_examples=topic.invalid_examples,
+        )
     
     @staticmethod
     def build_chatbot_agent_system_message() -> str:
@@ -287,16 +278,11 @@ is_invalid should be TRUE only if the feedback is clearly spam, outlandish, or c
         Returns:
             System message string
         """
-        return """You are an intelligent feedback quality assistant for Boston city government permit processes. 
+        categories = "\n".join(f"- {name}: {description}" for name, description in topic.context_categories.items())
+        return f"""{topic.chatbot_role}
 
-You can look up permit details using the get_boston_permit_context tool. Use it when you need info about permit types, processes, requirements, or common issues.
-
-Available context categories:
-- general_info: Boston permit contacts, portals, overview
-- home_renovations: Kitchen, bathroom, basement, residential permits
-- events_entertainment: Parties, venues, clubs, entertainment licenses
-- restaurants_bars: Food businesses, liquor licenses, commercial kitchens
-- construction_contractors: Hot work, dumpsters, contractor permits
+Background notes may be included below, chosen from these categories:
+{categories}
 
 You evaluate feedback and ask follow-up questions to improve detail quality. You always respond with valid JSON."""
     
@@ -311,7 +297,7 @@ You evaluate feedback and ask follow-up questions to improve detail quality. You
         Returns:
             Formatted prompt string
         """
-        template = """Analyze the following text and break it down into individual, distinct feedback items. Each feedback should be a complete thought or complaint from a citizen about government permits/services.
+        template = """Analyze the following text and break it down into individual, distinct feedback items. Each feedback should be a complete thought or complaint from a citizen about {subject}.
 
 Presume there are multiple feedbacks in the text and in rare cases there may be only one feedback.
 
@@ -331,7 +317,7 @@ Format examples:
 Text to analyze:
 {text}"""
         
-        return template.format(text=text)
+        return template.format(text=text, subject=topic.subject)
     
     @staticmethod
     def build_segmentation_system_message() -> str:
@@ -379,7 +365,7 @@ Requirements:
 - Write ONLY the summary of what was discussed in the conversation
 - DO NOT repeat or reference the original feedback
 - Present it as a natural, flowing note with the additional context
-- Focus on key specifics: timing, location, steps taken, errors, expectations, permit types, etc.
+- Focus on key specifics: timing, location, steps taken, errors, expectations, locations, etc.
 - Don't mention "questions", "conversation", or "the user said" - just state the facts
 - NEVER assume or make up any information not explicitly stated in the conversation
 - Only include details that were directly provided by the user
