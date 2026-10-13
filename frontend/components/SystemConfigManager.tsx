@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { configApi, SystemConfig, Category, ConfigVersion, ConfigHistoryResponse } from "@/lib/config-api";
+import { topic } from "@/lib/topic";
 
 type ConfigTab = "categories" | "permit_types" | "departments" | "impact_types" | "urgency_levels";
 
@@ -232,7 +233,7 @@ export default function SystemConfigManager() {
 
   const tabs = [
     { id: "categories" as ConfigTab, label: "Categories & Subcategories", icon: "📁" },
-    { id: "permit_types" as ConfigTab, label: "Permit Types", icon: "📋" },
+    { id: "permit_types" as ConfigTab, label: topic.itemLabelPlural, icon: "📋" },
     { id: "departments" as ConfigTab, label: "Departments", icon: "🏢" },
     { id: "impact_types" as ConfigTab, label: "Impact Types", icon: "⚡" },
     { id: "urgency_levels" as ConfigTab, label: "Urgency Levels", icon: "🔔" },
@@ -483,7 +484,7 @@ export default function SystemConfigManager() {
 
         {activeTab === "permit_types" && (
           <ListSection
-            title="Permit Types"
+            title={topic.itemLabelPlural}
             items={config.permit_types}
             onAdd={() => addListItem("permit_types")}
             onUpdate={(index, value) => updateListItem("permit_types", index, value)}
@@ -533,7 +534,7 @@ export default function SystemConfigManager() {
             <textarea
               value={changeNotes}
               onChange={(e) => setChangeNotes(e.target.value)}
-              placeholder="E.g., Added new category for technology issues, updated permit types..."
+              placeholder={`E.g., Added new category for technology issues, updated ${topic.itemLabelPlural.toLowerCase()}...`}
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 mb-4"
               style={{ 
                 borderColor: 'var(--boston-gray-medium-dark)',

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Montserrat, Lora } from "next/font/google";
 import "./globals.css";
+import { topic } from "@/lib/topic";
 
 const montserrat = Montserrat({
   variable: "--font-montserrat",
@@ -15,8 +16,8 @@ const lora = Lora({
 });
 
 export const metadata: Metadata = {
-  title: "Boston Permit Feedback",
-  description: "Share feedback about your City of Boston permitting experience.",
+  title: topic.appTitle,
+  description: topic.appDescription,
 };
 
 export default function RootLayout({

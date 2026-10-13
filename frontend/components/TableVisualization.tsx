@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { api, FeedbackRecord } from "@/lib/api";
+import { topic } from "@/lib/topic";
 
 interface FeedbackTableProps {
   refreshTrigger?: number;
@@ -181,7 +182,7 @@ function ClassificationCard({ permitType, category, subcategory, department, imp
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <span className="text-[11px] font-semibold block mb-0.5" style={{ color: 'var(--boston-optimistic-blue)' }}>Permit Type</span>
+                <span className="text-[11px] font-semibold block mb-0.5" style={{ color: 'var(--boston-optimistic-blue)' }}>{topic.itemLabel}</span>
                 <span className="font-bold text-gray-900 text-[15px] truncate block">{permitType || "N/A"}</span>
               </div>
             </div>

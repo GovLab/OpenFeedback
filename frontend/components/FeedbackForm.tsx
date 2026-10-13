@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { api, ClassifiedFeedback, ConversationMessage } from '@/lib/api';
+import { topic } from '@/lib/topic';
 import ChatbotSidebar from './ChatbotSidebar';
 
 interface FeedbackFormProps {
@@ -36,11 +37,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
   });
 
   // Suggestion prompts to help users
-  const suggestionPrompts = [
-    "What specific feature or service would you like to see improved?",
-    "Can you describe a problem you encountered?",
-    "What frustrated you about your recent interaction?",
-  ];
+  const suggestionPrompts = topic.suggestionPrompts;
 
   // Auto-resize textarea when feedback is augmented and scroll to bottom
   useEffect(() => {
@@ -92,7 +89,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
         
         // Check if feedback is spam/invalid
         if (agentData.is_invalid) {
-          setError('We cannot allow non-permit related feedback or other content.');
+          setError(topic.rejectionMessage);
           setLoading(false);
           return;
         }
@@ -295,7 +292,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
       }}>
         <div className="mb-2">
           <label htmlFor="feedback" className="block text-lg font-semibold text-slate-900">
-            How was your experience with permitting?
+            {topic.formQuestion}
           </label>
         </div>
         {/* Suggestion prompts */}
@@ -346,7 +343,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
                   : 'border-slate-300 min-h-[120px]'
               }`}
               style={isActuallyAugmented ? { minHeight: '120px' } : undefined}
-              placeholder="Share feedback on your experience!"
+              placeholder={topic.formPlaceholder}
               disabled={loading || showChatbot || isActuallyAugmented}
             />
             
