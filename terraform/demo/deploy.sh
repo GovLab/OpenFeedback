@@ -34,12 +34,19 @@ deploy_backend() {
 }
 
 deploy_frontend() {
-  local app_id api_url zip job
+  local app_id api_url topic sample_notice zip job
   app_id="$(tf_out amplify_app_id)"
   api_url="$(tf_out backend_url)"
+  # Read outputs here: inside the build subshell the cwd is frontend/, which has no state
+  topic="$(tf_out topic)"
+  sample_notice="$(tf_out show_sample_data_notice)"
 
-  echo "==> Building front end against $api_url"
-  (cd "$REPO_ROOT/frontend" && npm ci && NEXT_PUBLIC_API_URL="$api_url" npm run build)
+  echo "==> Building front end ($topic) against $api_url"
+  (cd "$REPO_ROOT/frontend" && npm ci && \
+    NEXT_PUBLIC_API_URL="$api_url" \
+    NEXT_PUBLIC_TOPIC="$topic" \
+    NEXT_PUBLIC_SAMPLE_DATA_NOTICE="$sample_notice" \
+    npm run build)
 
   zip="$(mktemp -d)/site.zip"
   (cd "$REPO_ROOT/frontend/out" && zip -qr "$zip" .)

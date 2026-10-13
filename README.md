@@ -72,6 +72,32 @@ OpenFeedback bridges the gap between **how residents share feedback** and **how 
 
 ---
 
+## Topics
+
+The app was built for permit feedback, and can also run as a parks and playgrounds feedback tool. One setting, `TOPIC`, picks which:
+
+| `TOPIC` | Resident question | What the AI looks for |
+|---|---|---|
+| `permits` (default) | "How was your experience with permitting?" | Permit type, cost, delays, process problems |
+| `parks` | "How could your local park or playground be better?" | Park feature, location, safety, upkeep, access |
+
+- **Back end:** set `TOPIC` in `backend/.env.local`. The topic-specific AI wording lives in `backend/app/topics.py`, and the chatbot's background notes are in `backend/app/context/<topic>/`.
+- **Front end:** set `NEXT_PUBLIC_TOPIC` to the same value (the screen wording is in `frontend/lib/topic.ts`).
+- **Categories:** the category lists themselves are not in code. They're versions in the **System Configuration** tab, so switching topic also means activating that topic's config version (v1 is permits, and `backend/seed/parks_config.json` is parks).
+
+### Demo data
+`backend/seed/seed_demo.py` publishes a config file and then submits made-up feedback through the public form endpoint, so every item gets real AI classification:
+
+```bash
+STAFF_PASSWORD=... python3 backend/seed/seed_demo.py --api http://localhost:8003 \
+  --config backend/seed/parks_config.json --config-notes "Parks & playgrounds demo" \
+  --feedback backend/seed/parks_feedback.json
+```
+
+Set `NEXT_PUBLIC_SAMPLE_DATA_NOTICE=true` to label the dashboard "Sample Data".
+
+---
+
 ## Running It Locally
 
 ### 1. Install the tools

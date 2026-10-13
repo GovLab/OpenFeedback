@@ -37,6 +37,19 @@ aws apprunner start-deployment --region us-east-1 \
   --service-arn "$(terraform output -raw apprunner_service_arn)"
 ```
 
+## Topic and demo data
+`var.topic` (default `parks`) sets the back end's `TOPIC` and the front end's wording. `var.show_sample_data_notice` (default `true`) labels the dashboard "Sample Data". After changing either one, run `./deploy.sh`.
+
+To load the parks demo data (about 40 items, roughly 5 minutes, under $1 of OpenAI usage):
+```bash
+STAFF_PASSWORD="$(aws secretsmanager get-secret-value --region us-east-1 --secret-id openfeedback/dev/app --query SecretString --output text | jq -r .STAFF_PASSWORD)" \
+  python3 ../../backend/seed/seed_demo.py --api "$(terraform output -raw backend_url)" \
+  --config ../../backend/seed/parks_config.json --config-notes "Parks & playgrounds demo" \
+  --feedback ../../backend/seed/parks_feedback.json
+```
+
+To remove a single item (spam, a test entry), staff can call `DELETE /api/feedback/<id>`.
+
 ## Staff dashboard password
 ```bash
 aws secretsmanager get-secret-value --region us-east-1 \

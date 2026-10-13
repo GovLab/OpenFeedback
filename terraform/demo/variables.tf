@@ -44,3 +44,20 @@ variable "app_runner_max_instances" {
   type        = number
   default     = 2
 }
+
+variable "topic" {
+  description = "Which topic profile the app runs: permits or parks"
+  type        = string
+  default     = "parks"
+
+  validation {
+    condition     = contains(["permits", "parks"], var.topic)
+    error_message = "topic must be permits or parks."
+  }
+}
+
+variable "show_sample_data_notice" {
+  description = "Label the dashboard as sample data (for demos with made-up feedback)"
+  type        = bool
+  default     = true
+}
