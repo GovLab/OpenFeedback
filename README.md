@@ -2,9 +2,9 @@
 
 **An AI-powered civic feedback system that helps governments listen better — and act faster.**
 
-[![Watch the 20-second OpenFeedback video](docs/openfeedback-launch.jpg)](docs/openfeedback-launch.mp4)
+![OpenFeedback in 20 seconds: a resident's comment, the chatbot's follow-up, the AI's classification, and the staff dashboard](docs/openfeedback-launch.gif)
 
-*20-second walkthrough (click to play): a resident's comment, the chatbot's follow-up, the AI's classification, and the staff dashboard. Shown with sample parks and playgrounds data.*
+*A resident's comment, the chatbot's follow-up, the AI's classification, and the staff dashboard. Shown with sample parks and playgrounds data. [Version with sound (mp4)](docs/openfeedback-launch.mp4).*
 
 OpenFeedback is a full-stack web application that collects, clarifies, classifies, and visualizes constituent feedback about permitting experiences. It transforms unstructured public input into structured, actionable insights using AI and a graph database, enabling city staff to identify patterns, prioritize issues, and ensure no feedback is lost.
 
