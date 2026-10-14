@@ -1,1256 +1,240 @@
 "use client";
-import { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import { KeyboardEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { GraphData } from "@/lib/api";
+import { computeLayout, graphHeightFor } from "@/lib/graphLayout";
+import { buildGraphModel, connectedTo, truncate } from "@/lib/graphModel";
+import { firstNodeId, nextNodeId } from "@/lib/graphNavigation";
+import { GraphCanvas } from "@/components/graph/GraphCanvas";
+import { GraphDetailsPanel } from "@/components/graph/GraphDetailsPanel";
+import { GraphHierarchyTable } from "@/components/graph/GraphHierarchyTable";
+import { GraphLegend, ZoomControls } from "@/components/graph/GraphLegend";
+import { MONTSERRAT } from "@/components/graph/graphTheme";
+import { useElementWidth, usePrefersReducedMotion } from "@/components/graph/hooks";
+import { useZoomPan } from "@/components/graph/useZoomPan";
 
 interface GraphVisualizationProps {
   data: GraphData;
 }
 
-interface EnhancedNode {
-  id: string;
-  name: string;
-  type: string;
-  color: string;
-  size?: number;
-  feedbackCount: number;
-  deprecated?: boolean;
-  x?: number;
-  y?: number;
-}
+const OVERLAY_MIN_WIDTH = 720; // Below this the details panel sits under the graph
+const PANEL_SPACE = 320 + 24 + 24; // Panel width, its margin, and breathing room
+const EDGE_SPACE = 48;
+const ZOOM_STEP = 1.3;
+const TOOLTIP_CHARS = 90;
+const NAV_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"]);
 
 // ================ Empty State Component ================
 function GraphEmptyState() {
   return (
     <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl shadow-sm p-8 text-center border border-slate-200">
       <div className="text-slate-400 mb-2">
-        <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
       </div>
-      <p className="text-slate-600 text-lg font-medium">
-        No feedback data yet
-      </p>
-      <p className="text-slate-500 text-sm mt-1">
-        Submit your first feedback to visualize the graph
-      </p>
-    </div>
-  );
-}
-
-// ================ Legend Component ================
-interface GraphLegendProps {
-  zoomLevel: number;
-  showDeprecated: boolean;
-  onToggleDeprecated: () => void;
-}
-
-function GraphLegend({ zoomLevel, showDeprecated, onToggleDeprecated }: GraphLegendProps) {
-  return (
-    <div className="mb-3 md:mb-4 flex flex-wrap gap-2 md:gap-3 bg-white rounded-lg p-2 md:p-3 lg:p-4 border border-slate-200 overflow-x-auto">
-      <div className="flex items-center gap-2 px-2 md:px-3 py-1.5 bg-blue-50 rounded-lg flex-shrink-0">
-        <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-blue-500 shadow-sm"></div>
-        <span className="text-slate-700 text-xs md:text-sm font-medium whitespace-nowrap">Feedback</span>
-      </div>
-      <div className="flex items-center gap-2 px-2 md:px-3 py-1.5 bg-green-50 rounded-lg flex-shrink-0">
-        <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-green-500 shadow-sm"></div>
-        <span className="text-slate-700 text-xs md:text-sm font-medium whitespace-nowrap">Category</span>
-      </div>
-      <div className="flex items-center gap-2 px-2 md:px-3 py-1.5 bg-amber-50 rounded-lg flex-shrink-0">
-        <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-amber-500 shadow-sm"></div>
-        <span className="text-slate-700 text-xs md:text-sm font-medium whitespace-nowrap">Subcategory</span>
-      </div>
-      <div 
-        className={`flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-lg border flex-shrink-0 transition-all cursor-pointer ${showDeprecated ? 'bg-gray-50 border-gray-300 opacity-60' : 'bg-gray-100 border-gray-400 opacity-40'}`} 
-        onClick={onToggleDeprecated}
-        title={showDeprecated ? "Hide deprecated nodes (categories/subcategories not in active config)" : "Show deprecated nodes (categories/subcategories not in active config)"}
-      >
-        <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-gray-400 shadow-sm"></div>
-        <span className="text-slate-600 text-xs md:text-sm font-medium whitespace-nowrap">Deprecated</span>
-        <div className={`relative w-8 h-4 rounded-full transition-colors ${showDeprecated ? 'bg-blue-500' : 'bg-gray-300'}`}>
-          <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${showDeprecated ? 'translate-x-4' : 'translate-x-0'}`}></div>
-        </div>
-      </div>
-      <div className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-200 flex-shrink-0">
-        <svg className="w-3 h-3 md:w-3.5 md:h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span className="text-slate-600 text-xs whitespace-nowrap">Zoom: {zoomLevel.toFixed(1)}x</span>
-      </div>
-    </div>
-  );
-}
-
-// ================ Node Details Sidebar Component ================
-interface NodeDetailsSidebarProps {
-  selectedNode: any;
-  onClose: () => void;
-  getNodeInfo: (node: any) => any;
-  showDeprecated: boolean;
-}
-
-function NodeDetailsSidebar({ selectedNode, onClose, getNodeInfo, showDeprecated }: NodeDetailsSidebarProps) {
-  const nodeInfo = getNodeInfo(selectedNode);
-
-  // Get type-specific colors
-  const getTypeColors = (type: string) => {
-    const colors = {
-      Feedback: {
-        primary: '#3b82f6',
-        light: '#dbeafe',
-        dark: '#1e40af',
-        gradient: 'from-blue-50 to-blue-100',
-        border: 'border-blue-200'
-      },
-      Category: {
-        primary: '#10b981',
-        light: '#d1fae5',
-        dark: '#047857',
-        gradient: 'from-green-50 to-green-100',
-        border: 'border-green-200'
-      },
-      Subcategory: {
-        primary: '#f59e0b',
-        light: '#fef3c7',
-        dark: '#d97706',
-        gradient: 'from-amber-50 to-amber-100',
-        border: 'border-amber-200'
-      }
-    };
-    return colors[type as keyof typeof colors] || colors.Feedback;
-  };
-
-  const typeColors = getTypeColors(selectedNode.type);
-
-  return (
-    <div className="w-80 bg-white rounded-xl p-4 border border-gray-300 shadow-xl flex flex-col h-full overflow-hidden flex-shrink-0">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-3 pb-3 border-b border-gray-200">
-        <div className="flex items-center gap-2.5">
-          <div 
-            className="flex items-center justify-center w-8 h-8 rounded-lg shadow-sm"
-            style={{ backgroundColor: `${typeColors.primary}15` }}
-          >
-            <div 
-              className="w-3 h-3 rounded-full shadow-sm" 
-              style={{ backgroundColor: typeColors.primary }}
-            />
-          </div>
-          <div>
-            <h3 className="text-base md:text-lg font-bold text-gray-900">Details</h3>
-            <p className="text-xs text-gray-500">Explore information</p>
-          </div>
-        </div>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1 rounded-lg transition-all"
-          title="Close"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      <div className="flex-1 flex flex-col min-h-0 pr-1">
-        {/* Feedback Text Card - Only for Feedback nodes - Flexible to fit with other cards */}
-        {selectedNode.type === "Feedback" && nodeInfo.feedbackText && (
-          <>
-            <div className="bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden flex flex-col flex-1 min-h-0 mb-2.5 max-h-fit">
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-3 py-2 border-b border-gray-200 flex-shrink-0">
-                <div className="flex items-center gap-2">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#1871bd' }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  <p className="text-xs text-gray-700 font-bold uppercase tracking-wide">Content</p>
-                </div>
-              </div>
-              <div className="p-3 bg-gray-50 overflow-y-auto flex-1 min-h-0">
-                <p className="text-xs leading-relaxed text-gray-900 whitespace-pre-wrap">{nodeInfo.feedbackText}</p>
-              </div>
-            </div>
-
-            {/* Classification Cards - Fixed at natural height */}
-            <div className="space-y-2.5 flex-shrink-0">
-              {nodeInfo.categories && nodeInfo.categories.length > 0 && (() => {
-                const visibleCategories = showDeprecated 
-                  ? nodeInfo.categories 
-                  : nodeInfo.categories.filter((cat: { name: string; deprecated?: boolean } | string) => {
-                      const isDeprecated = typeof cat === 'object' ? (cat.deprecated || false) : false;
-                      return !isDeprecated;
-                    });
-                
-                if (visibleCategories.length === 0) return null;
-                
-                return (
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-2.5 border border-green-200 shadow-sm">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <div className="flex items-center justify-center w-5 h-5 rounded-full bg-green-200">
-                        <svg className="w-3 h-3 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                        </svg>
-                      </div>
-                      <p className="text-xs font-bold uppercase tracking-wide text-green-800">
-                        {visibleCategories.length === 1 ? 'Category' : 'Categories'}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      {visibleCategories.map((cat: { name: string; deprecated?: boolean } | string, idx: number) => {
-                        const catName = typeof cat === 'string' ? cat : cat.name;
-                        const isDeprecated = typeof cat === 'object' ? (cat.deprecated || false) : false;
-                        return (
-                          <div key={idx} className={`flex items-center gap-1.5 ${isDeprecated ? 'opacity-50' : ''}`}>
-                            <div className={`w-1 h-1 rounded-full flex-shrink-0 ${isDeprecated ? 'bg-gray-400' : 'bg-green-600'}`}></div>
-                            <p className={`text-xs font-semibold ${isDeprecated ? 'text-gray-500 line-through' : 'text-green-900'}`}>{catName}</p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {nodeInfo.subcategories && nodeInfo.subcategories.length > 0 && (() => {
-                const visibleSubcategories = showDeprecated 
-                  ? nodeInfo.subcategories 
-                  : nodeInfo.subcategories.filter((subcat: { name: string; deprecated?: boolean } | string) => {
-                      const isDeprecated = typeof subcat === 'object' ? (subcat.deprecated || false) : false;
-                      return !isDeprecated;
-                    });
-                
-                if (visibleSubcategories.length === 0) return null;
-                
-                return (
-                  <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-2.5 border border-amber-200 shadow-sm">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <div className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-200">
-                        <svg className="w-3 h-3 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                        </svg>
-                      </div>
-                      <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
-                        {visibleSubcategories.length === 1 ? 'Subcategory' : 'Subcategories'}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      {visibleSubcategories.map((subcat: { name: string; deprecated?: boolean } | string, idx: number) => {
-                        const subcatName = typeof subcat === 'string' ? subcat : subcat.name;
-                        const isDeprecated = typeof subcat === 'object' ? (subcat.deprecated || false) : false;
-                        return (
-                          <div key={idx} className={`flex items-center gap-1.5 ${isDeprecated ? 'opacity-50' : ''}`}>
-                            <div className={`w-1 h-1 rounded-full flex-shrink-0 ${isDeprecated ? 'bg-gray-400' : 'bg-amber-600'}`}></div>
-                            <p className={`text-xs font-semibold ${isDeprecated ? 'text-gray-500 line-through' : 'text-amber-900'}`}>{subcatName}</p>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-          </>
-         )}
-
-        {/* Name Card - For non-Feedback nodes - More compact */}
-        {selectedNode.type !== "Feedback" && (
-          <div className="space-y-2.5 overflow-y-auto">
-            <div className="bg-white rounded-lg p-3 border border-gray-300 shadow-sm">
-              <div className="flex items-center gap-2 mb-1.5">
-                <svg className="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
-                <p className="text-xs text-gray-600 font-bold uppercase tracking-wide">Name</p>
-              </div>
-              <p className="text-sm md:text-base font-bold text-gray-900 break-words leading-snug">{selectedNode.name}</p>
-            </div>
-
-        {/* Category Card - For Subcategory nodes - Compact */}
-        {selectedNode.type === "Subcategory" && nodeInfo.category && (showDeprecated || !nodeInfo.categoryDeprecated) && (
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-2.5 border border-green-200 shadow-sm">
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <div className="flex items-center justify-center w-5 h-5 rounded-full bg-green-200">
-                <svg className="w-3 h-3 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
-              </div>
-              <p className="text-xs font-bold uppercase tracking-wide text-green-800">Parent Category</p>
-            </div>
-            <div className={`flex items-center gap-1.5 ${nodeInfo.categoryDeprecated ? 'opacity-50' : ''}`}>
-              <div className={`w-1 h-1 rounded-full flex-shrink-0 ${nodeInfo.categoryDeprecated ? 'bg-gray-400' : 'bg-green-600'}`}></div>
-              <p className={`text-xs font-semibold ${nodeInfo.categoryDeprecated ? 'text-gray-500 line-through' : 'text-green-900'}`}>{nodeInfo.category}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Total Feedback Card - For Subcategory nodes - Compact */}
-        {selectedNode.type === "Subcategory" && (
-          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-2.5 border border-blue-200 shadow-sm">
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <div className="flex items-center justify-center w-5 h-5 rounded-full" style={{ backgroundColor: 'rgba(24, 113, 189, 0.15)' }}>
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#1871bd' }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#1e40af' }}>Total Feedback</p>
-            </div>
-            <div className="flex items-baseline gap-2">
-              <p className="text-2xl md:text-3xl font-bold" style={{ color: '#1e3a8a' }}>
-                {nodeInfo.feedbackCount || 0}
-              </p>
-              <span className="text-xs text-blue-600 font-medium">
-                {nodeInfo.feedbackCount === 1 ? 'item' : 'items'}
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Total Subcategories Card - Category Only - Compact */}
-        {selectedNode.type === "Category" && (
-          <>
-            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg p-2.5 border border-emerald-200 shadow-sm">
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <div className="flex items-center justify-center w-5 h-5 rounded-full bg-emerald-200">
-                  <svg className="w-3 h-3 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                  </svg>
-                </div>
-                <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">Total Subcategories</p>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <p className="text-2xl md:text-3xl font-bold text-emerald-900">
-                  {nodeInfo.totalSubcategories}
-                </p>
-                <span className="text-xs text-emerald-600 font-medium">
-                  {nodeInfo.totalSubcategories === 1 ? 'group' : 'groups'}
-                </span>
-              </div>
-            </div>
-
-            {/* Total Feedback Card - Compact */}
-            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-2.5 border border-blue-200 shadow-sm">
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <div className="flex items-center justify-center w-5 h-5 rounded-full" style={{ backgroundColor: 'rgba(24, 113, 189, 0.15)' }}>
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: '#1871bd' }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </div>
-                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#1e40af' }}>Total Feedback</p>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <p className="text-2xl md:text-3xl font-bold" style={{ color: '#1e3a8a' }}>
-                  {nodeInfo.feedbackCount || 0}
-                </p>
-                <span className="text-xs text-blue-600 font-medium">
-                  {nodeInfo.feedbackCount === 1 ? 'item' : 'items'}
-                </span>
-              </div>
-            </div>
-
-             {/* Feedback by Subcategory List - Compact */}
-             <div className="bg-white rounded-lg border border-gray-300 shadow-sm overflow-hidden">
-               <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-3 py-2 border-b border-gray-200">
-                 <div className="flex items-center gap-1.5">
-                   <svg className="w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                   </svg>
-                   <p className="text-xs text-gray-700 font-bold uppercase tracking-wide">Distribution</p>
-                 </div>
-               </div>
-               <div className="max-h-56 overflow-y-auto">
-                 {(() => {
-                   const filteredEntries = Object.entries(nodeInfo.feedbackBySubcategory || {}).filter(([subcat]) => {
-                     // Find if this subcategory is deprecated
-                     const subcatNode = nodeInfo.subcategories?.find((s: any) => 
-                       (typeof s === 'string' ? s : s.name) === subcat
-                     );
-                     const isDeprecated = subcatNode && typeof subcatNode === 'object' ? (subcatNode.deprecated || false) : false;
-                     return showDeprecated || !isDeprecated;
-                   });
-                   
-                   return filteredEntries.length > 0 ? (
-                     <div className="divide-y divide-gray-100">
-                       {filteredEntries
-                         .sort(([, a], [, b]) => (b as number) - (a as number))
-                         .map(([subcat, count]: [string, unknown]) => {
-                           // Find if this subcategory is deprecated
-                           const subcatNode = nodeInfo.subcategories?.find((s: any) => 
-                             (typeof s === 'string' ? s : s.name) === subcat
-                           );
-                           const isDeprecated = subcatNode && typeof subcatNode === 'object' ? (subcatNode.deprecated || false) : false;
-                           return (
-                             <div key={subcat} className={`flex items-center justify-between py-2 px-3 hover:bg-blue-50 transition-colors group ${isDeprecated ? 'opacity-50' : ''}`}>
-                               <div className="flex items-center gap-1.5 flex-1 min-w-0 mr-2">
-                                 <div className={`w-1 h-1 rounded-full flex-shrink-0 group-hover:scale-125 transition-transform ${isDeprecated ? 'bg-gray-400' : 'bg-amber-500'}`}></div>
-                                 <p className={`text-xs font-medium truncate ${isDeprecated ? 'text-gray-500 line-through' : 'text-gray-900'}`}>{subcat}</p>
-                               </div>
-                               <span 
-                                 className="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-2 text-xs font-bold text-white rounded-full shadow-sm flex-shrink-0"
-                                 style={{ backgroundColor: '#1871bd' }}
-                               >
-                                 {count as number}
-                               </span>
-                             </div>
-                           );
-                         })}
-                     </div>
-                   ) : (
-                   <div className="py-6 text-center">
-                     <svg className="w-8 h-8 mx-auto text-gray-300 mb-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                     </svg>
-                     <p className="text-xs text-gray-500">No subcategories found</p>
-                   </div>
-                 );
-                 })()}
-               </div>
-             </div>
-          </>
-        )}
-          </div>
-        )}
-      </div>
-
-      {/* Close Button - Compact */}
-      <button
-        onClick={onClose}
-        className="mt-3 w-full px-3 py-2 font-semibold rounded-lg transition-all text-xs shadow-md hover:shadow-lg"
-        style={{ 
-          backgroundColor: '#1871bd',
-          color: 'white'
-        }}
-      >
-        <span className="flex items-center justify-center gap-1.5">
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-          Close
-        </span>
-      </button>
+      <p className="text-slate-600 text-lg font-medium">No feedback data yet</p>
+      <p className="text-slate-500 text-sm mt-1">Submit your first feedback to visualize the graph</p>
     </div>
   );
 }
 
 // ================ Main Component ================
 export default function GraphVisualization({ data }: GraphVisualizationProps) {
-  const graphRef = useRef<any>(null);
-  const [ForceGraph2D, setForceGraph2D] = useState<any>(null);
-  const [selectedNode, setSelectedNode] = useState<any>(null);
-  const [hoveredNode, setHoveredNode] = useState<any>(null);
-  const [zoomLevel, setZoomLevel] = useState<number>(1);
-  const [highlightedNodes, setHighlightedNodes] = useState<Set<string>>(new Set());
-  const [highlightedLinks, setHighlightedLinks] = useState<Set<string>>(new Set());
-  const [showDeprecated, setShowDeprecated] = useState<boolean>(true);
+  const ids = useId().replace(/:/g, "");
+  const [showDeprecated, setShowDeprecated] = useState(false);
+  const [showTable, setShowTable] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [rovingId, setRovingId] = useState<string | null>(null);
+  const [hoverId, setHoverId] = useState<string | null>(null);
+  const nodeRefs = useRef(new Map<string, SVGGElement>());
+  const autoPan = useRef(0);
+  const reducedMotion = usePrefersReducedMotion();
+  const [frameRef, width] = useElementWidth();
+  const model = useMemo(() => buildGraphModel(data, showDeprecated), [data, showDeprecated]);
+  const height = graphHeightFor(width, model.categories.length);
+  const layout = useMemo(
+    () => (width > 0 ? computeLayout(model, width, height) : null),
+    [model, width, height]
+  );
+  const isOverlay = width >= OVERLAY_MIN_WIDTH;
+  // A selection can vanish when deprecated nodes are hidden
+  const selected = (selectedId && model.byId.get(selectedId)) || null;
+  const highlight = useMemo(() => (selected ? connectedTo(model, selected.id) : null), [model, selected]);
+  const tabStopId = (rovingId && model.byId.has(rovingId) ? rovingId : null) ?? selected?.id ?? firstNodeId(model);
 
-  // Dynamically import ForceGraph2D on client side
+  const clearSelection = useCallback(() => setSelectedId(null), []);
+  const zoom = useZoomPan(width, height, clearSelection);
+  const { view, panBy } = zoom;
+
+  // Undo the automatic pan once nothing is selected
   useEffect(() => {
-    import("react-force-graph-2d").then((mod) =>
-      setForceGraph2D(() => mod.default)
-    );
+    if (selected || !autoPan.current) return;
+    panBy(-autoPan.current);
+    autoPan.current = 0;
+  }, [selected, panBy]);
+
+  // Keep the selected node clear of the overlay panel (and of the left edge)
+  const keepInView = useCallback(
+    (id: string) => {
+      const place = layout?.nodes.get(id);
+      if (!place || !isOverlay) return;
+      const reach = Math.max(place.r, (layout?.labels.get(id)?.width ?? 0) / 2);
+      const sx = view.k * (place.x + reach) + view.x;
+      const limit = width - PANEL_SPACE;
+      const dx = sx > limit ? limit - sx : sx < EDGE_SPACE ? EDGE_SPACE - sx : 0;
+      if (!dx) return;
+      autoPan.current += dx;
+      panBy(dx);
+    },
+    [layout, isOverlay, view, panBy, width]
+  );
+
+  const toggleSelect = useCallback(
+    (id: string) => {
+      setRovingId(id);
+      if (id === selectedId) return clearSelection();
+      setSelectedId(id);
+      keepInView(id);
+    },
+    [selectedId, clearSelection, keepInView]
+  );
+
+  const registerRef = useCallback((id: string, el: SVGGElement | null) => {
+    if (el) nodeRefs.current.set(id, el);
+    else nodeRefs.current.delete(id);
   }, []);
 
-  // Calculate feedback counts for each node
-  const feedbackCounts = useMemo(() => {
-    const counts: { [key: string]: number } = {};
-    
-    data.nodes.forEach((node) => {
-      if (node.type === "Feedback") {
-        counts[node.id] = 1;
-      } else if (node.type === "Subcategory") {
-        // Count direct feedback connections to this subcategory
-        const feedbackCount = data.relationships.filter(
-          (rel) => rel.target === node.id && 
-          data.nodes.find(n => n.id === rel.source && n.type === "Feedback")
-        ).length;
-        counts[node.id] = feedbackCount;
-      } else if (node.type === "Category") {
-        // Find all subcategories belonging to this category
-        const subcategoryIds = data.relationships
-          .filter((rel) => rel.target === node.id && 
-            data.nodes.find(n => n.id === rel.source && n.type === "Subcategory"))
-          .map((rel) => rel.source);
-        
-        // Collect unique feedback IDs connected to any of these subcategories
-        const uniqueFeedbackIds = new Set<string>();
-        subcategoryIds.forEach((subcatId) => {
-          data.relationships
-            .filter((rel) => rel.target === subcatId && 
-              data.nodes.find(n => n.id === rel.source && n.type === "Feedback"))
-            .forEach((rel) => uniqueFeedbackIds.add(rel.source));
-        });
-        
-        counts[node.id] = uniqueFeedbackIds.size;
+  const onNodeKeyDown = useCallback(
+    (e: KeyboardEvent<SVGGElement>, id: string) => {
+      if (!layout) return;
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        return toggleSelect(id);
       }
-    });
-    
-    return counts;
-  }, [data]);
+      if (e.key === "Escape") return clearSelection();
+      if (e.key === "+" || e.key === "=") return zoom.zoomBy(ZOOM_STEP);
+      if (e.key === "-") return zoom.zoomBy(1 / ZOOM_STEP);
+      if (e.key === "0") return zoom.reset();
+      if (!NAV_KEYS.has(e.key)) return;
+      e.preventDefault();
+      const next = nextNodeId(model, layout, id, e.key);
+      if (!next) return;
+      setRovingId(next);
+      nodeRefs.current.get(next)?.focus();
+    },
+    [layout, model, toggleSelect, clearSelection, zoom]
+  );
 
-  // Calculate dynamic node sizes
-  const getNodeSize = useCallback((node: EnhancedNode): number => {
-    const feedbackCount = node.feedbackCount || 0;
-    
-    if (node.type === "Feedback") {
-      return 7; // Increased from 4 to 7
-    } else if (node.type === "Subcategory") {
-      // Base size 12, scale with feedback count (max ~28)
-      return Math.min(12 + feedbackCount * 1.2, 28);
-    } else if (node.type === "Category") {
-      // 1.5x subcategory size
-      const subcatSize = Math.min(12 + feedbackCount * 1.2, 28);
-      return subcatSize * 1.5;
-    }
-    return 8;
-  }, []);
+  // Closing from the panel button hands focus back to the node it described
+  const closePanel = useCallback(() => {
+    if (selectedId) nodeRefs.current.get(selectedId)?.focus();
+    clearSelection();
+  }, [selectedId, clearSelection]);
 
-  // Transform data to force-graph format with enhanced properties and circular positioning
-  const graphData = useMemo(() => {
-    // Filter out deprecated nodes if toggle is off
-    const visibleNodes = showDeprecated 
-      ? data.nodes 
-      : data.nodes.filter(n => !n.deprecated);
-    
-    // Create a set of visible node IDs for relationship filtering
-    const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
-    
-    // Group nodes by type
-    const categoryNodes = visibleNodes.filter(n => n.type === "Category");
-    const subcategoryNodes = visibleNodes.filter(n => n.type === "Subcategory");
-    const feedbackNodes = visibleNodes.filter(n => n.type === "Feedback");
-    
-    // Arrange nodes in circles
-    const arrangeInCircle = (nodes: any[], radius: number, startIndex: number) => {
-      return nodes.map((node, index) => {
-        const angle = (2 * Math.PI * (startIndex + index)) / Math.max(nodes.length, 1);
-        // Use 'text' for Feedback nodes, 'name' for Category/Subcategory nodes
-        const displayName = node.type === "Feedback" ? node.text : node.name;
-        const isDeprecated = node.deprecated === true;
-        return {
-      id: node.id,
-      name: displayName,
-      type: node.type,
-      color: getNodeColor(node.type, isDeprecated),
-      deprecated: isDeprecated,
-          feedbackCount: feedbackCounts[node.id] || 0,
-          x: Math.cos(angle) * radius,
-          y: Math.sin(angle) * radius,
-        };
-      });
-    };
-    
-    // Position nodes in their respective circles
-    const categoryCircle = arrangeInCircle(categoryNodes, 300, 0);
-    const subcategoryCircle = arrangeInCircle(subcategoryNodes, 180, 0);
-    const feedbackCircle = arrangeInCircle(feedbackNodes, 60, 0);
-    
-    // Filter relationships to exclude direct connections between Feedback and Category
-    // Also exclude relationships involving deprecated nodes if they're hidden
-    const filteredRelationships = data.relationships.filter((rel) => {
-      const sourceNode = data.nodes.find(n => n.id === rel.source);
-      const targetNode = data.nodes.find(n => n.id === rel.target);
-      
-      // Exclude if either node is not visible (deprecated and hidden)
-      if (!visibleNodeIds.has(rel.source) || !visibleNodeIds.has(rel.target)) {
-        return false;
-      }
-      
-      // Exclude direct Feedback -> Category connections
-      if (sourceNode?.type === "Feedback" && targetNode?.type === "Category") {
-        return false;
-      }
-      // Exclude direct Category -> Feedback connections
-      if (sourceNode?.type === "Category" && targetNode?.type === "Feedback") {
-        return false;
-      }
-      
-      return true;
-    });
-    
-    return {
-      nodes: [...categoryCircle, ...subcategoryCircle, ...feedbackCircle],
-    links: filteredRelationships.map((rel) => ({
-      source: rel.source,
-      target: rel.target,
-      label: rel.type,
-    })),
-  };
-  }, [data, feedbackCounts, showDeprecated]);
-
-  // Calculate highlighted nodes and links based on selected node
-  const getConnectedNodesAndLinks = useCallback((node: any) => {
-    if (!node) return { nodes: new Set<string>(), links: new Set<string>() };
-
-    const connectedNodes = new Set<string>();
-    const connectedLinks = new Set<string>();
-    
-    // Always include the selected node itself
-    connectedNodes.add(node.id);
-
-    if (node.type === "Category") {
-      // For Category: highlight all subcategories that belong to it
-      data.relationships.forEach((rel) => {
-        const sourceNode = data.nodes.find(n => n.id === rel.source);
-        const targetNode = data.nodes.find(n => n.id === rel.target);
-        
-        // Subcategory -> Category relationship
-        if (rel.target === node.id && sourceNode?.type === "Subcategory") {
-          connectedNodes.add(rel.source);
-          connectedLinks.add(`${rel.source}-${rel.target}`);
-          
-          // Now find all feedback connected to this subcategory
-          data.relationships.forEach((feedbackRel) => {
-            const feedbackSource = data.nodes.find(n => n.id === feedbackRel.source);
-            // Feedback -> Subcategory relationship
-            if (feedbackRel.target === rel.source && feedbackSource?.type === "Feedback") {
-              connectedNodes.add(feedbackRel.source);
-              connectedLinks.add(`${feedbackRel.source}-${feedbackRel.target}`);
-            }
-          });
-        }
-      });
-    } else if (node.type === "Subcategory") {
-      // For Subcategory: highlight the category it belongs to and all feedback connected to it
-      data.relationships.forEach((rel) => {
-        const sourceNode = data.nodes.find(n => n.id === rel.source);
-        const targetNode = data.nodes.find(n => n.id === rel.target);
-        
-        // Subcategory -> Category relationship
-        if (rel.source === node.id && targetNode?.type === "Category") {
-          connectedNodes.add(rel.target);
-          connectedLinks.add(`${rel.source}-${rel.target}`);
-        }
-        
-        // Feedback -> Subcategory relationship
-        if (rel.target === node.id && sourceNode?.type === "Feedback") {
-          connectedNodes.add(rel.source);
-          connectedLinks.add(`${rel.source}-${rel.target}`);
-        }
-      });
-    } else if (node.type === "Feedback") {
-      // For Feedback: highlight all subcategories it's connected to and their categories
-      data.relationships.forEach((rel) => {
-        const targetNode = data.nodes.find(n => n.id === rel.target);
-        
-        // Feedback -> Subcategory relationship
-        if (rel.source === node.id && targetNode?.type === "Subcategory") {
-          connectedNodes.add(rel.target);
-          connectedLinks.add(`${rel.source}-${rel.target}`);
-          
-          // Now find the category this subcategory belongs to
-          data.relationships.forEach((catRel) => {
-            const catTarget = data.nodes.find(n => n.id === catRel.target);
-            // Subcategory -> Category relationship
-            if (catRel.source === rel.target && catTarget?.type === "Category") {
-              connectedNodes.add(catRel.target);
-              connectedLinks.add(`${catRel.source}-${catRel.target}`);
-            }
-          });
-        }
-      });
-    }
-
-    return { nodes: connectedNodes, links: connectedLinks };
-  }, [data]);
-
-  // Update highlighted nodes and links when selected node changes
-  useEffect(() => {
-    if (selectedNode) {
-      const { nodes, links } = getConnectedNodesAndLinks(selectedNode);
-      setHighlightedNodes(nodes);
-      setHighlightedLinks(links);
-    } else {
-      setHighlightedNodes(new Set());
-      setHighlightedLinks(new Set());
-    }
-  }, [selectedNode, getConnectedNodesAndLinks]);
-
-  function getNodeColor(type: string, deprecated: boolean = false): string {
-    if (deprecated) {
-      // Gray out deprecated nodes
-      return "#9ca3af"; // gray-400
-    }
-    const colors: { [key: string]: string } = {
-      Feedback: "#3b82f6", // blue
-      Category: "#10b981", // green
-      Subcategory: "#f59e0b", // amber
-      Unknown: "#6b7280", // gray
-    };
-    return colors[type] || colors.Unknown;
-  }
-
-  function getNodeColorLight(type: string, deprecated: boolean = false): string {
-    if (deprecated) {
-      // Light gray for deprecated nodes
-      return "#d1d5db"; // gray-300
-    }
-    const colors: { [key: string]: string } = {
-      Feedback: "#93c5fd", // blue-300
-      Category: "#6ee7b7", // green-300
-      Subcategory: "#fcd34d", // amber-300
-      Unknown: "#9ca3af", // gray-400
-    };
-    return colors[type] || colors.Unknown;
-  }
-
-  function truncateLabel(label: string, maxLength: number = 25): string {
-    if (label.length <= maxLength) return label;
-    // Smart truncation - keep first few words
-    const words = label.split(" ");
-    if (words.length <= 3) {
-      return label.substring(0, maxLength - 3) + "...";
-    }
-    
-    let truncated = "";
-    for (let i = 0; i < words.length; i++) {
-      if ((truncated + words[i]).length > maxLength - 3) break;
-      truncated += (truncated ? " " : "") + words[i];
-    }
-    return truncated + "...";
-  }
-
-  function getNodeInfo(node: any) {
-    if (node.type === "Category") {
-      // Find subcategories that belong to this category
-      // Structure: Subcategory (source) -> belongs_to -> Category (target)
-      const subcategories = data.nodes.filter(
-        (n) =>
-          n.type === "Subcategory" &&
-          data.relationships.some(
-            (rel) => rel.target === node.id && rel.source === n.id
-          )
-      );
-
-      // Count feedback for each subcategory
-      const feedbackCounts: { [key: string]: number } = {};
-      const uniqueFeedbackIds = new Set<string>();
-      
-      subcategories.forEach((subcat) => {
-        // Find feedback nodes that belong to this subcategory
-        // Structure: Feedback (source) -> belongs_to -> Subcategory (target)
-        const feedbackForSubcat = data.relationships.filter(
-          (rel) => 
-            rel.target === subcat.id && 
-            data.nodes.find(n => n.id === rel.source && n.type === "Feedback")
-        );
-        
-        feedbackCounts[subcat.name || "Unknown"] = feedbackForSubcat.length;
-        
-        // Track unique feedback IDs across all subcategories
-        feedbackForSubcat.forEach((rel) => uniqueFeedbackIds.add(rel.source));
-      });
-
-      return {
-        name: node.name,
-        type: node.type,
-        feedbackCount: uniqueFeedbackIds.size, // Count unique feedback only
-        totalSubcategories: subcategories.length,
-        feedbackBySubcategory: feedbackCounts,
-        subcategories: subcategories.map((subcat: any) => ({
-          name: subcat.name,
-          deprecated: subcat.deprecated || false
-        })),
-      };
-    }
-
-    if (node.type === "Subcategory") {
-      // Count direct feedback for this subcategory
-      const feedbackCount = data.relationships.filter(
-        (rel) => 
-          rel.target === node.id && 
-          data.nodes.find(n => n.id === rel.source && n.type === "Feedback")
-      ).length;
-      
-      // Find the category this subcategory belongs to
-      const categoryRel = data.relationships.find(
-        (rel) => rel.source === node.id && 
-        data.nodes.find(n => n.id === rel.target && n.type === "Category")
-      );
-      const categoryNode = categoryRel ? data.nodes.find(n => n.id === categoryRel.target) : null;
-      
-      return {
-        name: node.name,
-        type: node.type,
-        feedbackCount: feedbackCount,
-        category: categoryNode?.name || null,
-        categoryDeprecated: categoryNode?.deprecated || false,
-      };
-    }
-
-    if (node.type === "Feedback") {
-      // Find all subcategories this feedback is connected to
-      const subcategoryRels = data.relationships.filter(
-        (rel) => rel.source === node.id && 
-        data.nodes.find(n => n.id === rel.target && n.type === "Subcategory")
-      );
-      
-      const subcategories: Array<{ name: string; deprecated: boolean }> = [];
-      const categories: Array<{ name: string; deprecated: boolean }> = [];
-      
-      subcategoryRels.forEach((rel) => {
-        const subcatNode = data.nodes.find(n => n.id === rel.target);
-        if (subcatNode) {
-          subcategories.push({
-            name: subcatNode.name || "",
-            deprecated: subcatNode.deprecated || false
-          });
-          
-          // Find the category for this subcategory
-          const catRel = data.relationships.find(
-            (r) => r.source === subcatNode.id && 
-            data.nodes.find(n => n.id === r.target && n.type === "Category")
-          );
-          if (catRel) {
-            const catNode = data.nodes.find(n => n.id === catRel.target);
-            if (catNode && catNode.name) {
-              // Check if category already added
-              const existingCat = categories.find(c => c.name === catNode.name);
-              if (!existingCat) {
-                categories.push({
-                  name: catNode.name,
-                  deprecated: catNode.deprecated || false
-                });
-              }
-            }
-          }
-        }
-      });
-      
-      // Get the full text from the original data node
-      const originalNode = data.nodes.find(n => n.id === node.id);
-      const fullText = originalNode?.text || node.name;
-      
-      return {
-        name: node.name,
-        type: node.type,
-        feedbackCount: node.feedbackCount || 0,
-        feedbackText: fullText, // The FULL untruncated feedback text from Neo4j
-        sentiment: originalNode?.sentiment || null,
-        timestamp: originalNode?.timestamp || null,
-        subcategories: subcategories,
-        categories: categories,
-      };
-    }
-
-    return {
-      name: node.name,
-      type: node.type,
-      feedbackCount: node.feedbackCount || 0,
-    };
-  }
-
-  // Configure physics for circular radial layout
-  useEffect(() => {
-    if (graphRef.current && ForceGraph2D) {
-      // Weaker charge for circular layout
-      graphRef.current.d3Force("charge")
-        .strength(-100)
-        .distanceMax(200);
-      
-      // Flexible link distances
-      graphRef.current.d3Force("link")
-        .distance((link: any) => {
-          const sourceNode = graphData.nodes.find(n => n.id === link.source.id || n.id === link.source);
-          const targetNode = graphData.nodes.find(n => n.id === link.target.id || n.id === link.target);
-          
-          // Radial connections from center to outer circles
-          if (sourceNode?.type === "Feedback" && targetNode?.type === "Subcategory") return 180;
-          if (sourceNode?.type === "Subcategory" && targetNode?.type === "Category") return 200;
-          if (sourceNode?.type === "Category") return 150;
-          return 100;
-        })
-        .strength(0.4);
-      
-      // No center force - we'll use radial positioning
-      graphRef.current.d3Force("center", null);
-      
-      // Add radial positioning force
-      const radialForce = (alpha: number) => {
-        const centerX = 0;
-        const centerY = 0;
-        
-        graphData.nodes.forEach((node: any) => {
-          if (!node.x || !node.y || !isFinite(node.x) || !isFinite(node.y)) return;
-          
-          // Define radius for each node type
-          let targetRadius = 0;
-          if (node.type === "Category") {
-            targetRadius = 300; // Outer circle
-          } else if (node.type === "Subcategory") {
-            targetRadius = 180; // Middle circle
-          } else if (node.type === "Feedback") {
-            targetRadius = 60; // Inner circle/center
-          }
-          
-          // Calculate current distance from center
-          const dx = node.x - centerX;
-          const dy = node.y - centerY;
-          const currentRadius = Math.sqrt(dx * dx + dy * dy);
-          
-          if (currentRadius > 0) {
-            // Push node towards target radius
-            const targetX = centerX + (dx / currentRadius) * targetRadius;
-            const targetY = centerY + (dy / currentRadius) * targetRadius;
-            
-            // Apply force with strength based on alpha
-            const strength = alpha * 0.8;
-            node.x += (targetX - node.x) * strength;
-            node.y += (targetY - node.y) * strength;
-          }
-        });
-      };
-      
-      graphRef.current.d3Force("radial", radialForce);
-
-      // Add collision force optimized for circular layout
-      const collisionForce = (alpha: number) => {
-        const nodes = graphData.nodes;
-        const iterations = 3;
-        
-        for (let iter = 0; iter < iterations; iter++) {
-          for (let i = 0; i < nodes.length; i++) {
-            const nodeA = nodes[i] as any;
-            if (!nodeA.x || !nodeA.y || !isFinite(nodeA.x) || !isFinite(nodeA.y)) continue;
-            
-            const sizeA = getNodeSize(nodeA as EnhancedNode);
-            // Larger padding for circular layout with labels
-            const paddingA = nodeA.type === "Category" ? 55 : nodeA.type === "Subcategory" ? 45 : 30;
-            const radiusA = sizeA + paddingA;
-            
-            for (let j = i + 1; j < nodes.length; j++) {
-              const nodeB = nodes[j] as any;
-              if (!nodeB.x || !nodeB.y || !isFinite(nodeB.x) || !isFinite(nodeB.y)) continue;
-              
-              const sizeB = getNodeSize(nodeB as EnhancedNode);
-              const paddingB = nodeB.type === "Category" ? 55 : nodeB.type === "Subcategory" ? 45 : 30;
-              const radiusB = sizeB + paddingB;
-              
-              const dx = nodeB.x - nodeA.x;
-              const dy = nodeB.y - nodeA.y;
-              const distance = Math.sqrt(dx * dx + dy * dy);
-              const minDistance = radiusA + radiusB;
-              
-              if (distance < minDistance && distance > 0) {
-                // Push nodes apart along the circle (tangentially)
-                const overlap = minDistance - distance;
-                const strength = (overlap / minDistance) * alpha * 0.9;
-                const moveDistance = overlap * 0.5 + strength;
-                const moveX = (dx / distance) * moveDistance;
-                const moveY = (dy / distance) * moveDistance;
-                
-                nodeB.x! += moveX;
-                nodeB.y! += moveY;
-                nodeA.x! -= moveX;
-                nodeA.y! -= moveY;
-                
-                // Dampening
-                if (nodeB.vx !== undefined) nodeB.vx *= 0.85;
-                if (nodeB.vy !== undefined) nodeB.vy *= 0.85;
-                if (nodeA.vx !== undefined) nodeA.vx *= 0.85;
-                if (nodeA.vy !== undefined) nodeA.vy *= 0.85;
-              }
-            }
-          }
-        }
-      };
-      
-      graphRef.current.d3Force("collide", collisionForce);
-    }
-  }, [ForceGraph2D, graphData, getNodeSize]);
-
-  // Auto-fit graph on data change
-  useEffect(() => {
-    if (graphRef.current && data.nodes.length > 0) {
-      setTimeout(() => {
-        graphRef.current.zoomToFit(300, 100); // Padding to show circular layout clearly
-      }, 600); // Circular layout converges faster
-    }
-  }, [data.nodes.length]);
-
-  // Render canvas node
-  const renderNode = useCallback((
-    node: any,
-    ctx: CanvasRenderingContext2D,
-    globalScale: number
-  ) => {
-    // Safety check: ensure node has valid coordinates
-    if (!node.x || !node.y || !isFinite(node.x) || !isFinite(node.y)) {
-      return;
-    }
-
-    const size = getNodeSize(node as EnhancedNode);
-    const isSelected = selectedNode?.id === node.id;
-    const isHovered = hoveredNode?.id === node.id;
-    const isHighlighted = highlightedNodes.has(node.id);
-    const hasSelection = selectedNode !== null;
-    
-    // If there's a selection and this node is not highlighted, fade it out
-    const shouldFade = hasSelection && !isHighlighted;
-    // Deprecated nodes are always slightly faded
-    const baseOpacity = node.deprecated ? 0.5 : 1;
-    const nodeOpacity = shouldFade ? 0.15 : baseOpacity;
-    
-    // Apply opacity for faded nodes
-    ctx.globalAlpha = nodeOpacity;
-    
-    // Draw outer glow for selected/hovered nodes (and highlighted nodes)
-    if ((isSelected || isHovered) || (isHighlighted && hasSelection && !isSelected)) {
-      ctx.beginPath();
-      ctx.arc(node.x, node.y, size + 6, 0, 2 * Math.PI, false);
-      ctx.fillStyle = getNodeColorLight(node.type, node.deprecated);
-      ctx.globalAlpha = nodeOpacity * 0.3;
-      ctx.fill();
-      ctx.globalAlpha = nodeOpacity;
-    }
-
-    // Draw node circle with gradient effect
-    const gradient = ctx.createRadialGradient(
-      node.x - size * 0.3,
-      node.y - size * 0.3,
-      0,
-      node.x,
-      node.y,
-      size
-    );
-    gradient.addColorStop(0, getNodeColorLight(node.type, node.deprecated));
-    gradient.addColorStop(1, node.color);
-
-                ctx.beginPath();
-                ctx.arc(node.x, node.y, size, 0, 2 * Math.PI, false);
-    ctx.fillStyle = gradient;
-                ctx.fill();
-
-    // Draw border
-    ctx.strokeStyle = isSelected ? "#1e293b" : "rgba(255, 255, 255, 0.8)";
-    ctx.lineWidth = (isSelected ? 3 : 2) / globalScale;
-    ctx.stroke();
-
-    // Draw feedback count badge for category and subcategory nodes
-    if ((node.type === "Category" || node.type === "Subcategory") && node.feedbackCount > 0) {
-      const badgeSize = size * 0.6;
-      const badgeX = node.x + size * 0.6;
-      const badgeY = node.y - size * 0.6;
-      
-      // Badge background
-                  ctx.beginPath();
-      ctx.arc(badgeX, badgeY, badgeSize, 0, 2 * Math.PI, false);
-      ctx.fillStyle = "#1e293b";
-      ctx.fill();
-      
-      // Badge border
-      ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 2 / globalScale;
-                  ctx.stroke();
-      
-      // Badge text
-      ctx.fillStyle = "#fff";
-      ctx.font = `bold ${(badgeSize * 1.3) / globalScale}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.fillText(node.feedbackCount.toString(), badgeX, badgeY);
-    }
-
-    // Label rendering logic based on zoom level and node type
-    const shouldShowLabel = 
-      isSelected || 
-      (globalScale > 1.0 && (node.type === "Category" || node.type === "Subcategory")) ||
-      (globalScale > 1.8);
-
-                if (shouldShowLabel) {
-      const label = truncateLabel(node.name, globalScale > 1.5 ? 35 : 20);
-      const fontSize = Math.max(10, 14 / globalScale);
-      ctx.font = `600 ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`;
-      
-      const textWidth = ctx.measureText(label).width;
-      const padding = fontSize * 0.6;
-      const bckgWidth = textWidth + padding * 2;
-      const bckgHeight = fontSize + padding * 1.2;
-      
-      const labelY = node.y + size + bckgHeight / 2 + 8;
-
-      // Get type-specific colors for background and text
-      const getLabelBackgroundColor = (type: string, deprecated: boolean = false) => {
-        if (deprecated) {
-          return "rgba(156, 163, 175, 0.2)"; // gray-400 with 20% opacity
-        }
-        const colors: { [key: string]: string } = {
-          Feedback: "rgba(147, 197, 253, 0.2)", // blue-300 with 20% opacity
-          Category: "rgba(110, 231, 183, 0.2)", // green-300 with 20% opacity
-          Subcategory: "rgba(252, 211, 77, 0.2)", // amber-300 with 20% opacity
-          Unknown: "rgba(255, 255, 255, 0.75)",
-        };
-        return colors[type] || colors.Unknown;
-      };
-
-      // Draw label background with shadow and type-based color
-                  ctx.shadowColor = "rgba(0, 0, 0, 0.1)";
-      ctx.shadowBlur = 6 / globalScale;
-                  ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 2 / globalScale;
-      
-      ctx.fillStyle = isSelected || isHovered 
-        ? "rgba(30, 41, 59, 0.85)" 
-        : getLabelBackgroundColor(node.type, node.deprecated);
-      ctx.beginPath();
-      ctx.roundRect(
-        node.x - bckgWidth / 2,
-        labelY - bckgHeight / 2,
-        bckgWidth,
-        bckgHeight,
-        4 / globalScale
-      );
-      ctx.fill();
-
-      // Optional: border for non-selected labels with type color
-      if (!isSelected && !isHovered) {
-        ctx.strokeStyle = node.color ? `${node.color}40` : "rgba(203, 213, 225, 0.5)"; // Type color with transparency
-        ctx.lineWidth = 1 / globalScale;
-        ctx.stroke();
-      }
-
-                  ctx.shadowColor = "transparent";
-
-      // Draw label text with type color
-                  ctx.textAlign = "center";
-                  ctx.textBaseline = "middle";
-      ctx.fillStyle = isSelected || isHovered ? "rgba(255, 255, 255, 0.95)" : node.color;
-      
-      // Draw strikethrough for deprecated nodes
-      if (node.deprecated && !isSelected && !isHovered) {
-        ctx.strokeStyle = node.color;
-        ctx.lineWidth = 2 / globalScale;
-        ctx.beginPath();
-        ctx.moveTo(node.x - bckgWidth / 2 + 4 / globalScale, labelY);
-        ctx.lineTo(node.x + bckgWidth / 2 - 4 / globalScale, labelY);
-        ctx.stroke();
-        ctx.globalAlpha = 0.6; // Reduce opacity for deprecated nodes
-      }
-      
-      ctx.fillText(label, node.x, labelY);
-      
-      // Reset opacity after drawing deprecated text
-      if (node.deprecated && !isSelected && !isHovered) {
-        ctx.globalAlpha = nodeOpacity;
-      }
-    }
-    
-    // Reset global alpha
-    ctx.globalAlpha = 1;
-  }, [graphData, getNodeSize, selectedNode, hoveredNode, highlightedNodes]);
+  const resetView = useCallback(() => {
+    autoPan.current = 0;
+    zoom.reset();
+  }, [zoom]);
 
   if (data.nodes.length === 0) {
     return <GraphEmptyState />;
   }
 
+  const announcement = selected
+    ? `Selected ${selected.kind.toLowerCase()}: ${truncate(selected.name, TOOLTIP_CHARS)}. ${
+        selected.kind === "Feedback" ? "" : `${selected.count} feedback ${selected.count === 1 ? "item" : "items"}. `
+      }Details shown.`
+    : "";
+  const hovered = hoverId ? model.byId.get(hoverId) : null;
+  const hoverPlace = hovered && layout?.nodes.get(hovered.id);
+  const isEmptyView = model.byId.size === 0;
+
   return (
     <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50 rounded-xl shadow-sm p-4 md:p-8">
-          <div className="mb-3 md:mb-4">
-            <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-slate-900 mb-1 md:mb-2">Feedback Graph</h2>
-            <p className="text-slate-600 text-xs md:text-sm">Circular visualization with Categories (outer), Subcategories (middle), and Feedback (center)</p>
-            <p className="text-slate-500 text-xs mt-1 hidden md:block">
-              Node sizes represent feedback volume • Click nodes to highlight connections • Drag to pan • Scroll to zoom
-            </p>
-          </div>
+      <div className="mb-3 md:mb-4">
+        <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-slate-900 mb-1 md:mb-2">Feedback Graph</h2>
+        <p className="text-slate-600 text-xs md:text-sm">
+          Circular visualization with Categories (outer), Subcategories (middle), and Feedback (center)
+        </p>
+        <p className="text-slate-600 text-xs mt-1" aria-hidden="true">
+          Node size shows feedback volume. Click a node, or use the arrow keys and Enter, to see its
+          connections. Esc clears. Drag to pan, scroll to zoom.
+        </p>
+        <p id={`${ids}-help`} className="sr-only">
+          Use the arrow keys to move between nodes: left and right along a ring, up toward categories, down
+          toward feedback. Press Enter or Space to select a node and show its details, and Escape to clear.
+          Plus and minus zoom, zero resets the view. A table version is available from the View as table button.
+        </p>
+      </div>
 
-      <div className="flex gap-4 lg:gap-6 h-[400px] md:h-[500px] lg:h-[600px]">
-        <div className="flex-1 flex flex-col min-w-0">
-          <GraphLegend 
-            zoomLevel={zoomLevel} 
-            showDeprecated={showDeprecated}
-            onToggleDeprecated={() => setShowDeprecated(!showDeprecated)}
-          />
+      <GraphLegend
+        zoomLevel={zoom.view.k}
+        showDeprecated={showDeprecated}
+        onToggleDeprecated={() => setShowDeprecated((v) => !v)}
+        showTable={showTable}
+        onToggleTable={() => setShowTable((v) => !v)}
+        tableId={`${ids}-table`}
+      />
 
-          <div className="flex-1 border border-slate-200 rounded-xl overflow-hidden bg-gradient-to-br from-slate-50 to-white shadow-inner min-h-0 relative">
-            {/* Reset View Button */}
-            <button
-              onClick={() => {
-                if (graphRef.current) {
-                  graphRef.current.zoomToFit(100,100);
-                }
-              }}
-              className="absolute top-3 right-3 z-10 p-2 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg shadow-md transition-all duration-200 hover:shadow-lg group"
-              title="Reset to default view"
-            >
-              <svg 
-                className="w-4 h-4 text-slate-600 group-hover:text-slate-900 transition-colors" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-              >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
-                />
-              </svg>
-            </button>
-
-            {ForceGraph2D && (
-              <ForceGraph2D
-                ref={graphRef}
-                graphData={graphData}
-                nodeLabel={(node: any) => `${node.name} (${node.feedbackCount || 0} feedback)`}
-                nodeColor="color"
-                linkLabel="label"
-                linkDirectionalArrowLength={8}
-                linkDirectionalArrowRelPos={0.9}
-                linkDirectionalArrowColor={(link: any) => {
-                  if (!selectedNode) return "#94a3b8";
-                  const linkId = `${link.source.id || link.source}-${link.target.id || link.target}`;
-                  const isHighlighted = highlightedLinks.has(linkId);
-                  return isHighlighted ? "#2563eb" : "#cbd5e1";
-                }}
-                linkColor={(link: any) => {
-                  if (!selectedNode) return "#cbd5e1";
-                  const linkId = `${link.source.id || link.source}-${link.target.id || link.target}`;
-                  const isHighlighted = highlightedLinks.has(linkId);
-                  return isHighlighted ? "#3b82f6" : "#e2e8f0";
-                }}
-                linkWidth={(link: any) => {
-                  if (!selectedNode) return 2;
-                  const linkId = `${link.source.id || link.source}-${link.target.id || link.target}`;
-                  const isHighlighted = highlightedLinks.has(linkId);
-                  return isHighlighted ? 3 : 1;
-                }}
-                linkOpacity={(link: any) => {
-                  if (!selectedNode) return 0.4;
-                  const linkId = `${link.source.id || link.source}-${link.target.id || link.target}`;
-                  const isHighlighted = highlightedLinks.has(linkId);
-                  return isHighlighted ? 0.8 : 0.1;
-                }}
-                linkDirectionalParticles={(link: any) => {
-                  if (!selectedNode) return 2;
-                  const linkId = `${link.source.id || link.source}-${link.target.id || link.target}`;
-                  const isHighlighted = highlightedLinks.has(linkId);
-                  return isHighlighted ? 4 : 0;
-                }}
-                linkDirectionalParticleWidth={2}
-                linkDirectionalParticleSpeed={0.003}
-                onNodeClick={(node: any) => setSelectedNode(node)}
-                onNodeHover={(node: any) => setHoveredNode(node)}
-                onZoom={(transform: any) => {
-                  setZoomLevel(transform.k);
-                }}
-                nodeCanvasObject={renderNode}
-                cooldownTicks={200}
-                d3VelocityDecay={0.4}
-                d3AlphaDecay={0.02}
-                warmupTicks={50}
-                enableNodeDrag={true}
-                enableZoomInteraction={true}
-                enablePanInteraction={true}
-              />
-            )}
-          </div>
-        </div>
-
-        {selectedNode && (
-          <NodeDetailsSidebar
-            selectedNode={selectedNode}
-            onClose={() => setSelectedNode(null)}
-            getNodeInfo={getNodeInfo}
-            showDeprecated={showDeprecated}
+      <div
+        ref={frameRef}
+        className="relative overflow-hidden rounded-xl border border-slate-200 bg-white"
+        style={{ height }}
+      >
+        <ZoomControls
+          onZoomIn={() => zoom.zoomBy(ZOOM_STEP)}
+          onZoomOut={() => zoom.zoomBy(1 / ZOOM_STEP)}
+          onReset={resetView}
+        />
+        {isEmptyView && (
+          <p className="absolute inset-0 flex items-center justify-center px-6 text-center text-slate-600">
+            Nothing to show. Turn on Deprecated to see retired categories.
+          </p>
+        )}
+        {layout && !isEmptyView && (
+          <GraphCanvas
+            model={model}
+            layout={layout}
+            view={zoom.view}
+            highlight={highlight}
+            selectedId={selected?.id ?? null}
+            tabStopId={tabStopId}
+            reducedMotion={reducedMotion}
+            describedBy={`${ids}-help`}
+            bindSvg={zoom.bindSvg}
+            pointerHandlers={zoom.handlers}
+            registerRef={registerRef}
+            onSelect={toggleSelect}
+            onKeyDown={onNodeKeyDown}
+            onHover={setHoverId}
           />
         )}
+        {hovered && hoverPlace && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute z-30 max-w-[260px] -translate-x-1/2 -translate-y-full rounded-lg bg-[#091F2F] px-3 py-2 text-white shadow-lg"
+            style={{
+              left: Math.min(width - 134, Math.max(134, zoom.view.k * hoverPlace.x + zoom.view.x)),
+              top: zoom.view.k * (hoverPlace.y - hoverPlace.r) + zoom.view.y - 10,
+            }}
+          >
+            <span className="block text-[11px] font-bold uppercase tracking-[0.1em] text-[#51ACFF]" style={{ fontFamily: MONTSERRAT }}>
+              {hovered.kind}
+              {hovered.kind === "Feedback" ? "" : ` · ${hovered.count} feedback`}
+            </span>
+            <span className="block text-sm leading-snug">{truncate(hovered.name, TOOLTIP_CHARS)}</span>
+          </div>
+        )}
+        {selected && isOverlay && (
+          <GraphDetailsPanel node={selected} model={model} variant="overlay" onClose={closePanel} />
+        )}
       </div>
+
+      {selected && !isOverlay && (
+        <GraphDetailsPanel node={selected} model={model} variant="stacked" onClose={closePanel} />
+      )}
+      <p className="sr-only" aria-live="polite">{announcement}</p>
+      {showTable && <GraphHierarchyTable id={`${ids}-table`} model={model} />}
     </div>
   );
 }
