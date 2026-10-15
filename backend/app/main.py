@@ -364,6 +364,8 @@ async def classify_feedback_file(file: UploadFile = File(...)):
         response = await upload_feedback_file(file, store_in_database=False)
         logger.info(f"File classified successfully. Response: {response}")
         return response
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error classifying feedback file: {str(e)}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
@@ -544,6 +546,8 @@ async def get_config():
             created_by=config['created_by'],
             change_notes=config['change_notes']
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error fetching active config: {str(e)}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
@@ -580,6 +584,8 @@ async def update_config(request: ConfigUpdateRequest):
             version=new_version,
             message=f"Configuration updated successfully. New version: {new_version}"
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating new config version: {str(e)}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
@@ -621,6 +627,8 @@ async def get_config_history():
             versions=versions,
             current_version=current_version
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error fetching config history: {str(e)}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
@@ -656,6 +664,8 @@ async def get_config_by_version(version: int):
             created_by=config['created_by'],
             change_notes=config['change_notes']
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error fetching config version {version}: {str(e)}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
@@ -692,6 +702,8 @@ async def activate_config_version(version: int):
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error activating config version {version}: {str(e)}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
@@ -726,6 +738,8 @@ async def delete_config_version(version: int):
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error deleting config version {version}: {str(e)}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
