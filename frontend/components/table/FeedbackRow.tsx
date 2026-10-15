@@ -75,7 +75,7 @@ export function FeedbackRow({ feedback, expanded, onToggle }: FeedbackRowProps) 
           </div>
         </td>
         <td className="hidden px-4 py-3 text-center text-sm font-medium whitespace-nowrap text-slate-900 lg:table-cell">
-          {feedback.department_predicted || <span className="text-slate-500">Unassigned</span>}
+          {feedback.department_predicted || <span className="text-slate-600">Unassigned</span>}
         </td>
         <td className="hidden px-4 py-3 text-center lg:table-cell">
           <div className="flex flex-wrap justify-center gap-1">
@@ -84,7 +84,7 @@ export function FeedbackRow({ feedback, expanded, onToggle }: FeedbackRowProps) 
                 <Badge key={impact} className="whitespace-normal">{impact}</Badge>
               ))
             ) : (
-              <span className="text-xs text-slate-500">None</span>
+              <span className="text-xs text-slate-600">None</span>
             )}
             {impacts.length > IMPACTS_SHOWN && (
               <span className="text-xs font-medium text-slate-600" title={impacts.slice(IMPACTS_SHOWN).join(", ")}>
@@ -97,7 +97,7 @@ export function FeedbackRow({ feedback, expanded, onToggle }: FeedbackRowProps) 
         <td className="px-4 py-3 text-center whitespace-nowrap">
           <span className={`font-ui inline-flex items-center gap-1.5 text-xs font-semibold ${SENTIMENT_TEXT[sentiment]}`}>
             <span
-              className={`h-2 w-2 rounded-full ${sentiment === "Unknown" ? "border border-slate-400" : "bg-current"}`}
+              className={`h-2 w-2 rounded-full ${sentiment === "Unknown" ? "border border-slate-500" : "bg-current"}`}
               aria-hidden="true"
             />
             {sentiment}
@@ -107,7 +107,7 @@ export function FeedbackRow({ feedback, expanded, onToggle }: FeedbackRowProps) 
           {feedback.urgency_level ? (
             <Badge tone={urgencyTone(feedback.urgency_level)} dot>{feedback.urgency_level}</Badge>
           ) : (
-            <span className="text-xs text-slate-500" aria-label="No urgency">—</span>
+            <span className="text-xs text-slate-600" aria-label="No urgency">—</span>
           )}
         </td>
         <td className="px-4 py-3 text-center whitespace-nowrap">
