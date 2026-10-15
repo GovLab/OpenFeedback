@@ -37,7 +37,7 @@ function Tile({ icon, label, children }: { icon: ReactNode; label: string; child
 function Classification({ feedback }: { feedback: FeedbackRecord }) {
   const impacts = feedback.impact_type ?? [];
   return (
-    <section className={`${PANEL} lg:col-span-6`} aria-label="Classification">
+    <div role="group" className={`${PANEL} lg:col-span-6`} aria-label="Classification">
       <PanelTitle icon={<Tag className="h-4 w-4" />}>Classification</PanelTitle>
       <div className="grid gap-2 sm:grid-cols-2">
         <div className="sm:col-span-2">
@@ -66,14 +66,14 @@ function Classification({ feedback }: { feedback: FeedbackRecord }) {
           </div>
         )}
       </div>
-    </section>
+    </div>
   );
 }
 
 function Contact({ info }: { info: NonNullable<FeedbackRecord["user_contact_info"]> }) {
   const link = "block truncate text-sm font-medium text-[#0f4c81] underline-offset-2 hover:underline";
   return (
-    <section className={`${PANEL} lg:col-span-4`} aria-label="Contact">
+    <div role="group" className={`${PANEL} lg:col-span-4`} aria-label="Contact">
       <PanelTitle icon={<Mail className="h-4 w-4" />}>Contact</PanelTitle>
       <dl className="space-y-2 text-sm">
         {info.name && (
@@ -98,13 +98,13 @@ function Contact({ info }: { info: NonNullable<FeedbackRecord["user_contact_info
           </div>
         )}
       </dl>
-    </section>
+    </div>
   );
 }
 
 function SystemInfo({ feedback, span }: { feedback: FeedbackRecord; span: string }) {
   return (
-    <section className={`${PANEL} ${span}`} aria-label="System">
+    <div role="group" className={`${PANEL} ${span}`} aria-label="System">
       <PanelTitle icon={<Info className="h-4 w-4" />}>System</PanelTitle>
       <dl className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1.5 text-sm">
         <dt className="text-slate-600">Source:</dt>
@@ -118,7 +118,7 @@ function SystemInfo({ feedback, span }: { feedback: FeedbackRecord; span: string
         <dt className="text-slate-600">Time:</dt>
         <dd className="font-medium text-slate-900">{shortDate(feedback.timestamp_submitted) || "N/A"}</dd>
       </dl>
-    </section>
+    </div>
   );
 }
 
@@ -127,19 +127,19 @@ export function FeedbackDetails({ feedback }: { feedback: FeedbackRecord }) {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
-        <section className={`${PANEL} lg:col-span-6`} aria-label="Original Feedback">
+        <div role="group" className={`${PANEL} lg:col-span-6`} aria-label="Original Feedback">
           <PanelTitle icon={<FileText className="h-4 w-4" />}>Original Feedback</PanelTitle>
           <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-900">{feedback.issue_description}</p>
-        </section>
+        </div>
         <Classification feedback={feedback} />
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
         {feedback.ai_summary && (
-          <section className={`${PANEL} border-[#1871bd]/20 bg-[#1871bd]/[0.03] ${contact ? "lg:col-span-6" : "lg:col-span-9"}`} aria-label="AI Summary">
+          <div role="group" className={`${PANEL} border-[#1871bd]/20 bg-[#1871bd]/[0.03] ${contact ? "lg:col-span-6" : "lg:col-span-9"}`} aria-label="AI Summary">
             <PanelTitle icon={<Sparkles className="h-4 w-4" />}>AI Summary</PanelTitle>
             <p className="text-sm leading-relaxed text-slate-900 italic">{feedback.ai_summary}</p>
-          </section>
+          </div>
         )}
         <SystemInfo
           feedback={feedback}

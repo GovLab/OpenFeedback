@@ -5,7 +5,7 @@ const FACTS = ["Supported: PDF, TXT, DOCX", "Maximum size: 10MB per file", "Auto
 
 export function UploadGuide() {
   return (
-    <aside aria-labelledby="upload-guide-title" className={`${CARD} p-6`}>
+    <div className={`${CARD} p-6`}>
       <h3 id="upload-guide-title" className="mb-4 flex items-center gap-2 text-base text-[#091F2F]">
         <Info className="h-5 w-5 text-[#1871bd]" aria-hidden="true" />
         File Upload Guide
@@ -25,6 +25,6 @@ export function UploadGuide() {
           <li><strong>Classify Only:</strong> Test without storing</li>
         </ul>
       </div>
-    </aside>
+    </div>
   );
 }
