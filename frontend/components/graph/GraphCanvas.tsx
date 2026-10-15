@@ -4,7 +4,7 @@ import { GraphLayout } from "@/lib/graphLayout";
 import { GraphModel, ModelNode, accessibleName } from "@/lib/graphModel";
 import { GraphNodeMark } from "./GraphNodeMark";
 import {
-  DIM_OPACITY, ENTRANCE, LABEL_COLOR, LINK_ACTIVE, LINK_COLOR, MONTSERRAT, NODE_COLOR, toneOf,
+  DIM_OPACITY, ENTRANCE, LABEL_COLOR, LINK_ACTIVE, LINK_COLOR, LINK_OPACITY, MONTSERRAT, NODE_COLOR, toneOf,
 } from "./graphTheme";
 import { View } from "./useZoomPan";
 
@@ -111,7 +111,7 @@ export function GraphCanvas({
                 strokeWidth={isActive ? 2.4 : 1.2}
                 strokeLinecap="round"
                 style={{
-                  opacity: highlight ? (isActive ? 0.9 : 0.06) : 0.4,
+                  opacity: highlight ? (isActive ? 0.9 : 0.06) : LINK_OPACITY,
                   animationDelay: `${delay}ms`,
                 }}
               />

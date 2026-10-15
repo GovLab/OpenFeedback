@@ -87,7 +87,7 @@ function GraphNodeMarkInner({
           </>
         )}
         {isCategory && (
-          <circle r={r + 4.5} fill="none" stroke={color} strokeOpacity={0.5} strokeWidth={1.5} />
+          <circle r={r + 4.5} fill="none" stroke={color} strokeOpacity={0.85} strokeWidth={1.5} />
         )}
         <circle
           r={r}

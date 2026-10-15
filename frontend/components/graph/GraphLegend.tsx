@@ -15,7 +15,7 @@ function Mark({ kind }: { kind: "Feedback" | "Category" | "Subcategory" | "Depre
   const r = { Feedback: 3.5, Subcategory: 5, Category: 6, Deprecated: 5, System: 5 }[kind];
   return (
     <svg width="18" height="18" viewBox="-9 -9 18 18" aria-hidden="true">
-      {kind === "Category" && <circle r={8} fill="none" stroke={NODE_COLOR.Category} strokeOpacity={0.6} strokeWidth={1.2} />}
+      {kind === "Category" && <circle r={8} fill="none" stroke={NODE_COLOR.Category} strokeOpacity={0.85} strokeWidth={1.2} />}
       <circle
         r={r}
         fill={NODE_COLOR[kind]}
