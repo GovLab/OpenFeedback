@@ -296,7 +296,9 @@ You evaluate feedback and ask follow-up questions to improve detail quality. You
         Returns:
             Formatted prompt string
         """
-        template = """Analyze the following text and break it down into individual, distinct feedback items. Each feedback should be a complete thought or complaint from a citizen about {subject}.
+        template = """Analyze the following text and break it down into individual, distinct items, one per message (email, letter, voicemail, comment, form entry). Most will be feedback from residents about {subject}.
+
+Keep every message, even spam, advertising, abusive or off-topic ones: a government body must accept and record everything it receives, and a later step tags irrelevant items. Never drop, merge, or summarise a message.
 
 Presume there are multiple feedbacks in the text and in rare cases there may be only one feedback.
 
@@ -306,6 +308,7 @@ Rules:
 3. Each feedback should be substantial enough to be meaningful (at least a sentence).
 4. If the feedbacks have a repeating structure (e.g., "Feedback: ...", "Issue: ...", "Complaint: ..."), use that structure to split them.
 5. Preserve any mentioned business names, person names, or other identifying attributes exactly as they appear; they are part of the feedback context.
+6. Do not include document titles, headings, or labels such as "1. Email" or "Received by post" as items of their own.
 
 Response format: Return ONLY a valid JSON array. No explanations, markdown formatting, or other text.
 
