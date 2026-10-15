@@ -108,6 +108,13 @@ body, p, span, div, input, textarea, label, .font-lora {
   font-family: var(--font-lora), serif;
 }
 
+/* The fixed navigation pill sits over the top of the page (about 4.5rem tall
+   with its margin). Leave that much room above any element the browser scrolls
+   into view, so a focused control is never hidden under it (WCAG 2.4.11). */
+html {
+  scroll-padding-top: 6rem;
+}
+
 /* One visible focus ring for every control, keyboard only */
 :focus-visible {
   outline: 2px solid var(--focus-ring);
