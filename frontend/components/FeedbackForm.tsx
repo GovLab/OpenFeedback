@@ -31,6 +31,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
   const [isActuallyAugmented, setIsActuallyAugmented] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [prefetchedAugmentation, setPrefetchedAugmentation] = useState<string | null>(null);
+  const [readyToFinish, setReadyToFinish] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const submitRef = useRef<HTMLButtonElement>(null);
   const wasChatOpen = useRef(false);
@@ -215,8 +216,9 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
               setPrefetchedAugmentation(conversationText);
             });
         }
-        // Auto-finish when quality is sufficient or after 5 questions
-        setTimeout(() => finishConversation(updatedHistory, true), 1500);
+        // Offer to finish when quality is sufficient or after 5 questions. The person
+        // chooses when to continue, so they can finish reading the last reply
+        setReadyToFinish(true);
       }
     } catch (err) {
       console.error('Chat error:', err);
@@ -272,17 +274,19 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
     // Close chatbot and put enhanced text back in textarea
     setShowChatbot(false);
     setHasBeenEnhanced(true);
-    
+
     // Reset chatbot state
     setConversationHistory([]);
     setOriginalFeedback('');
     setQuestionCount(0);
+    setReadyToFinish(false);
   };
 
   const handleCloseChatbot = async () => {
+    setReadyToFinish(false);
     // Check if user answered at least one question
     const hasUserAnswers = conversationHistory.some(msg => msg.role === 'user');
-    
+
     if (hasUserAnswers) {
       // User answered at least one question - augment feedback
       await finishConversation(conversationHistory, true);
@@ -430,6 +434,8 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
         onSubmitAnswer={handleChatSubmit}
         chatLoading={chatLoading}
         errorMessage={chatError}
+        readyToFinish={readyToFinish}
+        onFinish={() => finishConversation(conversationHistory, true)}
       />
     </div>
   );

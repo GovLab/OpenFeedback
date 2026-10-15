@@ -18,6 +18,8 @@ interface ChatbotSidebarProps {
   onSubmitAnswer: (answer: string) => Promise<void>;
   chatLoading: boolean;
   errorMessage?: string | null;
+  readyToFinish: boolean;
+  onFinish: () => void;
 }
 
 export default function ChatbotSidebar({
@@ -27,7 +29,9 @@ export default function ChatbotSidebar({
   onClose,
   onSubmitAnswer,
   chatLoading,
-  errorMessage = null
+  errorMessage = null,
+  readyToFinish,
+  onFinish
 }: ChatbotSidebarProps) {
   const [userInput, setUserInput] = useState('');
   const chatbotRef = useRef<HTMLDivElement>(null);
@@ -216,6 +220,16 @@ export default function ChatbotSidebar({
             <ArrowRight className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
           </button>
         </form>
+        {readyToFinish && (
+          <button
+            type="button"
+            onClick={onFinish}
+            disabled={chatLoading}
+            className={buttonClass('primary', 'md', 'mt-3 w-full')}
+          >
+            Continue to review
+          </button>
+        )}
         <button
           type="button"
           onClick={onClose}
