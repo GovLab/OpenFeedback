@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import { ChartColumn, House } from 'lucide-react';
 
 const LINKS = [
@@ -15,9 +16,20 @@ const isCurrent = (pathname: string, href: string) =>
 
 export default function Navigation() {
   const pathname = usePathname();
+  // Escape hides the name labels without moving pointer or focus (WCAG 1.4.13);
+  // they come back on the next hover or focus
+  const [labelsHidden, setLabelsHidden] = useState(false);
 
   return (
-    <nav aria-label="Main" className="fixed top-4 right-4 z-50 sm:top-6 sm:right-6">
+    <nav
+      aria-label="Main"
+      className="fixed top-4 right-4 z-50 sm:top-6 sm:right-6"
+      onKeyDown={(e) => {
+        if (e.key === "Escape") setLabelsHidden(true);
+      }}
+      onMouseEnter={() => setLabelsHidden(false)}
+      onFocus={() => setLabelsHidden(false)}
+    >
       <ul className="flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1 shadow-lg">
         {LINKS.map(({ href, label, Icon }) => {
           const current = isCurrent(pathname, href);
@@ -38,7 +50,9 @@ export default function Navigation() {
               {/* Visible name on hover or keyboard focus */}
               <span
                 aria-hidden="true"
-                className="font-ui pointer-events-none absolute top-full right-0 mt-2 rounded-md bg-[#091F2F] px-2 py-1 text-xs font-semibold whitespace-nowrap text-white opacity-0 shadow-md transition-opacity group-hover:opacity-100 group-has-[:focus-visible]:opacity-100"
+                className={`font-ui pointer-events-none absolute top-full right-0 mt-2 rounded-md bg-[#091F2F] px-2 py-1 text-xs font-semibold whitespace-nowrap text-white opacity-0 shadow-md transition-opacity ${
+                  labelsHidden ? "" : "group-hover:opacity-100 group-has-[:focus-visible]:opacity-100"
+                }`}
               >
                 {label}
               </span>

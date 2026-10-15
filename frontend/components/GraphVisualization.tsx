@@ -137,7 +137,10 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
         e.preventDefault();
         return toggleSelect(id);
       }
-      if (e.key === "Escape") return clearSelection();
+      if (e.key === "Escape") {
+        setHoverId(null); // Also dismiss the name tooltip, without moving focus (WCAG 1.4.13)
+        return clearSelection();
+      }
       if (e.key === "+" || e.key === "=") return zoom.zoomBy(ZOOM_STEP);
       if (e.key === "-") return zoom.zoomBy(1 / ZOOM_STEP);
       if (e.key === "0") return zoom.reset();

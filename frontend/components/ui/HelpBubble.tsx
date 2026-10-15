@@ -41,6 +41,16 @@ export function HelpBubble({ title, width = "md", children }: HelpBubbleProps) {
 
   useEffect(() => cancelClose, []);
 
+  // Escape closes the guide wherever focus is, including when it opened on hover
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
   const widthClass = width === "lg" ? "sm:w-[28rem]" : "sm:w-96";
   return (
     <div
