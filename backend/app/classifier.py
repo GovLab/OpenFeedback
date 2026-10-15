@@ -1,6 +1,7 @@
 from openai import OpenAI
 from .config import settings
 from .models import ClassifiedFeedback
+from .relevance import fallback_classification
 from .prompts import prompt_builder
 from .context_loader import load_context
 from .config import topic
@@ -10,10 +11,12 @@ import logging
 import re
 from typing import List, Optional, Dict, Any, Tuple
 
+OPENAI_TIMEOUT_SECONDS = 30.0
+
 # Configure logging for the classifier module
 logger = logging.getLogger(__name__)
 
-client = OpenAI(api_key=settings.openai_api_key)
+client = OpenAI(api_key=settings.openai_api_key, timeout=OPENAI_TIMEOUT_SECONDS, max_retries=1)
 
 # Cache for active config to avoid repeated database queries
 # Cache stores both config_data and version to ensure consistency
@@ -134,19 +137,7 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
         logger.warning("Falling back to default classification due to JSON parsing error")
         # Get config version even for fallback (may be None if no active config)
         _, config_version = _get_active_config()
-        return ClassifiedFeedback(
-            text=feedback_text,
-            category_map={"Process & Operational Flow Issues": ["Unclassified"]},
-            sentiment="Neutral",
-            priority="Medium",
-            permit_type=None,
-            ai_summary=feedback_text[:200] if len(feedback_text) > 200 else feedback_text,
-            department_predicted=None,
-            urgency_level="Medium",
-            impact_type=[],
-            language="en",
-            config_version=config_version
-        )
+        return fallback_classification(feedback_text, config_version)
     except Exception as e:
         logger.error(f"Error classifying feedback: {str(e)}")
         logger.debug(f"Exception details: {type(e).__name__}: {str(e)}")

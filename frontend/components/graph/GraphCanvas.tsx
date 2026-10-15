@@ -4,7 +4,7 @@ import { GraphLayout } from "@/lib/graphLayout";
 import { GraphModel, ModelNode, accessibleName } from "@/lib/graphModel";
 import { GraphNodeMark } from "./GraphNodeMark";
 import {
-  DIM_OPACITY, ENTRANCE, LABEL_COLOR, LINK_ACTIVE, LINK_COLOR, MONTSERRAT, NODE_COLOR,
+  DIM_OPACITY, ENTRANCE, LABEL_COLOR, LINK_ACTIVE, LINK_COLOR, MONTSERRAT, NODE_COLOR, toneOf,
 } from "./graphTheme";
 import { View } from "./useZoomPan";
 
@@ -149,7 +149,7 @@ export function GraphCanvas({
                 key={node.id}
                 node={node}
                 place={place}
-                gradientId={`${prefix}-${node.deprecated ? "Deprecated" : node.kind}`}
+                gradientId={`${prefix}-${toneOf(node)}`}
                 label={accessibleName(model, node)}
                 isSelected={node.id === selectedId}
                 isDimmed={!isLit(node.id)}
@@ -169,7 +169,7 @@ export function GraphCanvas({
             const label = layout.labels.get(node.id);
             if (!label) return null;
             const isCategory = node.kind === "Category";
-            const tone = node.deprecated ? "Deprecated" : node.kind;
+            const tone = toneOf(node);
             return (
               <text
                 key={node.id}

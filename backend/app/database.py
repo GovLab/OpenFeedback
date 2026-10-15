@@ -1,5 +1,6 @@
 from neo4j import GraphDatabase
 from .config import settings
+from .relevance import is_deprecated_category, is_deprecated_subcategory
 from .models import ClassifiedFeedback, GraphData, GraphNode, GraphRelationship
 from typing import List
 import uuid
@@ -185,9 +186,9 @@ class Neo4jDatabase:
                     
                     # Mark as deprecated if not in active config
                     if "Category" in labels:
-                        node_data["deprecated"] = node_name not in active_categories if active_categories else False
+                        node_data["deprecated"] = is_deprecated_category(node_name, active_categories)
                     elif "Subcategory" in labels:
-                        node_data["deprecated"] = node_name not in active_subcategories if active_subcategories else False
+                        node_data["deprecated"] = is_deprecated_subcategory(node_name, active_subcategories)
                     else:
                         node_data["deprecated"] = False
                 

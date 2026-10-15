@@ -9,7 +9,7 @@ interface GraphHierarchyTableProps {
   model: GraphModel;
 }
 
-const status = (n: ModelNode) => (n.deprecated ? " (deprecated)" : "");
+const status = (n: ModelNode) => (n.deprecated ? " (deprecated)" : n.isSystem ? " (system)" : "");
 const HEAD = "px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.08em] text-gray-600";
 
 export function GraphHierarchyTable({ id, model }: GraphHierarchyTableProps) {

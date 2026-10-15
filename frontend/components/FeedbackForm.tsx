@@ -98,17 +98,23 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
     setResult(null);
 
     try {
-      // Use intelligent agent to check feedback quality (only if not already enhanced)
+      // Use intelligent agent to check feedback quality (only if not already enhanced).
+      // The agent is optional: if it fails, skip the follow-up questions and submit.
       if (!hasBeenEnhanced) {
-        const agentData = await api.feedbackAgent({ 
-          original_feedback: feedback,
-          category_map: {},
-          conversation_history: []
-        });
-        
+        let agentData: Awaited<ReturnType<typeof api.feedbackAgent>> | null = null;
+        try {
+          agentData = await api.feedbackAgent({
+            original_feedback: feedback,
+            category_map: {},
+            conversation_history: []
+          });
+        } catch (agentError) {
+          console.error('Follow-up agent unavailable, submitting directly:', agentError);
+        }
+
         // Every submission is accepted. One that looks off-topic or spammy
         // skips the follow-up questions and is tagged Not Relevant on the server.
-        if (agentData.needs_followup && !agentData.is_invalid) {
+        if (agentData && agentData.needs_followup && !agentData.is_invalid) {
           // Low quality - show chatbot sidebar with agent's first question
           setOriginalFeedback(feedback);
           setConversationHistory([{
@@ -150,7 +156,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
       onFeedbackSubmitted();
       setLoading(false);
     } catch (err) {
-      setError('Submission failed. Please try again.');
+      setError('We could not send your feedback. Your text is still here, so please try again.');
       console.error(err);
       setLoading(false);
     }
