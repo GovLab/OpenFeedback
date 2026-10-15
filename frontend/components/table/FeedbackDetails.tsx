@@ -129,7 +129,7 @@ export function FeedbackDetails({ feedback }: { feedback: FeedbackRecord }) {
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-12">
         <div role="group" className={`${PANEL} lg:col-span-6`} aria-label="Original Feedback">
           <PanelTitle icon={<FileText className="h-4 w-4" />}>Original Feedback</PanelTitle>
-          <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-900">{feedback.issue_description}</p>
+          <p lang={feedback.language || undefined} className="text-sm leading-relaxed whitespace-pre-wrap text-slate-900">{feedback.issue_description}</p>
         </div>
         <Classification feedback={feedback} />
       </div>

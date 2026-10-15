@@ -60,7 +60,7 @@ export function FeedbackRow({ feedback, expanded, onToggle }: FeedbackRowProps) 
                 <Badge tone="violet">{feedback.language.toUpperCase()}</Badge>
               )}
             </div>
-            <p className={`line-clamp-2 text-sm ${feedback.ai_summary ? "text-slate-900" : "text-slate-700"}`}>{summary}</p>
+            <p lang={feedback.ai_summary ? undefined : feedback.language || undefined} className={`line-clamp-2 text-sm ${feedback.ai_summary ? "text-slate-900" : "text-slate-700"}`}>{summary}</p>
             {feedback.category && (
               <p className="flex flex-wrap items-center gap-1 text-xs text-slate-600">
                 <span className="font-medium">{feedback.category}</span>
