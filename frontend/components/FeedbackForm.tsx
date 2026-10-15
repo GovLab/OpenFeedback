@@ -321,6 +321,8 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
           <div>
             <label htmlFor="feedback" className="block text-lg font-semibold text-slate-900">
               {topic.formQuestion}
+              <span className="ml-1 text-[var(--text-danger)]" aria-hidden="true">*</span>
+              <span className="sr-only"> (required)</span>
             </label>
 
             {/* Suggestion prompts */}
@@ -344,6 +346,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
 
             <textarea
               maxLength={5000}
+              required
               ref={textareaRef}
               id="feedback"
               value={feedback}
