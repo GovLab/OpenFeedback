@@ -10,12 +10,10 @@ import { topic } from "@/lib/topic";
 export default function Home() {
   const [showSuccess, setShowSuccess] = useState(false);
 
+  // The message stays until the person closes it, so slower readers and
+  // screen reader users are not cut off mid-announcement (WCAG 2.2.1)
   const handleFeedbackSubmitted = () => {
     setShowSuccess(true);
-    // Auto-hide success message after 10 seconds
-    setTimeout(() => {
-      setShowSuccess(false);
-    }, 10000);
   };
 
   return (
