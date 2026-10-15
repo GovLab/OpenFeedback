@@ -18,12 +18,12 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen min-w-[320px]" style={{ background: 'var(--boston-gray-light)' }}>
+    <div className="min-h-screen min-w-[320px] bg-[var(--boston-gray-light)]">
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-8 sm:py-10 min-w-[320px]">
+      <main className="mx-auto min-w-[320px] max-w-4xl px-4 pt-20 pb-8 sm:py-10">
         {/* Minimal Header - centered and clean */}
-        <div className="text-center mb-6">
-          <h1 className="text-3xl sm:text-4xl font-semibold mb-2 tracking-tight" style={{ color: 'var(--boston-charles-blue)' }}>
+        <div className="mb-8 text-center">
+          <h1 className="mb-2 text-3xl tracking-tight text-[#091F2F] sm:text-4xl">
             {topic.appTitle}
           </h1>
           <p className="text-base text-slate-600">
