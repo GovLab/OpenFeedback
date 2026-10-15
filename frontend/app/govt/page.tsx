@@ -16,7 +16,8 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { StateMessage } from "@/components/ui/StateMessage";
 import { Tabs, tabPanelProps } from "@/components/ui/Tabs";
 import { api, GraphData, Stats } from "@/lib/api";
-import { getStaffToken, STAFF_LOGOUT_EVENT } from "@/lib/http";
+import { getStaffToken, STAFF_LOGOUT_EVENT, STAFF_SESSION_EXPIRED_EVENT } from "@/lib/http";
+import SessionExpiryNotice from "@/components/SessionExpiryNotice";
 import { useDocumentTitle } from "@/lib/useDocumentTitle";
 
 type TabType = "dashboard" | "config";
@@ -26,20 +27,38 @@ const TABS: { id: TabType; label: string }[] = [
   { id: "config", label: "System Configuration" },
 ];
 
+type SessionState = "checking" | "signedOut" | "signedIn" | "expired";
+
 export default function GovtPage() {
-  // null until we've checked sessionStorage, so the login form doesn't flash
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  // "checking" until sessionStorage is read, so the login form doesn't flash
+  const [session, setSession] = useState<SessionState>("checking");
 
   useEffect(() => {
-    setIsLoggedIn(Boolean(getStaffToken()));
-    const handleLogout = () => setIsLoggedIn(false);
+    setSession(getStaffToken() ? "signedIn" : "signedOut");
+    const handleLogout = () => setSession("signedOut");
+    const handleExpired = () => setSession("expired");
     window.addEventListener(STAFF_LOGOUT_EVENT, handleLogout);
-    return () => window.removeEventListener(STAFF_LOGOUT_EVENT, handleLogout);
+    window.addEventListener(STAFF_SESSION_EXPIRED_EVENT, handleExpired);
+    return () => {
+      window.removeEventListener(STAFF_LOGOUT_EVENT, handleLogout);
+      window.removeEventListener(STAFF_SESSION_EXPIRED_EVENT, handleExpired);
+    };
   }, []);
 
-  if (isLoggedIn === null) return null;
-  if (!isLoggedIn) return <StaffLogin onLoggedIn={() => setIsLoggedIn(true)} />;
-  return <GovtDashboard />;
+  if (session === "checking") return null;
+  if (session === "signedOut") return <StaffLogin onLoggedIn={() => setSession("signedIn")} />;
+
+  // When the session ends, the dashboard stays mounted behind a sign-in dialog,
+  // so unsaved configuration edits are still there after signing in again
+  const expired = session === "expired";
+  return (
+    <>
+      <div inert={expired || undefined}>
+        <GovtDashboard />
+      </div>
+      {expired && <StaffLogin dialog onLoggedIn={() => setSession("signedIn")} />}
+    </>
+  );
 }
 
 function GovtDashboard() {
@@ -101,6 +120,7 @@ function GovtDashboard() {
       <DashboardHeader />
 
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-7xl px-4 py-8">
+        <SessionExpiryNotice />
         <Tabs
           tabs={TABS}
           active={activeTab}

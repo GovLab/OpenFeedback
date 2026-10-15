@@ -10,10 +10,12 @@ import { CARD, INPUT } from "@/components/ui/styles";
 
 interface StaffLoginProps {
   onLoggedIn: () => void;
+  // Shown over the dashboard when the session ends, so unsaved edits stay on screen
+  dialog?: boolean;
 }
 
-export default function StaffLogin({ onLoggedIn }: StaffLoginProps) {
-  useDocumentTitle("Staff sign in");
+export default function StaffLogin({ onLoggedIn, dialog = false }: StaffLoginProps) {
+  useDocumentTitle(dialog ? null : "Staff sign in");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,15 +41,26 @@ export default function StaffLogin({ onLoggedIn }: StaffLoginProps) {
     }
   };
 
+  // A dialog sits over the dashboard, so it is not a page of its own
+  const Content = dialog ? "div" : "main";
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--boston-gray-light)] px-4">
-      <Navigation />
-      <main className="w-full max-w-sm">
+    <div
+      className={
+        dialog
+          ? "fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4"
+          : "flex min-h-screen items-center justify-center bg-[var(--boston-gray-light)] px-4"
+      }
+      role={dialog ? "dialog" : undefined}
+      aria-modal={dialog || undefined}
+      aria-labelledby={dialog ? "staff-login-title" : undefined}
+    >
+      {!dialog && <Navigation />}
+      <Content className="w-full max-w-sm">
         <form onSubmit={handleSubmit} className={`${CARD} p-8`} noValidate>
           <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-[#1871bd]/10 text-[#1871bd]">
             <LockKeyhole className="h-5 w-5" aria-hidden="true" />
           </div>
-          <h1 className="mb-1 text-2xl text-[#091F2F]">Staff Dashboard</h1>
+          <h1 id="staff-login-title" className="mb-1 text-2xl text-[#091F2F]">Staff Dashboard</h1>
           <p className="mb-6 text-sm text-slate-600">Enter the staff password to view feedback analytics.</p>
 
           <label htmlFor="staff-password" className="mb-2 block text-sm font-medium text-slate-800">
@@ -81,7 +94,7 @@ export default function StaffLogin({ onLoggedIn }: StaffLoginProps) {
             {submitting ? "Signing in…" : "Sign in"}
           </Button>
         </form>
-      </main>
+      </Content>
     </div>
   );
 }
