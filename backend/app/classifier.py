@@ -8,7 +8,6 @@ from .config import topic
 from .system_config import system_config_manager
 import json
 import logging
-import re
 from typing import List, Optional, Dict, Any, Tuple
 
 OPENAI_TIMEOUT_SECONDS = 30.0

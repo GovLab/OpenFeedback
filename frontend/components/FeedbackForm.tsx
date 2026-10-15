@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { api, ClassifiedFeedback, ConversationMessage } from '@/lib/api';
+import { api, ConversationMessage } from '@/lib/api';
 import { topic } from '@/lib/topic';
 import { CircleAlert, CircleCheck, Info, LoaderCircle, Sparkles } from 'lucide-react';
 import ChatbotSidebar from './ChatbotSidebar';
@@ -12,13 +12,11 @@ type ErrorField = 'feedback' | ContactErrorField;
 
 interface FeedbackFormProps {
   onFeedbackSubmitted: () => void;
-  showClassificationResult?: boolean;
 }
 
 export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps) {
   const [feedback, setFeedback] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<ClassifiedFeedback | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [errorField, setErrorField] = useState<ErrorField>(null);
   
@@ -95,7 +93,6 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
     setLoading(true);
     setError(null);
     setErrorField(null);
-    setResult(null);
 
     try {
       // Use intelligent agent to check feedback quality (only if not already enhanced).
@@ -145,8 +142,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
         };
       }
       
-      const submitted = await api.submitFeedback(feedbackData);
-      setResult(submitted);
+      await api.submitFeedback(feedbackData);
       setFeedback('');
       setHasBeenEnhanced(false); // Reset for next submission
       setIsActuallyAugmented(false); // Reset augmentation flag

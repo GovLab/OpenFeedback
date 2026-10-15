@@ -8,7 +8,6 @@ Manages versioned configuration with only one active version at a time.
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import JSONB
 from typing import Optional, Dict, Any, List
-from contextlib import contextmanager
 import logging
 import json
 from .postgres_db import postgres_db
@@ -345,75 +344,3 @@ class SystemConfigManager:
 
 # Global instance
 system_config_manager = SystemConfigManager()
-
-
-if __name__ == "__main__":
-    """
-    Quick test runner for SystemConfigManager.
-    Run with: python -m app.system_config
-    """
-    print("\n🧪 Testing SystemConfigManager\n")
-    print("=" * 60)
-    
-    # Test 1: Get Active Config
-    print("TEST 1: Get Active Config")
-    print("=" * 60)
-    try:
-        config = system_config_manager.get_active_config()
-        if config:
-            print(f"✅ Active config found!")
-            print(f"   Version: {config['version']}")
-            print(f"   Created at: {config['created_at']}")
-            print(f"   Created by: {config['created_by']}")
-            print(f"   Change notes: {config['change_notes']}")
-            print(f"   Categories count: {len(config['config_data'].get('categories', []))}")
-            print(f"   Permit types count: {len(config['config_data'].get('permit_types', []))}")
-            print(f"   Departments count: {len(config['config_data'].get('departments', []))}")
-        else:
-            print("⚠️  No active config found. Make sure you've run the seed migration!")
-    except Exception as e:
-        print(f"❌ Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-    
-    # Test 2: Get Config History
-    print("\n" + "=" * 60)
-    print("TEST 2: Get Config History")
-    print("=" * 60)
-    try:
-        history = system_config_manager.get_config_history()
-        print(f"✅ Found {len(history)} version(s)")
-        for version in history:
-            status = "(ACTIVE)" if version['is_active'] else ""
-            print(f"   Version {version['version']}: {status}")
-            print(f"      Created: {version['created_at']}")
-            print(f"      By: {version['created_by']}")
-            print(f"      Notes: {version['change_notes']}")
-    except Exception as e:
-        print(f"❌ Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-    
-    # Test 3: Get Config By Version
-    print("\n" + "=" * 60)
-    print("TEST 3: Get Config By Version (v1)")
-    print("=" * 60)
-    try:
-        config_v1 = system_config_manager.get_config_by_version(1)
-        if config_v1:
-            print(f"✅ Found version 1")
-            print(f"   Created: {config_v1['created_at']}")
-            print(f"   Active: {config_v1['is_active']}")
-            print(f"   Categories: {len(config_v1['config_data'].get('categories', []))}")
-        else:
-            print("⚠️  Version 1 not found")
-    except Exception as e:
-        print(f"❌ Error: {str(e)}")
-        import traceback
-        traceback.print_exc()
-    
-    print("\n" + "=" * 60)
-    print("✅ Tests completed!")
-    print("=" * 60)
-    print("\n💡 To test creating a new version, uncomment the test in the code.")
-

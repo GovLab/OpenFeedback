@@ -1,5 +1,4 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
 import os
 import json
 import boto3
@@ -60,10 +59,6 @@ class Settings(BaseSettings):
     # Which topic profile the AI prompts use: "permits" or "parks"
     topic: str = "permits"
 
-    # Application Settings
-    debug: bool = False
-    app_env: str = "development"
-    api_version: str = "1.0.0"
     
     @property
     def postgres_url(self) -> str:
