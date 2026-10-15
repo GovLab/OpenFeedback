@@ -20,6 +20,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen min-w-[320px] bg-[var(--boston-gray-light)]">
+      {/* First in the source so keyboard order matches the top-right position on screen */}
+      <Navigation />
+
       {/* Main Content */}
       <main className="mx-auto min-w-[320px] max-w-4xl px-4 pt-20 pb-8 sm:py-10">
         {/* Minimal Header - centered and clean */}
@@ -43,9 +46,6 @@ export default function Home() {
         <PrivacyNotice />
 
       </main>
-
-      {/* Navigation */}
-      <Navigation />
     </div>
   );
 }

@@ -90,9 +90,17 @@ function GovtDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      {/* Skip link is the first stop, so keyboard users can jump past the navigation and header */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[60] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[#091F2F] focus:shadow-lg focus:outline-2 focus:outline-offset-2 focus:outline-[#1871bd]"
+      >
+        Skip to main content
+      </a>
+      <Navigation />
       <DashboardHeader />
 
-      <main className="mx-auto max-w-7xl px-4 py-8">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-7xl px-4 py-8">
         <Tabs
           tabs={TABS}
           active={activeTab}
@@ -168,9 +176,6 @@ function GovtDashboard() {
           </div>
         )}
       </main>
-
-      {/* Navigation */}
-      <Navigation />
     </div>
   );
 }

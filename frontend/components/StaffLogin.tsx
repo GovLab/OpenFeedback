@@ -41,6 +41,7 @@ export default function StaffLogin({ onLoggedIn }: StaffLoginProps) {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--boston-gray-light)] px-4">
+      <Navigation />
       <main className="w-full max-w-sm">
         <form onSubmit={handleSubmit} className={`${CARD} p-8`} noValidate>
           <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-[#1871bd]/10 text-[#1871bd]">
@@ -81,7 +82,6 @@ export default function StaffLogin({ onLoggedIn }: StaffLoginProps) {
           </Button>
         </form>
       </main>
-      <Navigation />
     </div>
   );
 }
