@@ -73,10 +73,10 @@ export default function ChatbotSidebar({
     <section
       ref={chatbotRef}
       aria-labelledby="chatbot-title"
-      className="animate-slide-in flex h-[520px] w-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg lg:h-[600px] lg:w-96 lg:shrink-0"
+      className="animate-slide-in flex min-h-[520px] max-h-[85vh] w-full flex-col rounded-xl border border-slate-200 bg-white shadow-lg lg:min-h-[600px] lg:w-96 lg:shrink-0"
     >
       {/* Header */}
-      <div className="border-b border-slate-200 bg-[#1871bd]/5 px-4 py-3">
+      <div className="rounded-t-xl border-b border-slate-200 bg-[#1871bd]/5 px-4 py-3">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-2.5">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1871bd] text-white">
@@ -132,7 +132,7 @@ export default function ChatbotSidebar({
         role="log"
         aria-live="polite"
         aria-label="Conversation"
-        className="flex-1 space-y-3 overflow-y-auto bg-slate-50 p-3"
+        className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-slate-50 p-3"
       >
         {conversationHistory.map((msg, idx) => (
           <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -187,7 +187,7 @@ export default function ChatbotSidebar({
       )}
 
       {/* Answer */}
-      <div className="border-t border-slate-200 bg-white p-3">
+      <div className="rounded-b-xl border-t border-slate-200 bg-white p-3">
         <form
           className="flex gap-2"
           onSubmit={(e) => {
