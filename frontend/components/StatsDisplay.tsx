@@ -1,36 +1,46 @@
 'use client';
 
 import { Stats } from '@/lib/api';
+import { CARD, EYEBROW } from '@/components/ui/styles';
+import { NODE_COLOR } from '@/components/graph/graphTheme';
 
 interface StatsDisplayProps {
   stats: Stats;
 }
 
+// Total plus a per-category breakdown, drawn like the graph's distribution list
 export default function StatsDisplay({ stats }: StatsDisplayProps) {
+  const top = Math.max(1, ...stats.categories.map((c) => c.count));
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-2xl font-bold mb-4 text-gray-800">Statistics</h2>
-      
-      <div className="space-y-4">
-        <div className="border-b pb-3">
-          <p className="text-sm text-gray-600">Total Feedback</p>
-          <p className="text-3xl font-bold text-blue-600">{stats.total_feedback}</p>
-        </div>
+    <div className={`${CARD} grid gap-6 p-6 md:grid-cols-[12rem_1fr] md:gap-8`}>
+      <div className="md:border-r md:border-slate-200 md:pr-8">
+        <p className={EYEBROW}>Total Feedback</p>
+        <p className="font-ui mt-1 text-5xl font-bold text-[#091F2F] tabular-nums">{stats.total_feedback}</p>
+      </div>
 
-        {stats.categories.length > 0 && (
-          <div>
-            <h3 className="text-lg font-semibold mb-2 text-gray-800">Categories</h3>
-            <div className="space-y-2">
-              {stats.categories.map((cat, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <span className="text-gray-700">{cat.category}</span>
-                  <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
+      <div>
+        <h3 className={`${EYEBROW} mb-3`}>Categories</h3>
+        {stats.categories.length === 0 ? (
+          <p className="text-sm text-slate-600">No categories yet.</p>
+        ) : (
+          <ul className="grid gap-x-10 gap-y-3 lg:grid-cols-2">
+            {stats.categories.map((cat) => (
+              <li key={cat.category}>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm text-slate-800">{cat.category}</span>
+                  <span className="font-ui inline-flex min-w-[2rem] justify-center rounded-full bg-[#1871bd] px-2 py-0.5 text-xs font-bold text-white tabular-nums">
                     {cat.count}
                   </span>
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="mt-1.5 h-1.5 rounded-full bg-slate-100" aria-hidden="true">
+                  <div
+                    className="h-1.5 rounded-full"
+                    style={{ width: `${(cat.count / top) * 100}%`, backgroundColor: NODE_COLOR.Category }}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
     </div>
