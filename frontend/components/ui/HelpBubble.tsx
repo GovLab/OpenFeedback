@@ -45,7 +45,9 @@ export function HelpBubble({ title, width = "md", children }: HelpBubbleProps) {
   return (
     <div
       ref={wrapRef}
-      className="relative"
+      /* Below sm the guide is positioned against the section heading, so it
+         stays inside the screen; from sm it sits beside the "?" button */
+      className="static sm:relative"
       onMouseEnter={() => { cancelClose(); setOpen(true); }}
       onMouseLeave={scheduleClose}
       onKeyDown={(e) => {

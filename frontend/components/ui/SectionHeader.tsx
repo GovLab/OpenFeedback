@@ -10,7 +10,7 @@ interface SectionHeaderProps {
 
 export function SectionHeader({ title, id, help, actions }: SectionHeaderProps) {
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="relative mb-4 flex flex-wrap items-center justify-between gap-3">
       <div className="flex items-center gap-1.5">
         <h2 id={id} className="text-xl text-[#091F2F]">{title}</h2>
         {help}

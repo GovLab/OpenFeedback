@@ -7,8 +7,9 @@ import { MONTSERRAT, NODE_COLOR } from "./graphTheme";
 
 const FOCUS_RING =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1871bd]";
+// Labels may wrap so the legend fits a 320 px screen without sideways scrolling
 const CHIP =
-  "inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[13px] font-semibold text-gray-700 whitespace-nowrap";
+  "inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[13px] font-semibold text-gray-700";
 
 function Mark({ kind }: { kind: "Feedback" | "Category" | "Subcategory" | "Deprecated" | "System" }) {
   const r = { Feedback: 3.5, Subcategory: 5, Category: 6, Deprecated: 5, System: 5 }[kind];

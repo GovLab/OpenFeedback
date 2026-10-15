@@ -19,7 +19,7 @@ export function CategoryEditor({
 }: CategoryEditorProps) {
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-base text-[#091F2F]">Categories &amp; Subcategories</h3>
         <button type="button" onClick={onAdd} className={buttonClass("secondary", "sm")}>
           <Plus className="h-4 w-4" aria-hidden="true" />
