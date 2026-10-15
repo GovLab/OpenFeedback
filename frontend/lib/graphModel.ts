@@ -12,6 +12,7 @@ export interface ModelNode {
   name: string; // Category/Subcategory name, or the full feedback text
   count: number; // Feedback volume (1 for a feedback node)
   deprecated: boolean;
+  isSystem: boolean; // Not Relevant / Unclassified, or something filed under them
   parentId: string | null; // Subcategory -> its category
   subIds: string[]; // Category -> its subcategories; Feedback -> its subcategories
   categoryIds: string[]; // Feedback -> its categories
@@ -31,6 +32,9 @@ export interface GraphModel {
   feedback: ModelNode[];
   links: ModelLink[];
 }
+
+// Categories the backend creates itself (relevance.py). They are never deprecated.
+export const SYSTEM_CATEGORY_NAMES = ["Not Relevant", "Unclassified"];
 
 const RANK: Record<NodeKind, number> = { Feedback: 0, Subcategory: 1, Category: 2 };
 const FEEDBACK_NAME_LIMIT = 120;
@@ -99,11 +103,26 @@ export function buildGraphModel(data: GraphData, showDeprecated: boolean): Graph
       name: (kind === "Feedback" ? n.text : n.name) || "Untitled",
       count: 0,
       deprecated: n.deprecated === true,
+      isSystem: false,
       parentId: parentOf.get(n.id) || null,
       subIds,
       categoryIds: kind === "Feedback" ? unique([...viaSubs, ...direct]) : [],
       feedbackIds: unique(feedbackOf.get(n.id) || []),
     });
+  });
+
+  // System categories, then whatever is filed only under them
+  const systemIds = new Set(
+    raw.filter((n) => n.type === "Category" && SYSTEM_CATEGORY_NAMES.includes(n.name || "")).map((n) => n.id)
+  );
+  byId.forEach((node, id) => {
+    const isSystem =
+      node.kind === "Category"
+        ? systemIds.has(id)
+        : node.kind === "Subcategory"
+          ? node.parentId !== null && systemIds.has(node.parentId)
+          : node.categoryIds.length > 0 && node.categoryIds.every((c) => systemIds.has(c));
+    byId.set(id, { ...node, isSystem });
   });
 
   // Category volume = unique feedback under any of its subcategories, or tagged directly
@@ -167,7 +186,7 @@ const items = (n: number) => `${n} feedback ${n === 1 ? "item" : "items"}`;
 
 // Spoken name for each node, e.g. "Subcategory: Broken Equipment, 6 feedback items, in Maintenance"
 export function accessibleName(model: GraphModel, node: ModelNode): string {
-  const retired = node.deprecated ? ", deprecated" : "";
+  const retired = node.deprecated ? ", deprecated" : node.isSystem ? ", system category" : "";
   if (node.kind === "Category") {
     const subs = node.subIds.length;
     return `Category: ${node.name}, ${items(node.count)}, ${subs} ${subs === 1 ? "subcategory" : "subcategories"}${retired}`;

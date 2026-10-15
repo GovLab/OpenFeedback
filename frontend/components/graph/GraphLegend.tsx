@@ -10,8 +10,8 @@ const FOCUS_RING =
 const CHIP =
   "inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-[13px] font-semibold text-gray-700 whitespace-nowrap";
 
-function Mark({ kind }: { kind: "Feedback" | "Category" | "Subcategory" | "Deprecated" }) {
-  const r = { Feedback: 3.5, Subcategory: 5, Category: 6, Deprecated: 5 }[kind];
+function Mark({ kind }: { kind: "Feedback" | "Category" | "Subcategory" | "Deprecated" | "System" }) {
+  const r = { Feedback: 3.5, Subcategory: 5, Category: 6, Deprecated: 5, System: 5 }[kind];
   return (
     <svg width="18" height="18" viewBox="-9 -9 18 18" aria-hidden="true">
       {kind === "Category" && <circle r={8} fill="none" stroke={NODE_COLOR.Category} strokeOpacity={0.6} strokeWidth={1.2} />}
@@ -43,6 +43,9 @@ export function GraphLegend({
         <li className={CHIP}><Mark kind="Feedback" />Feedback</li>
         <li className={CHIP}><Mark kind="Category" />Category</li>
         <li className={CHIP}><Mark kind="Subcategory" />Subcategory</li>
+        <li className={CHIP} title="Not Relevant is spam, abuse or off-topic input. Unclassified means the AI was unavailable. Both are kept and filed automatically.">
+          <Mark kind="System" />Not Relevant / Unclassified (filed automatically)
+        </li>
       </ul>
       <button
         type="button"

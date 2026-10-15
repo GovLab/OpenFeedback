@@ -3,6 +3,7 @@
 import { Stats } from '@/lib/api';
 import { CARD, EYEBROW } from '@/components/ui/styles';
 import { NODE_COLOR } from '@/components/graph/graphTheme';
+import { SYSTEM_CATEGORY_NAMES } from '@/lib/graphModel';
 
 interface StatsDisplayProps {
   stats: Stats;
@@ -35,7 +36,7 @@ export default function StatsDisplay({ stats }: StatsDisplayProps) {
                 <div className="mt-1.5 h-1.5 rounded-full bg-slate-100" aria-hidden="true">
                   <div
                     className="h-1.5 rounded-full"
-                    style={{ width: `${(cat.count / top) * 100}%`, backgroundColor: NODE_COLOR.Category }}
+                    style={{ width: `${(cat.count / top) * 100}%`, backgroundColor: SYSTEM_CATEGORY_NAMES.includes(cat.category) ? NODE_COLOR.System : NODE_COLOR.Category }}
                   />
                 </div>
               </li>

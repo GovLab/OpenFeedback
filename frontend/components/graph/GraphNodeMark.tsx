@@ -2,7 +2,7 @@
 import { KeyboardEvent, memo } from "react";
 import { NodePlacement, textWidth } from "@/lib/graphLayout";
 import { ModelNode } from "@/lib/graphModel";
-import { BADGE_FILL, DIM_OPACITY, FOCUS_COLOR, LINK_ACTIVE, MONTSERRAT, NODE_COLOR } from "./graphTheme";
+import { BADGE_FILL, DIM_OPACITY, FOCUS_COLOR, LINK_ACTIVE, MONTSERRAT, NODE_COLOR, toneOf } from "./graphTheme";
 
 // One focusable node: gradient circle, count badge, selection halo and focus ring.
 // Type is shown by size and shape as well as colour: categories are the largest
@@ -60,7 +60,7 @@ function GraphNodeMarkInner({
 }: GraphNodeMarkProps) {
   const { r } = place;
   const isCategory = node.kind === "Category";
-  const color = node.deprecated ? NODE_COLOR.Deprecated : NODE_COLOR[node.kind];
+  const color = NODE_COLOR[toneOf(node)];
   return (
     <g
       ref={(el) => registerRef(node.id, el)}

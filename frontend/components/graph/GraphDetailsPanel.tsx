@@ -1,7 +1,7 @@
 "use client";
 import { ReactNode, useEffect, useRef } from "react";
 import { GraphModel, ModelNode, nameOf } from "@/lib/graphModel";
-import { LABEL_COLOR, MONTSERRAT, NODE_COLOR } from "./graphTheme";
+import { LABEL_COLOR, MONTSERRAT, NODE_COLOR, toneOf } from "./graphTheme";
 
 // Details for the selected node. Overlays the right edge of the graph on wide
 // cards and sits below it on narrow ones.
@@ -47,7 +47,8 @@ function names(model: GraphModel, ids: string[]): ModelNode[] {
 }
 
 function withStatus(n: ModelNode) {
-  return n.deprecated ? `${n.name} (deprecated)` : n.name;
+  if (n.deprecated) return `${n.name} (deprecated)`;
+  return n.isSystem ? `${n.name} (system)` : n.name;
 }
 
 function Distribution({ subs, total }: { subs: ModelNode[]; total: number }) {
@@ -137,7 +138,7 @@ function DetailsBody({ node, model }: { node: ModelNode; model: GraphModel }) {
 
 export function GraphDetailsPanel({ node, model, variant, onClose }: GraphDetailsPanelProps) {
   const ref = useRef<HTMLElement>(null);
-  const tone = node.deprecated ? "Deprecated" : node.kind;
+  const tone = toneOf(node);
 
   // Below the graph the panel can start off-screen; bring it just into view
   useEffect(() => {
@@ -180,8 +181,14 @@ export function GraphDetailsPanel({ node, model, variant, onClose }: GraphDetail
         >
           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: NODE_COLOR[tone] }} aria-hidden="true" />
           {node.kind}
-          {node.deprecated ? " (deprecated)" : ""}
+          {node.deprecated ? " (deprecated)" : node.isSystem ? " (system category)" : ""}
         </p>
+        {node.isSystem && (
+          <p className="mt-2 text-sm text-gray-700">
+            Filed automatically. Not Relevant is spam, abuse or off-topic input; Unclassified means the
+            AI was unavailable. Every submission is still kept.
+          </p>
+        )}
         <DetailsBody node={node} model={model} />
       </div>
     </aside>
