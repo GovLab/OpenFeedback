@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { CircleCheck, X } from 'lucide-react';
 import { CARD, ICON_BUTTON } from '@/components/ui/styles';
 
@@ -8,6 +9,14 @@ interface SuccessMessageProps {
 }
 
 export default function SuccessMessage({ onClose }: SuccessMessageProps) {
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
+  // The submit button is disabled once the form resets, so move focus here.
+  // Otherwise keyboard and screen reader users are left on the page body (WCAG 2.4.3)
+  useEffect(() => {
+    headingRef.current?.focus();
+  }, []);
+
   return (
     <div role="status" className={`${CARD} animate-fadeIn mt-6 border-l-4 border-l-[var(--text-success)] p-6`}>
       <div className="flex items-start gap-4">
@@ -15,7 +24,7 @@ export default function SuccessMessage({ onClose }: SuccessMessageProps) {
           <CircleCheck className="h-6 w-6" aria-hidden="true" />
         </div>
         <div className="flex-1">
-          <h2 className="mb-2 text-lg text-[#091F2F]">Thank you for your feedback!</h2>
+          <h2 ref={headingRef} tabIndex={-1} className="mb-2 text-lg text-[#091F2F]">Thank you for your feedback!</h2>
           <p className="mb-2 text-slate-700">
             Your feedback has been successfully received and will be reviewed by our team.
             We appreciate you taking the time to help us improve our services.
