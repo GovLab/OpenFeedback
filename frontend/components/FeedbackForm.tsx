@@ -354,7 +354,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
               className={`mt-3 max-h-[400px] min-h-[120px] w-full resize-y rounded-lg border-2 px-4 py-3 text-base leading-relaxed text-slate-900 transition-colors placeholder:text-slate-500 focus:border-[#1871bd] focus:outline-2 focus:outline-offset-0 focus:outline-[#1871bd] aria-[invalid=true]:border-[#b42318] ${
                 isActuallyAugmented
                   ? 'cursor-not-allowed border-slate-200 bg-slate-50'
-                  : 'border-slate-300 hover:border-slate-400'
+                  : 'border-slate-500 hover:border-slate-600'
               }`}
               placeholder={topic.formPlaceholder}
               disabled={isBusy || isActuallyAugmented}

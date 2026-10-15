@@ -107,7 +107,7 @@ export default function FileUploadForm({
             accept=".pdf,.txt,.docx"
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? "file-upload-error" : selectedFile ? "file-upload-selected" : undefined}
-            className="block w-full cursor-pointer rounded-lg border border-dashed border-slate-300 bg-slate-50 p-2 text-sm text-slate-700 transition-colors hover:border-[#1871bd] file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-[#1871bd] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#091F2F] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1871bd] disabled:cursor-not-allowed disabled:opacity-60"
+            className="block w-full cursor-pointer rounded-lg border border-dashed border-slate-500 bg-slate-50 p-2 text-sm text-slate-700 transition-colors hover:border-[#1871bd] file:mr-4 file:cursor-pointer file:rounded-md file:border-0 file:bg-[#1871bd] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#091F2F] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1871bd] disabled:cursor-not-allowed disabled:opacity-60"
             disabled={loading}
           />
 

@@ -33,7 +33,7 @@ export function ListEditor({ title, items, onAdd, onUpdate, onDelete }: ListEdit
               onChange={(e) => onUpdate(index, e.target.value)}
               placeholder={`${singular} name`}
               aria-label={`${singular} ${index + 1}`}
-              className={`${INLINE_INPUT} border-dashed border-slate-300`}
+              className={`${INLINE_INPUT} border-dashed border-slate-500`}
             />
             <button
               type="button"

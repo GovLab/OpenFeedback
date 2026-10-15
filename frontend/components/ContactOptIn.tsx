@@ -58,7 +58,7 @@ export default function ContactOptIn({
                 className={`flex min-w-[6.5rem] items-center justify-center gap-2 rounded-lg border-2 px-5 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                   selected
                     ? 'border-[#1871bd] bg-[#1871bd]/10 text-[#0f4c81]'
-                    : 'border-slate-300 bg-white text-slate-700 hover:border-[#1871bd] hover:bg-[#1871bd]/5'
+                    : 'border-slate-500 bg-white text-slate-700 hover:border-[#1871bd] hover:bg-[#1871bd]/5'
                 }`}
               >
                 <Icon className={`h-4 w-4 ${selected ? 'text-[#1871bd]' : 'text-slate-500'}`} strokeWidth={2.5} aria-hidden="true" />

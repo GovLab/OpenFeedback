@@ -39,7 +39,7 @@ export function CategoryEditor({
                   onChange={(e) => onRename(catIndex, e.target.value)}
                   placeholder="Category name"
                   aria-label={`Category ${catIndex + 1} name`}
-                  className={`${INLINE_INPUT} border-b-2 border-slate-300 font-semibold`}
+                  className={`${INLINE_INPUT} border-b-2 border-slate-500 font-semibold`}
                 />
                 <button
                   type="button"
@@ -62,7 +62,7 @@ export function CategoryEditor({
                         onChange={(e) => onUpdateSub(catIndex, subIndex, e.target.value)}
                         placeholder="Subcategory"
                         aria-label={`Subcategory ${subIndex + 1} of ${name}`}
-                        className={`${INLINE_INPUT} border-dashed border-slate-300`}
+                        className={`${INLINE_INPUT} border-dashed border-slate-500`}
                       />
                       <button
                         type="button"

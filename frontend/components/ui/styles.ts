@@ -8,9 +8,9 @@ export const EYEBROW =
   "font-montserrat text-xs font-semibold uppercase tracking-[0.08em] text-gray-600";
 
 export const INPUT =
-  "w-full rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 " +
+  "w-full rounded-lg border border-slate-500 bg-white px-3.5 py-2.5 text-sm text-slate-900 " +
   "placeholder:text-slate-500 transition-colors " +
-  "hover:border-slate-400 focus:border-[#1871bd] focus:outline-2 focus:outline-offset-0 focus:outline-[#1871bd] " +
+  "hover:border-slate-600 focus:border-[#1871bd] focus:outline-2 focus:outline-offset-0 focus:outline-[#1871bd] " +
   "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 " +
   "aria-[invalid=true]:border-[#b42318]";
 
@@ -25,7 +25,7 @@ const VARIANTS: Record<ButtonVariant, string> = {
   primary:
     "bg-[#1871bd] text-white shadow-sm hover:bg-[#091F2F] disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none",
   secondary:
-    "border border-slate-300 bg-white text-[#091F2F] hover:border-[#1871bd] hover:bg-[#1871bd]/5 disabled:opacity-50 disabled:hover:border-slate-300 disabled:hover:bg-white",
+    "border border-slate-500 bg-white text-[#091F2F] hover:border-[#1871bd] hover:bg-[#1871bd]/5 disabled:opacity-50 disabled:hover:border-slate-500 disabled:hover:bg-white",
   ghost: "text-[#1871bd] hover:bg-[#1871bd]/10 disabled:opacity-50",
   danger: "bg-[#b42318] text-white shadow-sm hover:bg-[#8f1c13] disabled:opacity-50",
   dangerGhost: "text-[#b42318] hover:bg-red-50 disabled:opacity-50",
