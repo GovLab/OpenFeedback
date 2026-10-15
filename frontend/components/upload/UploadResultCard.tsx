@@ -37,7 +37,7 @@ function CategoryList({ categoryMap, compact }: { categoryMap: Record<string, st
           <li key={category} className="space-y-2">
             {hasSubs ? (
               <button type="button" aria-expanded={isOpen} onClick={() => toggle(category)} className={`${chip} hover:bg-emerald-100`}>
-                <span className={`flex-1 ${compact ? "truncate" : ""}`}>{category}</span>
+                <span className="min-w-0 flex-1 break-words">{category}</span>
                 <span className="flex shrink-0 items-center gap-1 text-xs">
                   {subcategories.length}
                   <span className="sr-only"> subcategories</span>
