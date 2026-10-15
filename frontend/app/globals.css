@@ -24,6 +24,16 @@
   
   /* Additional Colors */
   --boston-green: #228B22;               /* Green for contact and positive indicators */
+
+  /* Text-safe shades (WCAG AA 4.5:1+ on white) for small text and icons */
+  --text-success: #1a7f37;
+  --text-danger: #b42318;
+  --text-warning: #9a5b00;
+  --text-muted: #4b5563;
+
+  /* Shared surface tokens, matching the feedback graph */
+  --surface-border: #e2e8f0;             /* slate-200 */
+  --focus-ring: var(--boston-optimistic-blue);
   
   /* Status Badge Colors */
   --status-new: #2563eb;                 /* Blue for New status */
@@ -42,12 +52,7 @@
   --sentiment-positive: #16a34a;         /* Green */
   --sentiment-neutral: #ca8a04;          /* Yellow */
   --sentiment-negative: #dc2626;         /* Red */
-  
-  --instruction-modal-bg: #ffffff;
-  --instruction-modal-border: var(--boston-optimistic-blue);
-  --instruction-modal-shadow: 0 20px 25px -5px rgba(9, 31, 47, 0.1), 0 10px 10px -5px rgba(9, 31, 47, 0.04);
-  --instruction-modal-border-radius: 0.75rem;
-  --instruction-modal-padding: 1.25rem;
+
 }
 
 @theme inline {
@@ -70,11 +75,10 @@
   --color-boston-gray-light: var(--boston-gray-light);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* The app is designed for light surfaces only. A dark OS theme used to flip
+   the body text to near-white on these light cards, so it stays light. */
+:root {
+  color-scheme: light;
 }
 
 body {
@@ -102,6 +106,18 @@ button {
 /* Lora for body text - polite, poetic, and warm */
 body, p, span, div, input, textarea, label, .font-lora {
   font-family: var(--font-lora), serif;
+}
+
+/* One visible focus ring for every control, keyboard only */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Montserrat for UI chrome (pills, labels) without the heading uppercase */
+.font-ui,
+.font-ui * {
+  font-family: var(--font-montserrat), sans-serif;
 }
 
 /* Lora italic for quotes or special secondary text */
@@ -149,15 +165,6 @@ body, p, span, div, input, textarea, label, .font-lora {
 
 .animate-fadeIn {
   animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* Instruction Modal Base Styles */
-.instruction-modal {
-  background-color: var(--instruction-modal-bg);
-  border: 2px solid var(--instruction-modal-border);
-  border-radius: var(--instruction-modal-border-radius);
-  padding: var(--instruction-modal-padding);
-  box-shadow: var(--instruction-modal-shadow);
 }
 
 @media (min-width: 768px) {
@@ -244,5 +251,17 @@ body, p, span, div, input, textarea, label, .font-lora {
   .og-graph .og-label,
   .og-camera-smooth {
     transition: none;
+  }
+}
+
+/* Everything else: honour reduced motion app-wide */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
