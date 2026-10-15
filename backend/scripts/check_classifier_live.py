@@ -8,7 +8,7 @@ import os
 import asyncio
 
 # Add the backend directory to the path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.system_config import system_config_manager
 from app.classifier import classify_feedback, clear_config_cache, _get_active_config

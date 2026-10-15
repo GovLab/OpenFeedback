@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import random
 
 # Add the backend directory to the path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.postgres_db import postgres_db
 import uuid
