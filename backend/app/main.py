@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse, IndividualResponse, ConversationInput, ConversationResponse, AugmentationInput, AugmentationResponse, ConfigResponse, ConfigUpdateRequest, ConfigUpdateResponse, ConfigHistoryResponse, ConfigVersion, SystemConfig, Category, StaffLoginInput, StaffLoginResponse
 from .classifier import classify_feedback, chatbot_agent, augment_feedback, determine_topic_context, detect_spam_or_invalid, clear_config_cache
-from .relevance import mark_not_relevant
+from .feedback_pipeline import process_submission, StorageError
 from .database import db
 from .postgres_db import postgres_db
 from .file_processor import FileProcessor
@@ -285,106 +285,15 @@ async def submit_feedback(feedback: FeedbackInput):
     Returns:
         ClassifiedFeedback object with categories and subcategories
     """
-    logger.info(f"Received feedback submission: {feedback.text[:100]}...")
-    
-    try:
-        # Classify the feedback using OpenAI
-        logger.debug("Starting feedback classification...")
-        classified = await classify_feedback(feedback.text)
-        logger.info(f"Classification completed. Categories: {list(classified.category_map.keys())}")
+    logger.info(f"Received feedback submission ({len(feedback.text)} chars)")
 
-        # Accept everything; tag spam, abusive or off-topic submissions instead of rejecting them
-        relevance = detect_spam_or_invalid(feedback.text)
-        if relevance.get("is_invalid", False):
-            classified = mark_not_relevant(classified, relevance)
-            logger.info(f"Tagged as not relevant: {classified.category_map}")
-        
-        # Use config_version from classification result (captured during classification)
-        config_version = classified.config_version
-        if config_version:
-            logger.debug(f"Classification used config version {config_version}")
-        else:
-            logger.debug("Classification used hardcoded defaults (no active config)")
-        
-        # Generate a single UUID for both databases
-        import uuid as uuid_module
-        shared_feedback_id = str(uuid_module.uuid4())
-        logger.info(f"Generated shared feedback ID: {shared_feedback_id}")
-        
-        # 1. Store FULL data in PostgreSQL (with AI-generated fields)
-        logger.debug("Storing feedback in PostgreSQL...")
-        
-        # Process contact information if provided
-        followup_opt_in = False
-        user_contact_info = None
-        if feedback.contact_info:
-            followup_opt_in = feedback.contact_info.get('opted_in', False)
-            if followup_opt_in:
-                # Store contact details in JSONB format (name is optional, others are required)
-                user_contact_info = {
-                    "name": feedback.contact_info.get('name', ''),
-                    "email": feedback.contact_info.get('email'),
-                    "phone": feedback.contact_info.get('phone')
-                }
-                # Only add name if it's provided and not empty
-                name = feedback.contact_info.get('name', '').strip()
-                if name:
-                    user_contact_info['name'] = name
-                    
-                logger.info("User opted in for follow-up contact")
-            else:
-                logger.info("User opted out of follow-up contact")
-        
-        postgres_data = {
-            "issue_description": feedback.text,
-            "permit_type": classified.permit_type,
-            "category": list(classified.category_map.keys())[0] if classified.category_map else None,
-            "subcategory": list(classified.category_map.values())[0][0] if classified.category_map and list(classified.category_map.values())[0] else None,
-            "ai_summary": classified.ai_summary,
-            "department_predicted": classified.department_predicted,
-            "sentiment_score": sentiment_to_score(classified.sentiment) if classified.sentiment else None,
-            "urgency_level": classified.urgency_level,
-            "impact_type": classified.impact_type,
-            "language": classified.language,
-            "status": "New",
-            "feedback_source": "OpenPermit",
-            "timestamp_processed": datetime.now(),
-            "followup_opt_in": followup_opt_in,
-            "user_contact_info": user_contact_info
-        }
-        
-        postgres_id = None
-        neo4j_id = None
-        
-        # Try to store in PostgreSQL, but don't fail if it doesn't work
-        try:
-            postgres_id = postgres_db.add_feedback(postgres_data, feedback_id=shared_feedback_id, config_version=config_version)
-            logger.info(f"Feedback stored in PostgreSQL. ID: {postgres_id}, Config version: {config_version}")
-        except Exception as e:
-            logger.error(f"Failed to store feedback in PostgreSQL: {str(e)}")
-            # Continue execution even if PostgreSQL fails
-        
-        # 2. Store graph relationships in Neo4j
-        logger.debug("Storing feedback relationships in Neo4j...")
-        try:
-            neo4j_id = db.add_feedback(classified, feedback_id=shared_feedback_id)
-            logger.info(f"Feedback relationships stored in Neo4j. ID: {neo4j_id}")
-            if postgres_id:
-                logger.info(f"Verified: Both databases using same ID: {postgres_id == neo4j_id}")
-        except Exception as e:
-            logger.error(f"Failed to store feedback in Neo4j: {str(e)}")
-            # Continue execution even if Neo4j fails
-        
-        # If both database operations failed, raise an error
-        if postgres_id is None and neo4j_id is None:
-            raise Exception("Failed to store feedback in both databases")
-        
-        return classified
-        
-    except Exception as e:
-        logger.error(f"Error processing feedback submission: {str(e)}")
-        logger.debug(f"Exception type: {type(e).__name__}")
-        raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
+    try:
+        return await process_submission(feedback.text, feedback.contact_info)
+    except StorageError as e:
+        logger.error(f"Submission {e.feedback_id} could not be stored")
+    except Exception:
+        logger.exception("Error processing feedback submission")
+    raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
 
 @app.post("/api/upload-feedback", response_model=FileUploadResponse, dependencies=[Depends(require_staff)])
 async def upload_feedback_file(file: UploadFile = File(...), store_in_database: bool = True):

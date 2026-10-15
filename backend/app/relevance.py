@@ -8,6 +8,11 @@ from .models import ClassifiedFeedback
 
 NOT_RELEVANT_CATEGORY = "Not Relevant"
 
+# Filed here when classification is unavailable, so the submission is still stored
+UNCLASSIFIED_CATEGORY = "Unclassified"
+UNCLASSIFIED_SUBCATEGORY = "Classification unavailable"
+UNCLASSIFIED_SUMMARY = "Classification unavailable"
+
 # Subcategory per kind returned by the relevance check (prompts.build_spam_detection_prompt)
 NOT_RELEVANT_KINDS = {
     "off_topic": "Off-topic",
@@ -38,3 +43,20 @@ def mark_not_relevant(classified: ClassifiedFeedback, check: dict) -> Classified
         "impact_type": [],
         "ai_summary": summary,
     })
+
+
+def fallback_classification(text: str, config_version: int | None = None) -> ClassifiedFeedback:
+    """Classification used when the AI step fails: the text is kept, nothing is guessed."""
+    return ClassifiedFeedback(
+        text=text,
+        category_map={UNCLASSIFIED_CATEGORY: [UNCLASSIFIED_SUBCATEGORY]},
+        sentiment="Neutral",
+        priority="Low",
+        permit_type=None,
+        ai_summary=UNCLASSIFIED_SUMMARY,
+        department_predicted="Unassigned",
+        urgency_level="Low",
+        impact_type=[],
+        language=None,
+        config_version=config_version,
+    )
