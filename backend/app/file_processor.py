@@ -5,23 +5,12 @@ from fastapi import UploadFile, HTTPException
 from pypdf import PdfReader
 import docx
 from openai import OpenAI
+from pydantic import ValidationError
+from .ai_schemas import SegmentList, describe_validation_error, strip_code_fence
 from .config import settings
 from .prompts import prompt_builder
-import json
-import re
 
 logger = logging.getLogger(__name__)
-
-_OPENING_FENCE = re.compile(r"^```[\w-]*\s*")
-_CLOSING_FENCE = re.compile(r"\s*```$")
-
-
-def strip_code_fence(text: str) -> str:
-    """Remove a Markdown code fence (```json ... ```) the model may wrap its JSON in."""
-    stripped = text.strip()
-    stripped = _OPENING_FENCE.sub("", stripped)
-    return _CLOSING_FENCE.sub("", stripped).strip()
-
 
 client = OpenAI(api_key=settings.openai_api_key)
 
@@ -156,29 +145,23 @@ class FileProcessor:
                 logger.error("Empty response from AI segmentation")
                 return [text]
             
-            # Parse the JSON response
+            # Parse the JSON response; anything but a list of strings keeps the whole text
             try:
-                feedback_segments = json.loads(strip_code_fence(response_text))
-                if not isinstance(feedback_segments, list):
-                    logger.warning("AI response was not a list, treating as single feedback")
-                    return [text]
-                
-                # Filter out empty or very short segments
-                valid_segments = [segment.strip() for segment in feedback_segments 
-                                if segment.strip() and len(segment.strip()) > 10]
-                
-                if not valid_segments:
-                    logger.warning("No valid segments found, returning original text")
-                    return [text]
-                
-                logger.info(f"===================================\nSuccessfully segmented text into {len(valid_segments)} feedback items\n===================================")
-                return valid_segments
-                
-            except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse AI segmentation response as JSON: {e}")
-                logger.error(f"Raw response (first 500 chars): '{response_text[:500]}'")
-                logger.error(f"Response starts with: '{response_text[:50] if response_text else 'None'}'")
-                return [text]  # Fallback to original text
+                feedback_segments = SegmentList.model_validate_json(strip_code_fence(response_text)).root
+            except ValidationError as e:
+                logger.error(f"AI segmentation reply failed validation, keeping whole text: {describe_validation_error(e)}")
+                return [text]
+
+            # Filter out empty or very short segments
+            valid_segments = [segment.strip() for segment in feedback_segments
+                            if segment.strip() and len(segment.strip()) > 10]
+
+            if not valid_segments:
+                logger.warning("No valid segments found, returning original text")
+                return [text]
+
+            logger.info(f"===================================\nSuccessfully segmented text into {len(valid_segments)} feedback items\n===================================")
+            return valid_segments
                 
         except Exception as e:
             logger.error(f"Error in AI text segmentation: {str(e)}")

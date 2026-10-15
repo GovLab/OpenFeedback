@@ -1,4 +1,5 @@
 from openai import OpenAI
+from pydantic import ValidationError
 from .config import settings
 from .models import ClassifiedFeedback
 from .relevance import fallback_classification
@@ -6,7 +7,14 @@ from .prompts import prompt_builder
 from .context_loader import load_context
 from .config import topic
 from .system_config import system_config_manager
-import json
+from .ai_schemas import (
+    ClassificationReply,
+    FollowupVerdict,
+    RelevanceReply,
+    TopicContextArguments,
+    describe_validation_error,
+    strip_code_fence,
+)
 import logging
 from typing import List, Optional, Dict, Any, Tuple
 
@@ -61,6 +69,12 @@ def clear_config_cache():
     logger.info("Configuration cache cleared")
 
 
+def _json_object_span(content: str) -> str:
+    """The outermost {...} in a reply, with any Markdown code fence removed first."""
+    text = strip_code_fence(content)
+    return text[text.find("{"):text.rfind("}") + 1]
+
+
 async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
     """
     Classify feedback using OpenAI API with dynamic configuration.
@@ -98,42 +112,13 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
         )
         
         logger.debug(f"Received response from OpenAI")
-        
+
         # Extract the response content
         content = response.choices[0].message.content.strip()
         logger.debug(f"Raw response content: {content}")
-        
-        # Parse JSON response
-        try:
-            # Attempt to extract JSON object from the response
-            start = content.find('{')
-            end = content.rfind('}') + 1
-            json_str = content[start:end]
-            classification = json.loads(json_str)
-        except Exception as e:
-            logger.error(f"Failed to extract JSON from response: {content[:200]}... Error: {str(e)}")
-            raise
-        category_map = classification.get("category_map", {})
-        logger.info(f"Successfully classified feedback. Categories: {list(category_map.keys())}")
-        logger.debug(f"Full classification result: {classification}")
-        
-        return ClassifiedFeedback(
-            text=feedback_text,
-            category_map=category_map,
-            sentiment=classification.get("sentiment", "Neutral"),
-            priority=classification.get("priority", "Medium"),
-            permit_type=classification.get("permit_type"),
-            ai_summary=classification.get("ai_summary"),
-            department_predicted=classification.get("department_predicted"),
-            urgency_level=classification.get("urgency_level", "Medium"),
-            impact_type=classification.get("impact_type", []),
-            language=classification.get("language", "en"),
-            config_version=config_version
-        )
-    
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON parsing failed for content: {content[:200]}... Error: {str(e)}")
-        logger.warning("Falling back to default classification due to JSON parsing error")
+        reply = ClassificationReply.model_validate_json(_json_object_span(content))
+    except ValidationError as e:
+        logger.error(f"Classification reply failed validation, storing as Unclassified: {describe_validation_error(e)}")
         # Get config version even for fallback (may be None if no active config)
         _, config_version = _get_active_config()
         return fallback_classification(feedback_text, config_version)
@@ -141,6 +126,10 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
         logger.error(f"Error classifying feedback: {str(e)}")
         logger.debug(f"Exception details: {type(e).__name__}: {str(e)}")
         raise Exception(f"Error classifying feedback: {str(e)}")
+
+    logger.info(f"Successfully classified feedback. Categories: {list(reply.category_map.keys())}")
+    logger.debug(f"Full classification result: {reply}")
+    return ClassifiedFeedback(text=feedback_text, config_version=config_version, **reply.model_dump())
 
 def determine_topic_context(feedback_text: str, category_map: dict = None) -> str:
     """
@@ -223,8 +212,8 @@ def determine_topic_context(feedback_text: str, category_map: dict = None) -> st
         # Extract the category from tool call
         if response.choices[0].message.tool_calls:
             tool_call = response.choices[0].message.tool_calls[0]
-            category = json.loads(tool_call.function.arguments)["category"]
-            
+            category = TopicContextArguments.model_validate_json(tool_call.function.arguments).category
+
             logger.info(f"✓ AI selected category: '{category}'")
             logger.info(f"📄 Loading {topic.key} context from file...")
             
@@ -239,7 +228,11 @@ def determine_topic_context(feedback_text: str, category_map: dict = None) -> st
             logger.warning("⚠️ No tool call returned, using empty context")
             logger.info("=" * 60)
             return ""
-            
+
+    except ValidationError as e:
+        logger.error(f"❌ Topic context tool call failed validation, using empty context: {describe_validation_error(e)}")
+        logger.info("=" * 60)
+        return ""
     except Exception as e:
         logger.error(f"❌ Error determining topic context: {str(e)}")
         logger.info("=" * 60)
@@ -284,22 +277,19 @@ def detect_spam_or_invalid(feedback_text: str) -> dict:
             max_tokens=80
         )
         
-        result = json.loads(response.choices[0].message.content)
-        is_invalid = bool(result.get("is_invalid", False))
-        reason = result.get("reason", "")
-        kind = result.get("kind", "")
-        
-        logger.info(f"Spam detection result: is_invalid={is_invalid}")
-        if is_invalid:
-            logger.info(f"Reason: {reason}")
+        reply = RelevanceReply.model_validate_json(strip_code_fence(response.choices[0].message.content))
+
+        logger.info(f"Spam detection result: is_invalid={reply.is_invalid}")
+        if reply.is_invalid:
+            logger.info(f"Reason: {reply.reason}")
         logger.info("=" * 60)
-        
-        return {
-            "is_invalid": is_invalid,
-            "kind": kind,
-            "reason": reason
-        }
-        
+
+        return reply.model_dump()
+
+    except ValidationError as e:
+        # Fail open like any other error here: the submission is kept as relevant
+        logger.error(f"Spam detection reply failed validation, treating as relevant: {describe_validation_error(e)}")
+        return {"is_invalid": False}
     except Exception as e:
         logger.error(f"Error in spam detection: {str(e)}")
         # On error, default to not invalid (be lenient)
@@ -373,12 +363,14 @@ def chatbot_agent(original_feedback: str, conversation_history: List, topic_cont
         response_format={"type": "json_object"}
     )
     
-    result = json.loads(response.choices[0].message.content)
-    
-    # Ensure proper types
-    result["needs_followup"] = bool(result.get("needs_followup", True))
-    result["quality_score"] = int(result.get("quality_score", 5))
-    
+    try:
+        verdict = FollowupVerdict.model_validate_json(strip_code_fence(response.choices[0].message.content))
+    except ValidationError as e:
+        # Not swallowed: the endpoint turns this into its friendly error response
+        logger.error(f"Chatbot reply failed validation: {describe_validation_error(e)}")
+        raise
+    result = verdict.model_dump()
+
     logger.info(f"✓ AI Response received:")
     logger.info(f"   - Quality score: {result['quality_score']}/10")
     logger.info(f"   - Needs followup: {result['needs_followup']}")
