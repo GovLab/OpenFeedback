@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CircleAlert, LoaderCircle, LockKeyhole } from "lucide-react";
 import { loginStaff } from "@/lib/http";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/Button";
 import { CARD, INPUT } from "@/components/ui/styles";
@@ -12,6 +13,7 @@ interface StaffLoginProps {
 }
 
 export default function StaffLogin({ onLoggedIn }: StaffLoginProps) {
+  useDocumentTitle("Staff sign in");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

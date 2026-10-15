@@ -6,8 +6,10 @@ import SuccessMessage from "@/components/SuccessMessage";
 import Navigation from "@/components/Navigation";
 import PrivacyNotice from "@/components/PrivacyNotice";
 import { topic } from "@/lib/topic";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 
 export default function Home() {
+  useDocumentTitle("Share feedback");
   const [showSuccess, setShowSuccess] = useState(false);
 
   // The message stays until the person closes it, so slower readers and

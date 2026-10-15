@@ -17,6 +17,7 @@ import { StateMessage } from "@/components/ui/StateMessage";
 import { Tabs, tabPanelProps } from "@/components/ui/Tabs";
 import { api, GraphData, Stats } from "@/lib/api";
 import { getStaffToken, STAFF_LOGOUT_EVENT } from "@/lib/http";
+import { useDocumentTitle } from "@/lib/useDocumentTitle";
 
 type TabType = "dashboard" | "config";
 
@@ -43,6 +44,7 @@ export default function GovtPage() {
 
 function GovtDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
+  useDocumentTitle(activeTab === "config" ? "System configuration" : "Dashboard");
   const [graphData, setGraphData] = useState<GraphData>({
     nodes: [],
     relationships: [],
