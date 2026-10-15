@@ -3,7 +3,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { api, ClassifiedFeedback, ConversationMessage } from '@/lib/api';
 import { topic } from '@/lib/topic';
+import { CircleAlert, CircleCheck, Info, LoaderCircle, Sparkles } from 'lucide-react';
 import ChatbotSidebar from './ChatbotSidebar';
+import ContactOptIn, { ContactErrorField } from './ContactOptIn';
+import { buttonClass, CARD } from '@/components/ui/styles';
+
+type ErrorField = 'feedback' | ContactErrorField;
 
 interface FeedbackFormProps {
   onFeedbackSubmitted: () => void;
@@ -15,6 +20,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ClassifiedFeedback | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorField, setErrorField] = useState<ErrorField>(null);
   
   // Chatbot state
   const [showChatbot, setShowChatbot] = useState(false);
@@ -27,6 +33,8 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [prefetchedAugmentation, setPrefetchedAugmentation] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const submitRef = useRef<HTMLButtonElement>(null);
+  const wasChatOpen = useRef(false);
 
   // Contact opt-in state
   const [contactOptIn, setContactOptIn] = useState<'yes' | 'no' | null>(null);
@@ -49,15 +57,23 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
     }
   }, [feedback, isActuallyAugmented]);
 
+  // When the assistant closes, put keyboard focus back on the form
+  useEffect(() => {
+    if (wasChatOpen.current && !showChatbot) submitRef.current?.focus({ preventScroll: true });
+    wasChatOpen.current = showChatbot;
+  }, [showChatbot]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!feedback.trim()) {
+      setErrorField('feedback');
       setError('Please enter your message');
       return;
     }
 
     if (contactOptIn === null) {
+      setErrorField('choice');
       setError('Please select whether you would like to be contacted');
       return;
     }
@@ -65,10 +81,12 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
     // Validate required contact fields if user opted in
     if (contactOptIn === 'yes') {
       if (!contactInfo.name.trim()) {
+        setErrorField('name');
         setError('Please provide your name');
         return;
       }
       if (!contactInfo.email.trim() && !contactInfo.phone.trim()) {
+        setErrorField('method');
         setError('Please provide at least one contact method (email or phone number)');
         return;
       }
@@ -76,6 +94,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
 
     setLoading(true);
     setError(null);
+    setErrorField(null);
     setResult(null);
 
     try {
@@ -281,55 +300,44 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
     }
   };
 
+  const isBusy = loading || showChatbot;
+  const canSubmit = !isBusy && contactOptIn !== null;
+  const errorId = 'feedback-form-error';
+
   return (
-    <div className="flex flex-col md:flex-row gap-6 w-full min-w-[280px]">
+    <div className="flex w-full min-w-[280px] flex-col gap-6 lg:flex-row lg:items-start">
       {/* Main Feedback Form */}
-      <div className={`flex-1 rounded-xl shadow-lg border p-6 sm:p-8 transition-opacity duration-300 min-w-[280px] ${showChatbot ? 'opacity-60 pointer-events-none' : 'opacity-100'}`} style={{ 
-        backgroundColor: 'rgba(255, 255, 255, 0.95)',
-        borderColor: 'var(--boston-blue-desaturated)',
-        borderWidth: '1px',
-        boxShadow: '0 4px 6px -1px rgba(24, 113, 189, 0.1), 0 2px 4px -1px rgba(24, 113, 189, 0.06)'
-      }}>
-        <div className="mb-2">
-          <label htmlFor="feedback" className="block text-lg font-semibold text-slate-900">
-            {topic.formQuestion}
-          </label>
-        </div>
-        {/* Suggestion prompts */}
-        {showSuggestions && !isActuallyAugmented && (
-          <div className="mb-2 space-y-1">
-            <p className="text-xs italic mb-1.5" style={{ color: 'var(--boston-gray-dark)', opacity: 0.8 }}>
-              Need help? Try answering:
-            </p>
-            <div className="space-y-0.5 pl-1">
-              {suggestionPrompts.map((prompt, index) => (
-                <p
-                  key={index}
-                  className="text-xs italic leading-relaxed"
-                  style={{ color: 'var(--boston-gray-dark)', opacity: 0.8 }}
-                >
-                  • {prompt}
-                </p>
-              ))}
-            </div>
-          </div>
-        )}
-        <form onSubmit={handleSubmit} className="space-y-5">
+      <div
+        className={`${CARD} min-w-[280px] flex-1 p-6 shadow-md transition-opacity duration-300 sm:p-8 ${
+          showChatbot ? 'pointer-events-none opacity-60' : 'opacity-100'
+        }`}
+        inert={showChatbot || undefined}
+      >
+        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
           <div>
-            {isActuallyAugmented && (
-              <div className="mb-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium" style={{ 
-                backgroundColor: 'rgba(24, 113, 189, 0.12)', 
-                borderColor: 'var(--boston-optimistic-blue)',
-                borderWidth: '1px',
-                color: 'var(--boston-optimistic-blue)'
-              }}>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Enhanced with details
+            <label htmlFor="feedback" className="block text-lg font-semibold text-slate-900">
+              {topic.formQuestion}
+            </label>
+
+            {/* Suggestion prompts */}
+            {showSuggestions && !isActuallyAugmented && (
+              <div id="feedback-prompts" className="mt-2">
+                <p className="text-sm italic text-slate-600">Need help? Try answering:</p>
+                <ul className="mt-1 list-disc space-y-0.5 pl-5 text-sm italic leading-relaxed text-slate-600 marker:text-slate-400">
+                  {suggestionPrompts.map((prompt, index) => (
+                    <li key={index}>{prompt}</li>
+                  ))}
+                </ul>
               </div>
             )}
-            
+
+            {isActuallyAugmented && (
+              <p className="font-ui mt-3 inline-flex items-center gap-1.5 rounded-full border border-[#1871bd]/30 bg-[#1871bd]/10 px-3 py-1 text-sm font-semibold text-[#0f4c81]">
+                <Sparkles className="h-4 w-4 text-[#1871bd]" aria-hidden="true" />
+                Enhanced with details
+              </p>
+            )}
+
             <textarea
               maxLength={5000}
               ref={textareaRef}
@@ -337,208 +345,80 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
               value={feedback}
               onChange={(e) => !isActuallyAugmented && setFeedback(e.target.value)}
               onFocus={() => setShowSuggestions(!isActuallyAugmented)}
-              className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-[#007A33] focus:border-[#007A33] text-slate-900 resize-y placeholder:text-slate-400 text-base leading-relaxed max-h-[400px] ${
-                isActuallyAugmented 
-                  ? 'border-slate-200 bg-slate-50 cursor-not-allowed' 
-                  : 'border-slate-300 min-h-[120px]'
+              aria-describedby={
+                [errorField === 'feedback' ? errorId : '', isActuallyAugmented ? 'feedback-enhanced-note' : showSuggestions ? 'feedback-prompts' : '']
+                  .filter(Boolean)
+                  .join(' ') || undefined
+              }
+              aria-invalid={errorField === 'feedback' || undefined}
+              className={`mt-3 max-h-[400px] min-h-[120px] w-full resize-y rounded-lg border-2 px-4 py-3 text-base leading-relaxed text-slate-900 transition-colors placeholder:text-slate-500 focus:border-[#1871bd] focus:outline-2 focus:outline-offset-0 focus:outline-[#1871bd] aria-[invalid=true]:border-[#b42318] ${
+                isActuallyAugmented
+                  ? 'cursor-not-allowed border-slate-200 bg-slate-50'
+                  : 'border-slate-300 hover:border-slate-400'
               }`}
-              style={isActuallyAugmented ? { minHeight: '120px' } : undefined}
               placeholder={topic.formPlaceholder}
-              disabled={loading || showChatbot || isActuallyAugmented}
+              disabled={isBusy || isActuallyAugmented}
             />
-            
+
             {isActuallyAugmented && (
-              <div className="mt-3 flex items-start gap-2 text-sm" style={{ color: 'var(--boston-gray-dark)' }}>
-                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--boston-optimistic-blue)' }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>We've enhanced your feedback with details to guide us in helping you! Review and submit when ready!</span>
-              </div>
-            )}
-            
-          
-          </div>
-
-          {/* Contact Opt-in Section */}
-          <div className="border-t pt-5" style={{ borderColor: 'var(--boston-blue-desaturated)' }}>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <p className="text-sm font-medium text-slate-900">
-                Can we contact you with questions about your feedback?
-                <span className="text-red-500 ml-1">*</span>
+              <p id="feedback-enhanced-note" className="mt-3 flex items-start gap-2 text-sm text-slate-700">
+                <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#1871bd]" aria-hidden="true" />
+                We&apos;ve enhanced your feedback with details to guide us in helping you! Review and submit when ready!
               </p>
-              
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setContactOptIn(contactOptIn === 'yes' ? null : 'yes')}
-                  disabled={loading || showChatbot}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200 border-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    contactOptIn === 'yes'
-                      ? 'shadow-md'
-                      : 'bg-white border-slate-300 text-slate-700'
-                  }`}
-                  onMouseEnter={(e) => {
-                    if (contactOptIn !== 'yes' && !e.currentTarget.disabled) {
-                      e.currentTarget.style.borderColor = 'var(--boston-optimistic-blue)';
-                      e.currentTarget.style.backgroundColor = 'rgba(24, 113, 189, 0.1)';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (contactOptIn !== 'yes') {
-                      e.currentTarget.style.borderColor = '';
-                      e.currentTarget.style.backgroundColor = '';
-                    }
-                  }}
-                  style={contactOptIn === 'yes' ? { backgroundColor: 'rgba(24, 113, 189, 0.1)', borderColor: 'var(--boston-optimistic-blue)', color: 'var(--boston-optimistic-blue)' } : {}}
-                >
-                  <svg className={`w-5 h-5 ${contactOptIn === 'yes' ? '' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" style={contactOptIn === 'yes' ? { color: 'var(--boston-optimistic-blue)' } : {}}>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Yes
-                </button>
-                
-                <button
-                  type="button"
-                  onClick={() => setContactOptIn(contactOptIn === 'no' ? null : 'no')}
-                  disabled={loading || showChatbot}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-sm transition-all duration-200 border-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                    contactOptIn === 'no'
-                      ? 'bg-red-50 border-red-500 text-red-700 shadow-md'
-                      : 'bg-white border-slate-300 text-slate-700 hover:border-red-400 hover:bg-red-50'
-                  }`}
-                >
-                  <svg className={`w-5 h-5 ${contactOptIn === 'no' ? 'text-red-600' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  No
-                </button>
-              </div>
-            </div>
-
-            {/* Conditional Contact Fields */}
-            {contactOptIn === 'yes' && (
-              <div className="space-y-5 p-5 mt-2">
-                <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: 'var(--boston-optimistic-blue)' }}>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-sm text-slate-600">
-                    Please provide your name and at least one contact method (email or phone).
-                  </p>
-                </div>
-                
-                <div className="rounded-lg p-3" style={{
-                  backgroundColor: 'rgba(24, 113, 189, 0.08)',
-                  borderColor: 'var(--boston-blue-desaturated)',
-                  borderWidth: '1px'
-                }}>
-                  <p className="text-sm" style={{ color: 'var(--boston-charles-blue)' }}>
-                    We respect your privacy. We will only use your contact information to respond to your feedback.
-                  </p>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="group sm:col-span-2">
-                    <label htmlFor="contactName" className="block text-sm font-medium text-slate-700 mb-2">
-                      Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      id="contactName"
-                      value={contactInfo.name}
-                      onChange={(e) => setContactInfo({ ...contactInfo, name: e.target.value })}
-                      disabled={loading || showChatbot}
-                      placeholder="Your name"
-                      required
-                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm text-slate-900 transition-all duration-200 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed placeholder:text-slate-400"
-                    />
-                  </div>
-
-                  <div className="group">
-                    <label htmlFor="contactEmail" className="block text-sm font-medium text-slate-700 mb-2">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      id="contactEmail"
-                      value={contactInfo.email}
-                      onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })}
-                      disabled={loading || showChatbot}
-                      placeholder="your.email@example.com"
-                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm text-slate-900 transition-all duration-200 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed placeholder:text-slate-400"
-                    />
-                  </div>
-
-                  <div className="group">
-                    <label htmlFor="contactPhone" className="block text-sm font-medium text-slate-700 mb-2">
-                      Phone Number
-                    </label>
-                    <input
-                      type="tel"
-                      id="contactPhone"
-                      value={contactInfo.phone}
-                      onChange={(e) => setContactInfo({ ...contactInfo, phone: e.target.value })}
-                      disabled={loading || showChatbot}
-                      placeholder="(555) 123-4567"
-                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-sm text-slate-900 transition-all duration-200 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed placeholder:text-slate-400"
-                    />
-                  </div>
-                </div>
-              </div>
             )}
           </div>
+
+          <ContactOptIn
+            choice={contactOptIn}
+            onChoiceChange={(choice) => {
+              setContactOptIn(choice);
+              if (errorField === 'choice') setError(null);
+            }}
+            details={contactInfo}
+            onDetailsChange={setContactInfo}
+            disabled={isBusy}
+            errorField={errorField === 'feedback' ? null : errorField}
+            errorId={errorId}
+          />
+
+          {error && (
+            <div
+              id={errorId}
+              role="alert"
+              className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-[var(--text-danger)]"
+            >
+              <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>{error}</span>
+            </div>
+          )}
 
           <button
+            ref={submitRef}
             type="submit"
-            disabled={loading || showChatbot || contactOptIn === null}
-            className={`w-full py-3.5 px-6 rounded-lg font-semibold text-base transition-all duration-200 shadow-sm hover:shadow-md disabled:cursor-not-allowed`}
-            style={{ 
-              backgroundColor: (loading || showChatbot || contactOptIn === null) 
-                ? 'var(--boston-gray-medium-dark)' 
-                : 'var(--boston-optimistic-blue)',
-              color: 'white',
-              opacity: (loading || showChatbot || contactOptIn === null) ? 0.6 : 1
-            } as React.CSSProperties}
-            onMouseEnter={(e) => {
-              if (!loading && !showChatbot && contactOptIn !== null) {
-                e.currentTarget.style.backgroundColor = 'var(--boston-charles-blue)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!loading && !showChatbot && contactOptIn !== null) {
-                e.currentTarget.style.backgroundColor = 'var(--boston-optimistic-blue)';
-              }
-            }}
+            disabled={!canSubmit}
+            aria-describedby={contactOptIn === null && !isBusy ? 'submit-hint' : undefined}
+            className={buttonClass('primary', 'lg', 'w-full')}
           >
             {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+              <>
+                <LoaderCircle className="h-5 w-5 motion-safe:animate-spin" aria-hidden="true" />
                 Submitting...
-              </span>
+              </>
             ) : isActuallyAugmented ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+              <>
+                <CircleCheck className="h-5 w-5" aria-hidden="true" />
                 Submit Enhanced Response
-              </span>
-            ) : 'Submit'}
+              </>
+            ) : (
+              'Submit'
+            )}
           </button>
+          {contactOptIn === null && !isBusy && (
+            <p id="submit-hint" className="-mt-2 text-center text-sm text-slate-600">
+              Answer the contact question above to submit.
+            </p>
+          )}
         </form>
-
-        {error && (
-          <div className="mt-5 p-4 bg-red-50 border-l-4 border-red-500 text-red-800 rounded-r-lg">
-            <div className="flex items-start gap-3">
-              <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-sm font-medium">{error}</span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Chatbot Sidebar */}

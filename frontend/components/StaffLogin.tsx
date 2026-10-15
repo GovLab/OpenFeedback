@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { CircleAlert, LoaderCircle, LockKeyhole } from "lucide-react";
 import { loginStaff } from "@/lib/http";
 import Navigation from "@/components/Navigation";
+import { Button } from "@/components/ui/Button";
+import { CARD, INPUT } from "@/components/ui/styles";
 
 interface StaffLoginProps {
   onLoggedIn: () => void;
@@ -35,42 +38,47 @@ export default function StaffLogin({ onLoggedIn }: StaffLoginProps) {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "var(--boston-gray-light)" }}>
-      <form onSubmit={handleSubmit} className="w-full max-w-sm bg-white rounded-xl shadow-lg p-8">
-        <h1 className="text-2xl font-semibold mb-1" style={{ color: "var(--boston-charles-blue)" }}>
-          Staff Dashboard
-        </h1>
-        <p className="text-sm text-slate-600 mb-6">Enter the staff password to view feedback analytics.</p>
+    <div className="flex min-h-screen items-center justify-center bg-[var(--boston-gray-light)] px-4">
+      <main className="w-full max-w-sm">
+        <form onSubmit={handleSubmit} className={`${CARD} p-8`} noValidate>
+          <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-[#1871bd]/10 text-[#1871bd]">
+            <LockKeyhole className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <h1 className="mb-1 text-2xl text-[#091F2F]">Staff Dashboard</h1>
+          <p className="mb-6 text-sm text-slate-600">Enter the staff password to view feedback analytics.</p>
 
-        <label htmlFor="staff-password" className="block text-sm font-medium mb-2" style={{ color: "var(--boston-gray-dark)" }}>
-          Password
-        </label>
-        <input
-          id="staff-password"
-          type="password"
-          autoComplete="current-password"
-          autoFocus
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-lg border px-3 py-2 mb-4 focus:outline-none focus:ring-2"
-          style={{ borderColor: "var(--boston-gray-medium-dark)" }}
-        />
+          <label htmlFor="staff-password" className="mb-2 block text-sm font-medium text-slate-800">
+            Password
+          </label>
+          <input
+            id="staff-password"
+            type="password"
+            autoComplete="current-password"
+            autoFocus
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? "staff-password-error" : undefined}
+            className={`${INPUT} mb-4`}
+          />
 
-        {error && (
-          <p role="alert" className="text-sm mb-4" style={{ color: "var(--boston-freedom-trail-red)" }}>
-            {error}
-          </p>
-        )}
+          {error && (
+            <p
+              id="staff-password-error"
+              role="alert"
+              className="mb-4 flex items-start gap-2 text-sm text-[var(--text-danger)]"
+            >
+              <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              {error}
+            </p>
+          )}
 
-        <button
-          type="submit"
-          disabled={submitting || !password}
-          className="w-full rounded-lg py-2 font-medium text-white transition-opacity disabled:opacity-50"
-          style={{ backgroundColor: "var(--boston-optimistic-blue)" }}
-        >
-          {submitting ? "Signing in…" : "Sign in"}
-        </button>
-      </form>
+          <Button type="submit" disabled={submitting || !password} className="w-full" size="md">
+            {submitting && <LoaderCircle className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />}
+            {submitting ? "Signing in…" : "Sign in"}
+          </Button>
+        </form>
+      </main>
       <Navigation />
     </div>
   );

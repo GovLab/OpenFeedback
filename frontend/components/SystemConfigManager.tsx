@@ -1,10 +1,34 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Bell, Building2, CircleAlert, CircleCheck, FolderTree, History, ListChecks, LoaderCircle, X, Zap } from "lucide-react";
 import { configApi, SystemConfig, Category, ConfigVersion, ConfigHistoryResponse } from "@/lib/config-api";
 import { topic } from "@/lib/topic";
+import { CategoryEditor } from "@/components/config/CategoryEditor";
+import { ListEditor } from "@/components/config/ListEditor";
+import { SaveDialog } from "@/components/config/SaveDialog";
+import { VersionHistoryDialog } from "@/components/config/VersionHistoryDialog";
+import { Badge } from "@/components/ui/Badge";
+import { StateMessage } from "@/components/ui/StateMessage";
+import { TabItem, Tabs, tabPanelProps } from "@/components/ui/Tabs";
+import { buttonClass, CARD, ICON_BUTTON } from "@/components/ui/styles";
 
 type ConfigTab = "categories" | "permit_types" | "departments" | "impact_types" | "urgency_levels";
+type ListKey = Exclude<ConfigTab, "categories">;
+
+interface Notice {
+  tone: "success" | "error";
+  text: string;
+}
+
+const ICON = "h-4 w-4";
+const TABS: TabItem<ConfigTab>[] = [
+  { id: "categories", label: "Categories & Subcategories", icon: <FolderTree className={ICON} aria-hidden="true" /> },
+  { id: "permit_types", label: topic.itemLabelPlural, icon: <ListChecks className={ICON} aria-hidden="true" /> },
+  { id: "departments", label: "Departments", icon: <Building2 className={ICON} aria-hidden="true" /> },
+  { id: "impact_types", label: "Impact Types", icon: <Zap className={ICON} aria-hidden="true" /> },
+  { id: "urgency_levels", label: "Urgency Levels", icon: <Bell className={ICON} aria-hidden="true" /> },
+];
 
 export default function SystemConfigManager() {
   const [config, setConfig] = useState<SystemConfig | null>(null);
@@ -18,6 +42,7 @@ export default function SystemConfigManager() {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showVersionModal, setShowVersionModal] = useState(false);
   const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
+  const [notice, setNotice] = useState<Notice | null>(null);
 
   // Editing states
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
@@ -67,12 +92,12 @@ export default function SystemConfigManager() {
       setHasChanges(false);
       setChangeNotes("");
       setShowSaveModal(false);
-      alert(`Configuration saved successfully! New version: ${result.version}`);
+      setNotice({ tone: "success", text: `Configuration saved successfully! New version: ${result.version}` });
       await loadConfig(); // Reload to get updated version
       await loadVersionHistory(); // Reload version history
     } catch (error) {
       console.error("Failed to save config:", error);
-      alert("Failed to save configuration. Please try again.");
+      setNotice({ tone: "error", text: "Failed to save configuration. Please try again." });
     } finally {
       setSaving(false);
     }
@@ -85,13 +110,13 @@ export default function SystemConfigManager() {
     
     try {
       await configApi.activateVersion(version);
-      alert(`Version ${version} activated successfully!`);
+      setNotice({ tone: "success", text: `Version ${version} activated successfully!` });
       await loadConfig();
       await loadVersionHistory();
       setShowVersionModal(false);
     } catch (error: any) {
       console.error("Failed to activate version:", error);
-      alert(error.response?.data?.detail || "Failed to activate version. Please try again.");
+      setNotice({ tone: "error", text: error.response?.data?.detail || "Failed to activate version. Please try again." });
     }
   };
 
@@ -102,12 +127,12 @@ export default function SystemConfigManager() {
     
     try {
       await configApi.deleteVersion(version);
-      alert(`Version ${version} deleted successfully!`);
+      setNotice({ tone: "success", text: `Version ${version} deleted successfully!` });
       await loadVersionHistory();
       setShowVersionModal(false);
     } catch (error: any) {
       console.error("Failed to delete version:", error);
-      alert(error.response?.data?.detail || "Failed to delete version. Make sure it's not the active version.");
+      setNotice({ tone: "error", text: error.response?.data?.detail || "Failed to delete version. Make sure it's not the active version." });
     }
   };
 
@@ -120,7 +145,7 @@ export default function SystemConfigManager() {
       setShowVersionModal(false);
     } catch (error) {
       console.error("Failed to load version:", error);
-      alert("Failed to load version. Please try again.");
+      setNotice({ tone: "error", text: "Failed to load version. Please try again." });
     }
   };
 
@@ -158,25 +183,28 @@ export default function SystemConfigManager() {
 
   const addSubcategory = (categoryIndex: number) => {
     if (!config) return;
-    const updated = [...config.categories];
-    updated[categoryIndex].subcategories.push("");
+    const target = config.categories[categoryIndex];
+    const subcategories = [...target.subcategories, ""];
+    const updated = config.categories.map((c, i) => (i === categoryIndex ? { ...c, subcategories } : c));
     setConfig({ ...config, categories: updated });
     setHasChanges(true);
-    setEditingSubcategory({ category: updated[categoryIndex].name, index: updated[categoryIndex].subcategories.length - 1 });
+    setEditingSubcategory({ category: target.name, index: subcategories.length - 1 });
   };
 
   const updateSubcategory = (categoryIndex: number, subcatIndex: number, value: string) => {
     if (!config) return;
-    const updated = [...config.categories];
-    updated[categoryIndex].subcategories[subcatIndex] = value;
+    const updated = config.categories.map((c, i) =>
+      i === categoryIndex ? { ...c, subcategories: c.subcategories.map((s, j) => (j === subcatIndex ? value : s)) } : c
+    );
     setConfig({ ...config, categories: updated });
     setHasChanges(true);
   };
 
   const deleteSubcategory = (categoryIndex: number, subcatIndex: number) => {
     if (!config) return;
-    const updated = [...config.categories];
-    updated[categoryIndex].subcategories = updated[categoryIndex].subcategories.filter((_, i) => i !== subcatIndex);
+    const updated = config.categories.map((c, i) =>
+      i === categoryIndex ? { ...c, subcategories: c.subcategories.filter((_, j) => j !== subcatIndex) } : c
+    );
     setConfig({ ...config, categories: updated });
     setHasChanges(true);
   };
@@ -184,9 +212,7 @@ export default function SystemConfigManager() {
   // Generic list management (for permit_types, departments, etc.)
   const addListItem = (type: ConfigTab) => {
     if (!config) return;
-    const key = type === "permit_types" ? "permit_types" :
-                type === "departments" ? "departments" :
-                type === "impact_types" ? "impact_types" : "urgency_levels";
+    const key = type as ListKey;
     setConfig({ ...config, [key]: [...config[key], ""] });
     setHasChanges(true);
     setEditingItem({ type, index: config[key].length });
@@ -194,9 +220,7 @@ export default function SystemConfigManager() {
 
   const updateListItem = (type: ConfigTab, index: number, value: string) => {
     if (!config) return;
-    const key = type === "permit_types" ? "permit_types" :
-                type === "departments" ? "departments" :
-                type === "impact_types" ? "impact_types" : "urgency_levels";
+    const key = type as ListKey;
     const updated = [...config[key]];
     updated[index] = value;
     setConfig({ ...config, [key]: updated });
@@ -205,9 +229,7 @@ export default function SystemConfigManager() {
 
   const deleteListItem = (type: ConfigTab, index: number) => {
     if (!config) return;
-    const key = type === "permit_types" ? "permit_types" :
-                type === "departments" ? "departments" :
-                type === "impact_types" ? "impact_types" : "urgency_levels";
+    const key = type as ListKey;
     if (!confirm(`Are you sure you want to delete "${config[key][index]}"?`)) return;
     const updated = config[key].filter((_, i) => i !== index);
     setConfig({ ...config, [key]: updated });
@@ -215,599 +237,158 @@ export default function SystemConfigManager() {
   };
 
   if (loading) {
-    return (
-      <div className="bg-white rounded-lg shadow-md p-12 text-center border" style={{ borderColor: 'var(--boston-gray-medium)' }}>
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 mb-4" style={{ borderColor: 'var(--boston-optimistic-blue)' }}></div>
-        <p className="font-medium" style={{ color: 'var(--boston-gray-dark)' }}>Loading configuration...</p>
-      </div>
-    );
+    return <StateMessage kind="loading" title="Loading configuration..." />;
   }
 
   if (!config) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6 border" style={{ borderColor: 'var(--boston-gray-medium)' }}>
-        <p style={{ color: 'var(--boston-freedom-trail-red)' }}>Failed to load configuration.</p>
-      </div>
+      <StateMessage
+        kind="error"
+        title="Failed to load configuration."
+        action={<button type="button" onClick={loadConfig} className={buttonClass("secondary", "sm")}>Try again</button>}
+      />
     );
   }
 
-  const tabs = [
-    { id: "categories" as ConfigTab, label: "Categories & Subcategories", icon: "📁" },
-    { id: "permit_types" as ConfigTab, label: topic.itemLabelPlural, icon: "📋" },
-    { id: "departments" as ConfigTab, label: "Departments", icon: "🏢" },
-    { id: "impact_types" as ConfigTab, label: "Impact Types", icon: "⚡" },
-    { id: "urgency_levels" as ConfigTab, label: "Urgency Levels", icon: "🔔" },
-  ];
+  const lists: Record<ListKey, string> = {
+    permit_types: topic.itemLabelPlural,
+    departments: "Departments",
+    impact_types: "Impact Types",
+    urgency_levels: "Urgency Levels",
+  };
 
   return (
-    <div className="bg-white rounded-lg shadow-md border" style={{ borderColor: 'var(--boston-gray-medium)' }}>
+    <div className={CARD}>
       {/* Header */}
-      <div className="border-b px-6 py-4" style={{ borderColor: 'var(--boston-gray-medium)' }}>
-        <div className="flex items-center justify-between mb-3">
+      <div className="border-b border-slate-200 px-6 py-5">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold" style={{ color: 'var(--boston-charles-blue)' }}>System Configuration</h2>
-            <p className="text-sm mt-1" style={{ color: 'var(--boston-gray-dark)' }}>Manage categories, permit types, and other system settings</p>
+            <h2 className="text-xl text-[#091F2F]">System Configuration</h2>
+            <p className="mt-1 text-sm text-slate-600">Manage categories, permit types, and other system settings</p>
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+              <span className="flex items-center gap-2 text-slate-600">
+                Current Version:
+                <Badge tone="green" dot>v{currentVersion ?? "N/A"}</Badge>
+              </span>
+              {selectedVersion && selectedVersion !== currentVersion && (
+                <span className="flex items-center gap-2 text-slate-600">
+                  Viewing:
+                  <span className="font-ui inline-flex items-center gap-1 rounded-full border border-[#1871bd]/40 bg-white py-0.5 pr-1 pl-2.5 text-xs font-semibold text-[#0f4c81]">
+                    v{selectedVersion}
+                    <button
+                      type="button"
+                      onClick={handleStopViewingVersion}
+                      className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-[#1871bd]/10"
+                      aria-label="Stop viewing this version"
+                      title="Stop viewing this version"
+                    >
+                      <X className="h-3 w-3" aria-hidden="true" />
+                    </button>
+                  </span>
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {hasChanges && (
-              <span className="text-sm font-medium" style={{ color: 'var(--urgency-medium)' }}>Unsaved changes</span>
+              <span role="status" className="font-ui inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" />
+                Unsaved changes
+              </span>
             )}
-            <button
-              onClick={() => setShowVersionModal(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors border"
-              style={{ 
-                borderColor: 'var(--boston-gray-medium-dark)',
-                color: 'var(--boston-gray-dark)',
-                backgroundColor: 'white'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'var(--boston-gray-light)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'white';
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M8 2V14M2 8H14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
+            <button type="button" onClick={() => setShowVersionModal(true)} className={buttonClass("secondary")}>
+              <History className="h-4 w-4" aria-hidden="true" />
               Versions
             </button>
             <button
+              type="button"
               onClick={() => setShowSaveModal(true)}
               disabled={!hasChanges || saving}
-              className="px-4 py-2 rounded-lg font-medium transition-colors"
-              style={
-                hasChanges && !saving
-                  ? { backgroundColor: 'var(--boston-optimistic-blue)', color: 'white' }
-                  : { backgroundColor: 'var(--boston-gray-medium)', color: 'var(--boston-gray-dark)', cursor: 'not-allowed' }
-              }
-              onMouseEnter={(e) => {
-                if (hasChanges && !saving) {
-                  e.currentTarget.style.backgroundColor = 'var(--boston-charles-blue)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (hasChanges && !saving) {
-                  e.currentTarget.style.backgroundColor = 'var(--boston-optimistic-blue)';
-                }
-              }}
+              className={buttonClass("primary")}
             >
+              {saving && <LoaderCircle className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />}
               {saving ? "Saving..." : "Save Changes"}
             </button>
           </div>
         </div>
-        {/* Version Info */}
-        <div className="flex items-center gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <span style={{ color: 'var(--boston-gray-dark)' }}>Current Version:</span>
-            <span className="font-semibold px-2 py-0.5 rounded" style={{ 
-              backgroundColor: 'var(--boston-green)', 
-              color: 'white' 
-            }}>
-              v{currentVersion ?? 'N/A'}
-            </span>
+
+        {notice && (
+          <div
+            role={notice.tone === "error" ? "alert" : "status"}
+            className={`mt-4 flex items-start gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium ${
+              notice.tone === "error"
+                ? "border-red-200 bg-red-50 text-[var(--text-danger)]"
+                : "border-green-200 bg-green-50 text-[var(--text-success)]"
+            }`}
+          >
+            {notice.tone === "error" ? (
+              <CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            ) : (
+              <CircleCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            )}
+            <span className="flex-1">{notice.text}</span>
+            <button type="button" onClick={() => setNotice(null)} className={`${ICON_BUTTON} -my-1 h-6 w-6`} aria-label="Dismiss message">
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
           </div>
-          {selectedVersion && selectedVersion !== currentVersion && (
-            <div className="flex items-center gap-2">
-              <span style={{ color: 'var(--boston-gray-dark)' }}>Viewing:</span>
-              <span className="font-semibold px-2 py-0.5 rounded border flex items-center gap-1.5" style={{ 
-                borderColor: 'var(--boston-optimistic-blue)', 
-                color: 'var(--boston-optimistic-blue)',
-                backgroundColor: 'white'
-              }}>
-                v{selectedVersion}
-                <button
-                  onClick={handleStopViewingVersion}
-                  className="p-0.5 rounded transition-colors hover:bg-blue-50"
-                  style={{ color: 'var(--boston-optimistic-blue)' }}
-                  title="Stop viewing this version"
-                >
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M3 3L9 9M9 3L3 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                  </svg>
-                </button>
-              </span>
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Tabs */}
-      <div className="border-b px-6" style={{ borderColor: 'var(--boston-gray-medium)' }}>
-        <div className="flex gap-1 overflow-x-auto">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className="px-4 py-3 font-medium text-sm transition-colors border-b-2"
-              style={
-                activeTab === tab.id
-                  ? { borderColor: 'var(--boston-optimistic-blue)', color: 'var(--boston-optimistic-blue)' }
-                  : { borderColor: 'transparent', color: 'var(--boston-gray-dark)' }
-              }
-              onMouseEnter={(e) => {
-                if (activeTab !== tab.id) {
-                  e.currentTarget.style.color = 'var(--boston-charles-blue)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (activeTab !== tab.id) {
-                  e.currentTarget.style.color = 'var(--boston-gray-dark)';
-                }
-              }}
-            >
-              <span className="mr-2">{tab.icon}</span>
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <Tabs
+        tabs={TABS}
+        active={activeTab}
+        onChange={setActiveTab}
+        idPrefix="config"
+        label="Configuration lists"
+        className="border-b border-slate-200 px-6"
+      />
 
       {/* Content */}
-      <div className="p-6">
-        {activeTab === "categories" && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold" style={{ color: 'var(--boston-charles-blue)' }}>Categories & Subcategories</h3>
-              <button
-                onClick={addCategory}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all hover:scale-105"
-                style={{ 
-                  backgroundColor: 'var(--boston-green)',
-                  color: 'white'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#1e7e1e';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--boston-green)';
-                }}
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-                Add Category
-              </button>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {config.categories.map((category, catIndex) => (
-                <div key={catIndex} className="border rounded-lg p-3 transition-all hover:shadow-sm" style={{ borderColor: 'var(--boston-gray-medium)', backgroundColor: 'white' }}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: 'var(--boston-optimistic-blue)', flexShrink: 0 }}>
-                      <path d="M3 4.5H15M3 9H15M3 13.5H15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                    </svg>
-                    <input
-                      type="text"
-                      value={category.name}
-                      onChange={(e) => updateCategory(catIndex, "name", e.target.value)}
-                      placeholder="Category name"
-                      className="flex-1 px-2 py-1.5 text-sm border-0 border-b-2 rounded-none focus:outline-none transition-colors"
-                      style={{ 
-                        borderColor: 'var(--boston-gray-medium-dark)',
-                        color: 'var(--boston-gray-dark)',
-                        backgroundColor: 'transparent'
-                      }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--boston-optimistic-blue)';
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--boston-gray-medium-dark)';
-                      }}
-                    />
-                    <button
-                      onClick={() => deleteCategory(catIndex)}
-                      className="p-1.5 rounded transition-colors hover:bg-red-50"
-                      style={{ color: 'var(--boston-freedom-trail-red)' }}
-                      title="Delete category"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="ml-7">
-                    <div className="grid grid-cols-1 gap-1.5 mb-2">
-                      {category.subcategories.map((subcat, subIndex) => (
-                        <div key={subIndex} className="flex items-center gap-2 group">
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: 'var(--boston-gray-medium-dark)', flexShrink: 0 }}>
-                            <circle cx="6" cy="6" r="2" fill="currentColor"/>
-                          </svg>
-                          <input
-                            type="text"
-                            value={subcat}
-                            onChange={(e) => updateSubcategory(catIndex, subIndex, e.target.value)}
-                            placeholder="Subcategory"
-                            className="flex-1 px-2 py-1 text-sm border-0 border-b border-dashed rounded-none focus:outline-none transition-colors"
-                            style={{ 
-                              borderColor: 'var(--boston-gray-medium)',
-                              color: 'var(--boston-gray-dark)',
-                              backgroundColor: 'transparent'
-                            }}
-                            onFocus={(e) => {
-                              e.currentTarget.style.borderColor = 'var(--boston-optimistic-blue)';
-                              e.currentTarget.style.borderStyle = 'solid';
-                            }}
-                            onBlur={(e) => {
-                              e.currentTarget.style.borderColor = 'var(--boston-gray-medium)';
-                              e.currentTarget.style.borderStyle = 'dashed';
-                            }}
-                          />
-                          <button
-                            onClick={() => deleteSubcategory(catIndex, subIndex)}
-                            className="opacity-0 group-hover:opacity-100 p-1 rounded transition-all hover:bg-red-50"
-                            style={{ color: 'var(--boston-freedom-trail-red)' }}
-                            title="Remove subcategory"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M3.5 3.5L10.5 10.5M10.5 3.5L3.5 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                            </svg>
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                    <button
-                      onClick={() => addSubcategory(catIndex)}
-                      className="ml-4 flex items-center gap-1.5 px-2 py-1 text-xs rounded transition-colors hover:bg-blue-50"
-                      style={{ color: 'var(--boston-optimistic-blue)' }}
-                    >
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M6 3V9M3 6H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                      </svg>
-                      Add subcategory
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === "permit_types" && (
-          <ListSection
-            title={topic.itemLabelPlural}
-            items={config.permit_types}
-            onAdd={() => addListItem("permit_types")}
-            onUpdate={(index, value) => updateListItem("permit_types", index, value)}
-            onDelete={(index) => deleteListItem("permit_types", index)}
+      <div {...tabPanelProps("config", activeTab)} className="p-6 focus:outline-none">
+        {activeTab === "categories" ? (
+          <CategoryEditor
+            categories={config.categories}
+            onAdd={addCategory}
+            onRename={(index, name) => updateCategory(index, "name", name)}
+            onDelete={deleteCategory}
+            onAddSub={addSubcategory}
+            onUpdateSub={updateSubcategory}
+            onDeleteSub={deleteSubcategory}
           />
-        )}
-
-        {activeTab === "departments" && (
-          <ListSection
-            title="Departments"
-            items={config.departments}
-            onAdd={() => addListItem("departments")}
-            onUpdate={(index, value) => updateListItem("departments", index, value)}
-            onDelete={(index) => deleteListItem("departments", index)}
-          />
-        )}
-
-        {activeTab === "impact_types" && (
-          <ListSection
-            title="Impact Types"
-            items={config.impact_types}
-            onAdd={() => addListItem("impact_types")}
-            onUpdate={(index, value) => updateListItem("impact_types", index, value)}
-            onDelete={(index) => deleteListItem("impact_types", index)}
-          />
-        )}
-
-        {activeTab === "urgency_levels" && (
-          <ListSection
-            title="Urgency Levels"
-            items={config.urgency_levels}
-            onAdd={() => addListItem("urgency_levels")}
-            onUpdate={(index, value) => updateListItem("urgency_levels", index, value)}
-            onDelete={(index) => deleteListItem("urgency_levels", index)}
+        ) : (
+          <ListEditor
+            title={lists[activeTab]}
+            items={config[activeTab]}
+            onAdd={() => addListItem(activeTab)}
+            onUpdate={(index, value) => updateListItem(activeTab, index, value)}
+            onDelete={(index) => deleteListItem(activeTab, index)}
           />
         )}
       </div>
 
-      {/* Save Modal */}
       {showSaveModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-lg">
-            <h3 className="text-xl font-bold mb-4" style={{ color: 'var(--boston-charles-blue)' }}>Save Configuration Changes</h3>
-            <p className="mb-4" style={{ color: 'var(--boston-gray-dark)' }}>
-              This will create a new version of the configuration. Please add notes about what changed:
-            </p>
-            <textarea
-              value={changeNotes}
-              onChange={(e) => setChangeNotes(e.target.value)}
-              placeholder={`E.g., Added new category for technology issues, updated ${topic.itemLabelPlural.toLowerCase()}...`}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 mb-4"
-              style={{ 
-                borderColor: 'var(--boston-gray-medium-dark)',
-                color: 'var(--boston-gray-dark)',
-                backgroundColor: 'white'
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'var(--boston-optimistic-blue)';
-                e.currentTarget.style.boxShadow = '0 0 0 2px rgba(24, 113, 189, 0.2)';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--boston-gray-medium-dark)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-              rows={4}
-            />
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => {
-                  setShowSaveModal(false);
-                  setChangeNotes("");
-                }}
-                className="px-4 py-2 border rounded-lg transition-colors"
-                style={{ 
-                  borderColor: 'var(--boston-gray-medium-dark)',
-                  color: 'var(--boston-gray-dark)',
-                  backgroundColor: 'white'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = 'var(--boston-gray-light)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'white';
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50"
-                style={{ backgroundColor: 'var(--boston-optimistic-blue)' }}
-                onMouseEnter={(e) => {
-                  if (!saving) {
-                    e.currentTarget.style.backgroundColor = 'var(--boston-charles-blue)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!saving) {
-                    e.currentTarget.style.backgroundColor = 'var(--boston-optimistic-blue)';
-                  }
-                }}
-              >
-                {saving ? "Saving..." : "Save"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <SaveDialog
+          notes={changeNotes}
+          onNotesChange={setChangeNotes}
+          saving={saving}
+          onSave={handleSave}
+          onCancel={() => {
+            setShowSaveModal(false);
+            setChangeNotes("");
+          }}
+        />
       )}
 
-      {/* Version Management Modal */}
       {showVersionModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 shadow-lg max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold" style={{ color: 'var(--boston-charles-blue)' }}>Version History</h3>
-              <button
-                onClick={() => setShowVersionModal(false)}
-                className="p-1 rounded transition-colors hover:bg-gray-100"
-                style={{ color: 'var(--boston-gray-dark)' }}
-              >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M5 5L15 15M15 5L5 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              </button>
-            </div>
-            
-            <div className="space-y-3">
-              {versionHistory.length === 0 ? (
-                <p style={{ color: 'var(--boston-gray-dark)' }}>No version history available.</p>
-              ) : (
-                versionHistory.map((version) => (
-                  <div
-                    key={version.version}
-                    className="border rounded-lg p-4 transition-all hover:shadow-md"
-                    style={{ 
-                      borderColor: version.is_active ? 'var(--boston-green)' : 'var(--boston-gray-medium)',
-                      backgroundColor: version.is_active ? 'rgba(34, 139, 34, 0.05)' : 'white'
-                    }}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="font-bold text-lg" style={{ color: 'var(--boston-charles-blue)' }}>
-                            Version {version.version}
-                          </span>
-                          {version.is_active && (
-                            <span className="px-2 py-0.5 text-xs font-semibold rounded" style={{ 
-                              backgroundColor: 'var(--boston-green)', 
-                              color: 'white' 
-                            }}>
-                              ACTIVE
-                            </span>
-                          )}
-                        </div>
-                        {version.created_at && (
-                          <p className="text-sm mb-1" style={{ color: 'var(--boston-gray-dark)' }}>
-                            Created: {new Date(version.created_at).toLocaleString()}
-                          </p>
-                        )}
-                        {version.created_by && (
-                          <p className="text-sm mb-1" style={{ color: 'var(--boston-gray-dark)' }}>
-                            By: {version.created_by}
-                          </p>
-                        )}
-                        {version.change_notes && (
-                          <p className="text-sm mt-2 p-2 rounded" style={{ 
-                            backgroundColor: 'var(--boston-gray-light)',
-                            color: 'var(--boston-gray-dark)'
-                          }}>
-                            {version.change_notes}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex flex-col gap-2 ml-4">
-                        {!version.is_active && (
-                          <>
-                            <button
-                              onClick={() => handleLoadVersion(version.version)}
-                              className="px-3 py-1.5 text-sm rounded transition-colors border"
-                              style={{ 
-                                borderColor: 'var(--boston-optimistic-blue)',
-                                color: 'var(--boston-optimistic-blue)',
-                                backgroundColor: 'white'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = 'var(--boston-optimistic-blue)';
-                                e.currentTarget.style.color = 'white';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'white';
-                                e.currentTarget.style.color = 'var(--boston-optimistic-blue)';
-                              }}
-                            >
-                              Load
-                            </button>
-                            <button
-                              onClick={() => handleActivateVersion(version.version)}
-                              className="px-3 py-1.5 text-sm rounded transition-colors"
-                              style={{ 
-                                backgroundColor: 'var(--boston-green)',
-                                color: 'white'
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#1e7e1e';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = 'var(--boston-green)';
-                              }}
-                            >
-                              Activate
-                            </button>
-                          </>
-                        )}
-                        {!version.is_active && (
-                          <button
-                            onClick={() => handleDeleteVersion(version.version)}
-                            className="px-3 py-1.5 text-sm rounded transition-colors"
-                            style={{ 
-                              backgroundColor: 'var(--boston-freedom-trail-red)',
-                              color: 'white'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = '#c41e3a';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = 'var(--boston-freedom-trail-red)';
-                            }}
-                          >
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
+        <VersionHistoryDialog
+          versions={versionHistory}
+          onClose={() => setShowVersionModal(false)}
+          onLoad={handleLoadVersion}
+          onActivate={handleActivateVersion}
+          onDelete={handleDeleteVersion}
+        />
       )}
     </div>
   );
 }
-
-// Helper component for list sections
-function ListSection({
-  title,
-  items,
-  onAdd,
-  onUpdate,
-  onDelete,
-}: {
-  title: string;
-  items: string[];
-  onAdd: () => void;
-  onUpdate: (index: number, value: string) => void;
-  onDelete: (index: number) => void;
-}) {
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold" style={{ color: 'var(--boston-charles-blue)' }}>{title}</h3>
-        <button
-          onClick={onAdd}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium transition-all hover:scale-105"
-          style={{ 
-            backgroundColor: 'var(--boston-green)',
-            color: 'white'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#1e7e1e';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--boston-green)';
-          }}
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M8 3V13M3 8H13" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-          Add {title.slice(0, -1)}
-        </button>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {items.map((item, index) => (
-          <div key={index} className="flex items-center gap-2 group border-b border-dashed pb-1.5 transition-all hover:border-solid" style={{ borderColor: 'var(--boston-gray-medium)' }}>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: 'var(--boston-gray-medium-dark)', flexShrink: 0 }}>
-              <circle cx="7" cy="7" r="2" fill="currentColor"/>
-            </svg>
-            <input
-              type="text"
-              value={item}
-              onChange={(e) => onUpdate(index, e.target.value)}
-              placeholder={`${title.slice(0, -1)} name`}
-              className="flex-1 px-2 py-1 text-sm border-0 border-b border-dashed rounded-none focus:outline-none transition-colors"
-              style={{ 
-                borderColor: 'var(--boston-gray-medium)',
-                color: 'var(--boston-gray-dark)',
-                backgroundColor: 'transparent'
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'var(--boston-optimistic-blue)';
-                e.currentTarget.style.borderStyle = 'solid';
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'var(--boston-gray-medium)';
-                e.currentTarget.style.borderStyle = 'dashed';
-              }}
-            />
-            <button
-              onClick={() => onDelete(index)}
-              className="opacity-0 group-hover:opacity-100 p-1.5 rounded transition-all hover:bg-red-50"
-              style={{ color: 'var(--boston-freedom-trail-red)' }}
-              title={`Delete ${title.slice(0, -1).toLowerCase()}`}
-            >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3.5 3.5L10.5 10.5M10.5 3.5L3.5 10.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-

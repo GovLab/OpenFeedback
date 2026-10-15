@@ -1,55 +1,35 @@
 'use client';
 
+import { CircleCheck, X } from 'lucide-react';
+import { CARD, ICON_BUTTON } from '@/components/ui/styles';
+
 interface SuccessMessageProps {
   onClose?: () => void;
 }
 
 export default function SuccessMessage({ onClose }: SuccessMessageProps) {
   return (
-    <div className="mt-6 p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl shadow-lg">
+    <div role="status" className={`${CARD} animate-fadeIn mt-6 border-l-4 border-l-[var(--text-success)] p-6`}>
       <div className="flex items-start gap-4">
-        <div className="flex-shrink-0">
-          <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-            <svg 
-              className="w-7 h-7 text-white" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2.5} 
-                d="M5 13l4 4L19 7" 
-              />
-            </svg>
-          </div>
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-50 text-[var(--text-success)]">
+          <CircleCheck className="h-6 w-6" aria-hidden="true" />
         </div>
         <div className="flex-1">
-          <h3 className="text-xl font-bold text-green-900 mb-2">
-            Thank you for your feedback!
-          </h3>
-          <p className="text-green-800 mb-3">
-            Your feedback has been successfully received and will be reviewed by our team. 
+          <h2 className="mb-2 text-lg text-[#091F2F]">Thank you for your feedback!</h2>
+          <p className="mb-2 text-slate-700">
+            Your feedback has been successfully received and will be reviewed by our team.
             We appreciate you taking the time to help us improve our services.
           </p>
-          <p className="text-sm text-green-700">
+          <p className="text-sm text-slate-600">
             Your input helps us better understand and address community needs.
           </p>
         </div>
         {onClose && (
-          <button
-            onClick={onClose}
-            className="flex-shrink-0 text-green-600 hover:text-green-800 transition-colors"
-            aria-label="Close message"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+          <button type="button" onClick={onClose} className={`${ICON_BUTTON} -mt-1 -mr-2`} aria-label="Close message">
+            <X className="h-5 w-5" aria-hidden="true" />
           </button>
         )}
       </div>
     </div>
   );
 }
-

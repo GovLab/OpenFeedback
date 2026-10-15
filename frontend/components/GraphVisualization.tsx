@@ -150,9 +150,9 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
   const isEmptyView = model.byId.size === 0;
 
   return (
-    <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50 rounded-xl shadow-sm p-4 md:p-8">
+    <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50 rounded-xl border border-slate-200 shadow-sm p-4 md:p-8">
       <div className="mb-3 md:mb-4">
-        <h2 className="text-xl md:text-2xl lg:text-3xl font-bold text-slate-900 mb-1 md:mb-2">Feedback Graph</h2>
+        <h3 className="text-base md:text-lg text-slate-900 mb-1">Feedback Graph</h3>
         <p className="text-slate-600 text-xs md:text-sm">
           Circular visualization with Categories (outer), Subcategories (middle), and Feedback (center)
         </p>
