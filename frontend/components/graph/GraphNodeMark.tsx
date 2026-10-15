@@ -23,7 +23,7 @@ interface GraphNodeMarkProps {
   onHover: (id: string | null) => void;
 }
 
-const MIN_HIT_RADIUS = 11; // Bigger click target for small feedback dots
+const MIN_HIT_RADIUS = 12; // 24 px diameter hit area for small feedback dots (WCAG 2.5.8)
 
 function CountBadge({ count, r, isCategory }: { count: number; r: number; isCategory: boolean }) {
   const fontSize = isCategory ? 12 : 11;
