@@ -4,6 +4,7 @@ import { useState } from "react";
 import FeedbackForm from "@/components/FeedbackForm";
 import SuccessMessage from "@/components/SuccessMessage";
 import Navigation from "@/components/Navigation";
+import PrivacyNotice from "@/components/PrivacyNotice";
 import { topic } from "@/lib/topic";
 
 export default function Home() {
@@ -38,6 +39,8 @@ export default function Home() {
 
         {/* Success Message */}
         {showSuccess && <SuccessMessage onClose={() => setShowSuccess(false)} />}
+
+        <PrivacyNotice />
 
       </main>
 
