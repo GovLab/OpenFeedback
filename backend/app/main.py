@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse, IndividualResponse, ConversationInput, ConversationResponse, AugmentationInput, AugmentationResponse, ConfigResponse, ConfigUpdateRequest, ConfigUpdateResponse, ConfigHistoryResponse, ConfigVersion, SystemConfig, Category, StaffLoginInput, StaffLoginResponse
 from .classifier import classify_feedback, chatbot_agent, augment_feedback, determine_topic_context, detect_spam_or_invalid, clear_config_cache
+from .relevance import mark_not_relevant
 from .database import db
 from .postgres_db import postgres_db
 from .file_processor import FileProcessor
@@ -197,10 +198,13 @@ async def feedback_agent(conversation: ConversationInput):
             logger.info("📍 FIRST TURN: Checking for spam/invalid content")
             spam_check = detect_spam_or_invalid(conversation.original_feedback)
             
+            # Every submission must be accepted, so an irrelevant one is not
+            # rejected: skip the follow-up questions and let the form submit it.
+            # submit_feedback re-checks and files it under Not Relevant.
             if spam_check.get("is_invalid", False):
-                logger.info("⚠️ Feedback detected as spam/invalid - returning early")
+                logger.info("⚠️ Feedback looks not relevant - no follow-up, will be tagged on submit")
                 return {
-                    "message": topic.rejection_message,
+                    "message": "",
                     "needs_followup": False,
                     "quality_score": 0,
                     "is_invalid": True
@@ -288,6 +292,12 @@ async def submit_feedback(feedback: FeedbackInput):
         logger.debug("Starting feedback classification...")
         classified = await classify_feedback(feedback.text)
         logger.info(f"Classification completed. Categories: {list(classified.category_map.keys())}")
+
+        # Accept everything; tag spam, abusive or off-topic submissions instead of rejecting them
+        relevance = detect_spam_or_invalid(feedback.text)
+        if relevance.get("is_invalid", False):
+            classified = mark_not_relevant(classified, relevance)
+            logger.info(f"Tagged as not relevant: {classified.category_map}")
         
         # Use config_version from classification result (captured during classification)
         config_version = classified.config_version

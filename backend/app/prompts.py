@@ -258,6 +258,7 @@ Feedback to analyze:
 Return ONLY a valid JSON object:
 {{
     "is_invalid": true/false,
+    "kind": "off_topic" | "spam" | "abusive" | "unclear" (only if is_invalid is true),
     "reason": "Brief explanation (only if is_invalid is true)"
 }}
 

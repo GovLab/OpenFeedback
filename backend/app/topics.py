@@ -25,7 +25,6 @@ class Topic:
     quality_scoring: str
     valid_topics: str            # spam filter: what counts as on-topic
     invalid_examples: str
-    rejection_message: str       # shown when feedback is off-topic
     context_categories: Dict[str, str] = field(default_factory=dict)
 
     @property
@@ -74,7 +73,6 @@ PERMITS = Topic(
 - Promotional/spam: "Buy now!", "Click here for deals"
 - Trolling: "This system is stupid and you're all idiots" (without any permit context)
 - Personal rants unrelated to permits: "My neighbor is annoying\"""",
-    rejection_message="We can only accept feedback about Boston permits and licenses.",
     context_categories={
         "general_info": "contacts/portals",
         "home_renovations": "kitchen/bathroom/residential",
@@ -128,7 +126,6 @@ PARKS = Topic(
 - Promotional/spam: "Buy now!", "Click here for deals"
 - Trolling: "You're all idiots" (without any park context)
 - Personal disputes unrelated to parks: "My neighbor is annoying\"""",
-    rejection_message="We can only accept feedback about Boston parks and playgrounds.",
     context_categories={
         "general_info": "who runs parks, how to report issues, contacts",
         "playgrounds": "play equipment, splash pads, safety surfacing, ages",

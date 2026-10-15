@@ -106,14 +106,9 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
           conversation_history: []
         });
         
-        // Check if feedback is spam/invalid
-        if (agentData.is_invalid) {
-          setError(topic.rejectionMessage);
-          setLoading(false);
-          return;
-        }
-        
-        if (agentData.needs_followup) {
+        // Every submission is accepted. One that looks off-topic or spammy
+        // skips the follow-up questions and is tagged Not Relevant on the server.
+        if (agentData.needs_followup && !agentData.is_invalid) {
           // Low quality - show chatbot sidebar with agent's first question
           setOriginalFeedback(feedback);
           setConversationHistory([{

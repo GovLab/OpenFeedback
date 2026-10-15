@@ -291,12 +291,13 @@ def detect_spam_or_invalid(feedback_text: str) -> dict:
                 }
             ],
             response_format={"type": "json_object"},
-            max_tokens=50
+            max_tokens=80
         )
         
         result = json.loads(response.choices[0].message.content)
         is_invalid = bool(result.get("is_invalid", False))
         reason = result.get("reason", "")
+        kind = result.get("kind", "")
         
         logger.info(f"Spam detection result: is_invalid={is_invalid}")
         if is_invalid:
@@ -305,6 +306,7 @@ def detect_spam_or_invalid(feedback_text: str) -> dict:
         
         return {
             "is_invalid": is_invalid,
+            "kind": kind,
             "reason": reason
         }
         

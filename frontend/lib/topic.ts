@@ -10,7 +10,6 @@ export interface TopicCopy {
   dashboardTitle: string;
   itemLabel: string;
   itemLabelPlural: string;
-  rejectionMessage: string;
 }
 
 const TOPICS: Record<string, TopicCopy> = {
@@ -27,7 +26,6 @@ const TOPICS: Record<string, TopicCopy> = {
     dashboardTitle: "Permit Feedback Analytics",
     itemLabel: "Permit Type",
     itemLabelPlural: "Permit Types",
-    rejectionMessage: "We can only accept feedback about Boston permits and licenses.",
   },
   parks: {
     appTitle: "Boston Parks Feedback",
@@ -42,7 +40,6 @@ const TOPICS: Record<string, TopicCopy> = {
     dashboardTitle: "Parks Feedback Analytics",
     itemLabel: "Park Feature",
     itemLabelPlural: "Park Features",
-    rejectionMessage: "We can only accept feedback about Boston parks and playgrounds.",
   },
 };
 
