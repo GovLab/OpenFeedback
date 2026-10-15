@@ -1,9 +1,7 @@
 import os
-import asyncio
 import logging
-from typing import Optional, List
+from typing import List
 from fastapi import UploadFile, HTTPException
-import aiofiles
 from pypdf import PdfReader
 import docx
 from openai import OpenAI

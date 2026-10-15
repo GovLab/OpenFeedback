@@ -90,14 +90,6 @@ class ConversationInput(BaseModel):
     conversation_history: List[ConversationMessage] = Field(max_length=MAX_CONVERSATION_TURNS)
 
 
-class ConversationResponse(BaseModel):
-    """Model for chatbot conversation response."""
-    message: str
-    needs_followup: bool
-    quality_score: Optional[int] = None
-    is_invalid: Optional[bool] = False  # True if feedback is spam/outlandish/non-permit-related
-
-
 class AugmentationInput(BaseModel):
     """Model for feedback augmentation input."""
     original_feedback: str = Field(min_length=1, max_length=MAX_FEEDBACK_CHARS)

@@ -42,8 +42,6 @@ class FeedbackDB(Base):
     
     # AI outputs
     ai_summary = Column(Text, nullable=True)
-    ai_clarification_needed = Column(Boolean, default=False)
-    ai_followup_notes = Column(Text, nullable=True)
     department_predicted = Column(String(100), nullable=True)
     
     # Scoring
@@ -60,7 +58,6 @@ class FeedbackDB(Base):
     language = Column(String(10), nullable=True)
     
     # Metadata
-    attachment_urls = Column(ARRAY(Text), nullable=True)
     feedback_source = Column(String(50), default='OpenPermit')
     
     # Configuration version tracking
@@ -162,34 +159,6 @@ class PostgresDB:
             session.add(feedback)
             session.flush()
             return str(feedback.feedback_id)
-    
-    def get_feedback(self, feedback_id: str) -> Optional[Dict]:
-        """Get feedback by ID."""
-        if self.engine is None or self.SessionLocal is None:
-            raise Exception(f"PostgreSQL database not connected: {self._connection_error}")
-        
-        with self.get_session() as session:
-            feedback = session.query(FeedbackDB).filter(
-                FeedbackDB.feedback_id == uuid.UUID(feedback_id)
-            ).first()
-            
-            if not feedback:
-                return None
-            
-            return {
-                "feedback_id": str(feedback.feedback_id),
-                "timestamp_submitted": feedback.timestamp_submitted.isoformat() if feedback.timestamp_submitted else None,
-                "timestamp_processed": feedback.timestamp_processed.isoformat() if feedback.timestamp_processed else None,
-                "permit_type": feedback.permit_type,
-                "category": feedback.category,
-                "subcategory": feedback.subcategory,
-                "issue_description": feedback.issue_description,
-                "ai_summary": feedback.ai_summary,
-                "sentiment_score": feedback.sentiment_score,
-                "status": feedback.status,
-                "feedback_source": feedback.feedback_source,
-                "config_version": feedback.config_version,
-            }
     
     def get_all_feedback(self, limit: int = 100, offset: int = 0):
         """Get all feedback with pagination."""

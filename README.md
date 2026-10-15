@@ -6,7 +6,7 @@
 
 *A resident's comment, the chatbot's follow-up, the AI's classification, and the staff dashboard. Shown with sample parks and playgrounds data. [Version with sound (mp4)](docs/openfeedback-launch.mp4).*
 
-OpenFeedback is a full-stack web application that collects, clarifies, classifies, and visualizes constituent feedback about permitting experiences. It transforms unstructured public input into structured, actionable insights using AI and a graph database, enabling city staff to identify patterns, prioritize issues, and ensure no feedback is lost.
+OpenFeedback is a full-stack web application that collects, clarifies, classifies, and visualizes constituent feedback about city services. The default topic is permits; a parks and playgrounds topic is included (see Topics). It transforms unstructured public input into structured, actionable insights using AI and a graph database, enabling city staff to identify patterns, prioritize issues, and ensure no feedback is lost.
 
 ---
 
@@ -26,9 +26,8 @@ OpenFeedback bridges the gap between **how residents share feedback** and **how 
 
 ### 📝 Constituent Feedback Intake
 - Short, mobile-friendly feedback form  
-- Optional file uploads (screenshots, PDFs)  
 - Optional contact information for follow-up  
-- Designed to be embedded directly into Boston.gov permit pages  
+- Every submission is accepted. Off-topic or spam submissions are filed under Not Relevant, not rejected (see below)  
 
 📸 **Constituent Facing Form:**  
 <img width="1430" height="707" alt="Main Page" src="https://github.com/user-attachments/assets/3647180a-120f-4270-96a3-1aba3af0b2b9" />
@@ -46,12 +45,12 @@ OpenFeedback bridges the gap between **how residents share feedback** and **how 
 ---
 
 ### 🧠 Automated Classification
-- Uses generative AI to categorize feedback into city-defined issue areas:
-  - Process & Operations  
-  - Policy / Rules Clarity  
-  - Economic & Equity Concerns  
-  - Communication & Service  
+- Uses generative AI to file feedback under the categories in the active system configuration. Categories are edited in the **System Configuration** tab, not in code
 - Extracts metadata such as urgency, sentiment, and affected department  
+- **Not Relevant:** off-topic, spam, abusive or empty submissions are stored, not rejected. They are filed under *Not Relevant* and are not routed to a department
+- **Unclassified:** if the AI step fails, the text is still stored under *Unclassified* so nothing is lost
+- Both categories are always shown in the graph with a legend entry
+- Staff batch uploads (PDF, TXT or DOCX) go through the same classification and storage path
 
 ---
 
@@ -66,7 +65,7 @@ OpenFeedback bridges the gap between **how residents share feedback** and **how 
 ---
 
 ### 📊 Staff Insights & Analytics
-- Live statistics update as new feedback arrives  
+- Statistics and the graph load when the dashboard opens, and again after a batch upload finishes  
 - Enables pattern detection across time, categories, and volume  
 - Designed to support staff dashboards and executive reporting  
 
@@ -116,7 +115,7 @@ From the project folder:
 docker compose up -d
 ```
 
-This starts PostgreSQL on port 5432 and Neo4j on port 7687, with the passwords already set in `backend/.env.example`. The backend creates the tables and the starting category list the first time it connects, so there's no SQL to run by hand.
+This starts PostgreSQL on port 5432 and Neo4j on port 7687, with the passwords already set in `backend/.env.example`. When the backend starts against an empty database, it applies `backend/schema.sql` (tables, enums and the starting configuration). It does not reseed a database that already has tables.
 
 ### 3. Configure the backend
 ```bash
@@ -134,14 +133,43 @@ Open `backend/.env.local` and fill in:
 **Windows:** double-click `start-app.bat`
 
 ### 5. Use it
-- Resident form: http://localhost:3000
+- Resident form: http://localhost:3000 (Next.js uses 3001 if 3000 is busy)
 - Staff dashboard: http://localhost:3000/govt (asks for `STAFF_PASSWORD`)
+
+---
+
+## Configuration
+
+### Backend environment variables
+
+Read from `backend/.env.local` locally, or from the App Runner service in AWS. The app refuses to start if a required value is missing or `SESSION_SECRET` is shorter than 32 characters.
+
+| Variable | Required | Purpose | Where it comes from in the AWS demo |
+|---|---|---|---|
+| `OPENAI_API_KEY` | yes | Classification, the follow-up assistant, and batch segmentation | Secrets Manager (`openai` secret) |
+| `AWS_NEO4J_URI`, `AWS_NEO4J_USERNAME`, `AWS_NEO4J_PASSWORD` | yes | Neo4j graph database (Bolt URI and login) | Secrets Manager |
+| `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | yes | PostgreSQL database (port defaults to 5432) | Secrets Manager |
+| `STAFF_PASSWORD` | yes | Shared password for the staff dashboard | Secrets Manager |
+| `SESSION_SECRET` | yes | Signs staff login tokens (at least 32 characters) | Secrets Manager |
+| `TOPIC` | no, default `permits` | `permits` or `parks`; must match `NEXT_PUBLIC_TOPIC` | Terraform variable `topic` |
+| `CORS_ALLOWED_ORIGINS` | no, default `http://localhost:3000,http://localhost:3001` | Comma-separated frontend origins allowed to call the API | Set to the Amplify frontend URL |
+| `USE_SECRETS_MANAGER`, `SECRET_NAME`, `AWS_REGION` | no, legacy | Load settings from AWS Secrets Manager instead of environment variables. Only the older `terraform/prod` and `terraform/test` environments use these | Not used by `terraform/demo` |
+
+### Frontend environment variables
+
+These are compiled into the static site at build time, so changing one needs a rebuild.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `NEXT_PUBLIC_API_URL` | `http://localhost:8003` | Backend base URL. `terraform/demo/deploy.sh` sets it to the App Runner URL |
+| `NEXT_PUBLIC_TOPIC` | `permits` | Screen wording for the chosen topic; must match the backend `TOPIC` |
+| `NEXT_PUBLIC_SAMPLE_DATA_NOTICE` | `false` | `true` labels the dashboard "Sample Data" |
 
 ---
 
 ## Deploying to AWS
 
-`terraform/demo/` holds the current AWS setup (us-east-1): a static front end on Amplify, the API on App Runner, and PostgreSQL and Neo4j in private subnets that only the API can reach. See [terraform/demo/README.md](terraform/demo/README.md). The older `terraform/prod` and `terraform/test` folders are kept for reference only.
+`terraform/demo/` holds the current AWS setup (us-east-1): a static front end on Amplify, the API on App Runner, and PostgreSQL and Neo4j in private subnets that only the API can reach. See [terraform/demo/README.md](terraform/demo/README.md). The older `terraform/prod` and `terraform/test` folders are kept for reference only. Their guide, `terraform/README.md`, describes those older environments and does not apply to `terraform/demo`.
 
 ---
 
@@ -159,10 +187,10 @@ Open `backend/.env.local` and fill in:
 - The backend couldn't reach PostgreSQL when it started. Check `docker compose ps`, then restart the backend
 
 ### "Port already in use" messages
-- This is normal! The app automatically switches to backup ports (8003/3001)
+- Nothing switches ports automatically. Stop the other process using port 8003 (backend) or 3000 (frontend), then start again
 
 ### Nothing shows up in the browser
-- Try http://localhost:3001 (sometimes it uses a different port)
+- Try http://localhost:3001 if http://localhost:3000 did not open
 - Check the terminal windows for error messages
 
 ### Manual startup (if the script doesn't work)
@@ -186,12 +214,13 @@ npm run dev
 
 ## How It Works
 
-1. You type feedback into the web app
-2. The AI (OpenAI GPT) reads it and decides what categories it fits (like "Product", "UI", "Performance")
-3. The results get saved to both databases:
-   - **PostgreSQL** stores the full feedback details (text, timestamps, AI analysis)
-   - **Neo4j** stores the relationships between categories for the graph visualization
-4. The interactive graph updates to show your feedback and how topics connect
+1. The resident types feedback. Before submitting, the follow-up assistant (`/api/feedback-agent`) may ask one or more questions. If the assistant is unavailable, the form submits anyway
+2. On submit (`/api/submit-feedback`), the AI files the feedback under the active configuration's categories, tags it Not Relevant if needed, and records which configuration version it used
+3. The result is saved to both databases:
+   - **PostgreSQL** stores the full record (text, timestamps, AI analysis) for the staff table
+   - **Neo4j** stores the category links for the graph visualization
+   - If one database fails, the record is kept in the other and the failure is logged. If both fail, the full text is logged so it can be recovered, and the resident gets an error
+4. The staff dashboard reads both stores and shows the graph, statistics and table. If a store cannot be read, the dashboard shows an error rather than zeros
 
 
 ## Authors and Acknowledgments

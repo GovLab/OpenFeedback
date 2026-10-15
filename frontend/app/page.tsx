@@ -34,7 +34,6 @@ export default function Home() {
         {/* Form - The Hero */}
         <FeedbackForm 
           onFeedbackSubmitted={handleFeedbackSubmitted} 
-          showClassificationResult={false}
         />
 
         {/* Success Message */}
