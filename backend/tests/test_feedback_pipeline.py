@@ -143,3 +143,20 @@ def test_system_categories_are_never_deprecated():
     assert is_deprecated_category("Old Category", active) is True
     assert is_deprecated_subcategory("Old Sub", {"Seating"}) is True
     assert is_deprecated_category("Anything", set()) is False
+
+
+@pytest.mark.parametrize("value, stored", [("High", "High"), ("medium", "Medium"), (" low ", "Low"), ("Critical", None), (None, None)])
+def test_urgency_is_stored_only_as_a_valid_enum_value(pipeline, monkeypatch, value, stored):
+    _wire(pipeline, monkeypatch, lambda t: _good(t).model_copy(update={"urgency_level": value}))
+    asyncio.run(pipeline.process_submission("Lights are out on the trail", None))
+    row = pipeline.postgres_db.add_feedback.call_args.args[0]
+    assert row["urgency_level"] == stored
+
+
+def test_unknown_urgency_is_logged_and_the_submission_still_stored(pipeline, monkeypatch, caplog):
+    _wire(pipeline, monkeypatch, lambda t: _good(t).model_copy(update={"urgency_level": "Critical"}))
+    with caplog.at_level(logging.WARNING):
+        asyncio.run(pipeline.process_submission("Lights are out on the trail", None))
+    pipeline.postgres_db.add_feedback.assert_called_once()
+    pipeline.db.add_feedback.assert_called_once()
+    assert any("Critical" in r.getMessage() for r in caplog.records if r.levelno == logging.WARNING)

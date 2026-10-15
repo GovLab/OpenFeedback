@@ -27,6 +27,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
   const [originalFeedback, setOriginalFeedback] = useState('');
   const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
   const [questionCount, setQuestionCount] = useState(0);
   const [hasBeenEnhanced, setHasBeenEnhanced] = useState(false);
   const [isActuallyAugmented, setIsActuallyAugmented] = useState(false);
@@ -166,6 +167,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
     if (!userInput.trim()) return;
     
     setChatLoading(true);
+    setChatError(null);
     
     // Add user message to history
     const newHistory = [
@@ -222,6 +224,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
       }
     } catch (err) {
       console.error('Chat error:', err);
+      setChatError('The assistant could not respond. Try your answer again, or close the assistant to submit your feedback as it is.');
     } finally {
       setChatLoading(false);
     }
@@ -430,6 +433,7 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
         onClose={handleCloseChatbot}
         onSubmitAnswer={handleChatSubmit}
         chatLoading={chatLoading}
+        errorMessage={chatError}
       />
     </div>
   );

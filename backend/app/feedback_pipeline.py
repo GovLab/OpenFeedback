@@ -26,6 +26,7 @@ SENTIMENT_SCORES = {
     "very negative": -1.0,
 }
 FEEDBACK_SOURCE = "OpenPermit"  # value of the Postgres feedback_source enum
+URGENCY_ENUM_VALUES = ("Low", "Medium", "High")  # Postgres urgency_level_enum (schema.sql)
 
 
 class StorageError(Exception):
@@ -71,6 +72,19 @@ def _contact_fields(contact_info: Optional[dict]) -> tuple[bool, Optional[dict]]
     return True, details
 
 
+def _database_urgency(value: Optional[str]) -> Optional[str]:
+    """Map an urgency to the Postgres enum. Staff can add levels the enum does not have.
+
+    Such a value is stored as empty and logged, instead of failing the insert.
+    """
+    if not value:
+        return None
+    match = next((level for level in URGENCY_ENUM_VALUES if level.lower() == value.strip().lower()), None)
+    if match is None:
+        logger.warning(f"Urgency {value!r} is not in the database enum, storing it as empty")
+    return match
+
+
 def _postgres_row(text: str, classified: ClassifiedFeedback, contact_info: Optional[dict]) -> dict:
     opted_in, contact_details = _contact_fields(contact_info)
     first_subcategories = next(iter(classified.category_map.values()), [])
@@ -82,7 +96,7 @@ def _postgres_row(text: str, classified: ClassifiedFeedback, contact_info: Optio
         "ai_summary": classified.ai_summary,
         "department_predicted": classified.department_predicted,
         "sentiment_score": sentiment_to_score(classified.sentiment) if classified.sentiment else None,
-        "urgency_level": classified.urgency_level,
+        "urgency_level": _database_urgency(classified.urgency_level),
         "impact_type": classified.impact_type,
         "language": classified.language,
         "status": "New",

@@ -10,8 +10,20 @@ from openai import OpenAI
 from .config import settings
 from .prompts import prompt_builder
 import json
+import re
 
 logger = logging.getLogger(__name__)
+
+_OPENING_FENCE = re.compile(r"^```[\w-]*\s*")
+_CLOSING_FENCE = re.compile(r"\s*```$")
+
+
+def strip_code_fence(text: str) -> str:
+    """Remove a Markdown code fence (```json ... ```) the model may wrap its JSON in."""
+    stripped = text.strip()
+    stripped = _OPENING_FENCE.sub("", stripped)
+    return _CLOSING_FENCE.sub("", stripped).strip()
+
 
 client = OpenAI(api_key=settings.openai_api_key)
 
@@ -148,7 +160,7 @@ class FileProcessor:
             
             # Parse the JSON response
             try:
-                feedback_segments = json.loads(response_text)
+                feedback_segments = json.loads(strip_code_fence(response_text))
                 if not isinstance(feedback_segments, list):
                     logger.warning("AI response was not a list, treating as single feedback")
                     return [text]

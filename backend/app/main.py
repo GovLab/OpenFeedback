@@ -132,6 +132,13 @@ app.add_middleware(
 )
 
 MAX_FEEDBACK_PAGE = 500
+DASHBOARD_UNAVAILABLE = "Dashboard data could not be loaded right now. Please try again in a moment."
+
+
+def _dashboard_unavailable(what: str, error: Exception) -> HTTPException:
+    """Log the detail and return the friendly 503 the dashboard shows as an error."""
+    logger.error(f"Error retrieving {what}: {type(error).__name__}: {error}", exc_info=True)
+    return HTTPException(status_code=503, detail=DASHBOARD_UNAVAILABLE)
 
 
 @app.post("/api/staff/login", response_model=StaffLoginResponse, dependencies=[Depends(rate_limit_public)])
@@ -364,6 +371,8 @@ async def classify_feedback_file(file: UploadFile = File(...)):
         response = await upload_feedback_file(file, store_in_database=False)
         logger.info(f"File classified successfully. Response: {response}")
         return response
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error classifying feedback file: {str(e)}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
@@ -380,13 +389,9 @@ async def get_graph():
     try:
         # Get active config to filter graph nodes
         active_config = system_config_manager.get_active_config()
-        
-        graph_data = db.get_graph_data(active_config=active_config)
-        return graph_data
+        return db.get_graph_data(active_config=active_config)
     except Exception as e:
-        logger.error(f"Error retrieving graph data: {str(e)}")
-        # Return empty graph data instead of crashing
-        return GraphData(nodes=[], relationships=[])
+        raise _dashboard_unavailable("graph data", e) from e
 
 @app.get("/api/stats", dependencies=[Depends(require_staff)])
 async def get_stats():
@@ -399,18 +404,13 @@ async def get_stats():
     try:
         total_feedback = db.get_feedback_count()
         categories = db.get_categories_summary()
-        
+
         return {
             "total_feedback": total_feedback,
             "categories": categories
         }
     except Exception as e:
-        logger.error(f"Error retrieving stats: {str(e)}")
-        # Return empty stats instead of crashing
-        return {
-            "total_feedback": 0,
-            "categories": []
-        }
+        raise _dashboard_unavailable("stats", e) from e
 
 
 @app.get("/api/postgres/feedback", dependencies=[Depends(require_staff)])
@@ -435,14 +435,7 @@ async def get_all_postgres_feedback(limit: int = 100, offset: int = 0):
             "offset": offset
         }
     except Exception as e:
-        logger.error(f"Error fetching PostgreSQL feedback: {str(e)}")
-        # Return empty list instead of crashing
-        return {
-            "feedbacks": [],
-            "count": 0,
-            "limit": limit,
-            "offset": offset
-        }
+        raise _dashboard_unavailable("PostgreSQL feedback", e) from e
 
 
 @app.delete("/api/feedback/{feedback_id}", dependencies=[Depends(require_staff)])
@@ -471,23 +464,12 @@ async def verify_database_ids():
         Dictionary with verification results showing matched and unmatched IDs
     """
     try:
-        # Get all feedback IDs from PostgreSQL
-        postgres_ids = set()
-        try:
-            postgres_feedbacks = postgres_db.get_all_feedback(limit=10000)
-            postgres_ids = {f["feedback_id"] for f in postgres_feedbacks}
-        except Exception as e:
-            logger.error(f"Error fetching PostgreSQL IDs: {str(e)}")
-        
-        # Get all feedback IDs from Neo4j
-        neo4j_ids = set()
-        try:
-            with db.driver.session() as session:
-                result = session.run("MATCH (f:Feedback) RETURN f.id as id")
-                neo4j_ids = {record["id"] for record in result}
-        except Exception as e:
-            logger.error(f"Error fetching Neo4j IDs: {str(e)}")
-        
+        # Both stores must answer: a missing side would look like a mismatch
+        postgres_ids = {f["feedback_id"] for f in postgres_db.get_all_feedback(limit=10000)}
+        with db.driver.session() as session:
+            result = session.run("MATCH (f:Feedback) RETURN f.id as id")
+            neo4j_ids = {record["id"] for record in result}
+
         # Find matches and mismatches
         matched_ids = postgres_ids.intersection(neo4j_ids)
         only_in_postgres = postgres_ids - neo4j_ids
@@ -503,17 +485,7 @@ async def verify_database_ids():
             "status": "OK" if len(only_in_postgres) == 0 and len(only_in_neo4j) == 0 else "MISMATCH"
         }
     except Exception as e:
-        logger.error(f"Error verifying database IDs: {str(e)}")
-        # Return error status instead of crashing
-        return {
-            "total_postgres": 0,
-            "total_neo4j": 0,
-            "matched": 0,
-            "matched_ids": [],
-            "only_in_postgres": [],
-            "only_in_neo4j": [],
-            "status": "ERROR"
-        }
+        raise _dashboard_unavailable("database ID verification", e) from e
 
 
 # System Configuration Endpoints
@@ -544,6 +516,8 @@ async def get_config():
             created_by=config['created_by'],
             change_notes=config['change_notes']
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error fetching active config: {str(e)}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
@@ -580,6 +554,8 @@ async def update_config(request: ConfigUpdateRequest):
             version=new_version,
             message=f"Configuration updated successfully. New version: {new_version}"
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating new config version: {str(e)}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
@@ -621,6 +597,8 @@ async def get_config_history():
             versions=versions,
             current_version=current_version
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error fetching config history: {str(e)}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
@@ -656,6 +634,8 @@ async def get_config_by_version(version: int):
             created_by=config['created_by'],
             change_notes=config['change_notes']
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error fetching config version {version}: {str(e)}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
@@ -692,6 +672,8 @@ async def activate_config_version(version: int):
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error activating config version {version}: {str(e)}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
@@ -726,6 +708,8 @@ async def delete_config_version(version: int):
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error deleting config version {version}: {str(e)}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")

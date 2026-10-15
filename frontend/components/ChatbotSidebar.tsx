@@ -17,6 +17,7 @@ interface ChatbotSidebarProps {
   onClose: () => void;
   onSubmitAnswer: (answer: string) => Promise<void>;
   chatLoading: boolean;
+  errorMessage?: string | null;
 }
 
 export default function ChatbotSidebar({
@@ -25,7 +26,8 @@ export default function ChatbotSidebar({
   questionCount,
   onClose,
   onSubmitAnswer,
-  chatLoading
+  chatLoading,
+  errorMessage = null
 }: ChatbotSidebarProps) {
   const [userInput, setUserInput] = useState('');
   const chatbotRef = useRef<HTMLDivElement>(null);
@@ -175,6 +177,12 @@ export default function ChatbotSidebar({
         <p className="font-ui mx-3 mt-2 flex items-center justify-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">
           <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden="true" />
           Additional details needed
+        </p>
+      )}
+
+      {errorMessage && (
+        <p role="alert" className="mx-3 mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-[var(--text-danger)]">
+          {errorMessage}
         </p>
       )}
 
