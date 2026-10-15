@@ -1,129 +1,127 @@
+import { z } from "zod";
 import { http, API_URL } from "./http";
+import { checkedResponse } from "./checked-response";
 
+// Response schemas mirror backend/app/models.py. Objects are loose so fields
+// the backend adds later do not break the page. Fields the backend sends as
+// null are nullable or nullish.
 
-export const api = {
-  submitFeedback: async (
-    feedback: FeedbackInput
-  ): Promise<ClassifiedFeedback> => {
-    const response = await http.post(`${API_URL}/api/submit-feedback`, feedback);
-    return response.data;
-  },
+const ClassifiedFeedbackSchema = z.looseObject({
+  text: z.string(),
+  category_map: z.record(z.string(), z.array(z.string())).nullish(),
+  sentiment: z.string(),
+  priority: z.string().nullish(),
+  permit_type: z.string().nullish(),
+  ai_summary: z.string().nullish(),
+  department_predicted: z.string().nullish(),
+  urgency_level: z.string().nullish(),
+  impact_type: z.array(z.string()).nullish(),
+  language: z.string().nullish(),
+  config_version: z.number().nullish(),
+});
 
-  uploadFeedbackFile: async (file: File): Promise<FileUploadResponse> => {
-    const formData = new FormData();
-    formData.append("file", file);
+const GraphNodeSchema = z.looseObject({
+  id: z.string(),
+  type: z.string(),
+  text: z.string().nullish(),  // Full feedback text (only for Feedback nodes)
+  sentiment: z.string().nullish(),  // Sentiment (only for Feedback nodes)
+  timestamp: z.string().nullish(),  // Timestamp (only for Feedback nodes)
+  name: z.string().nullish(),  // Name (only for Category/Subcategory nodes)
+  deprecated: z.boolean().nullish(),  // True if category/subcategory is not in active config
+});
 
-    const response = await http.post(
-      `${API_URL}/api/upload-feedback`,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-    return response.data;
-  },
+const GraphRelationshipSchema = z.looseObject({
+  source: z.string(),
+  target: z.string(),
+  type: z.string(),
+});
 
-  classifyFeedbackFile: async (file: File): Promise<FileUploadResponse> => {
-    const formData = new FormData();
-    formData.append("file", file);
+const GraphDataSchema = z.looseObject({
+  nodes: z.array(GraphNodeSchema),
+  relationships: z.array(GraphRelationshipSchema),
+});
 
-    const response = await http.post(
-      `${API_URL}/api/classify-feedback`,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
-    return response.data;
-  },
+const StatsSchema = z.looseObject({
+  total_feedback: z.number(),
+  categories: z.array(
+    z.looseObject({
+      category: z.string(),
+      count: z.number(),
+    })
+  ),
+});
 
-  getGraph: async (): Promise<GraphData> => {
-    const response = await http.get(`${API_URL}/api/graph`);
-    return response.data;
-  },
+const IndividualResponseSchema = z.looseObject({
+  message: z.string(),
+  text_content: z.string(),
+  classified_feedback: ClassifiedFeedbackSchema.nullish(),
+});
 
-  getStats: async (): Promise<Stats> => {
-    const response = await http.get(`${API_URL}/api/stats`);
-    return response.data;
-  },
+const FileUploadResponseSchema = z.looseObject({
+  individual_responses: z.array(IndividualResponseSchema),
+  original_filename: z.string(),
+  file_type: z.string(),
+});
 
-  feedbackAgent: async (
-    input: ConversationInput
-  ): Promise<ConversationResponse> => {
-    const response = await http.post(`${API_URL}/api/feedback-agent`, input);
-    return response.data;
-  },
+const ConversationResponseSchema = z.looseObject({
+  message: z.string(),
+  needs_followup: z.boolean(),
+  quality_score: z.number().nullish(),
+  is_invalid: z.boolean().nullish(),
+});
 
-  getAllFeedback: async (limit: number = 100, offset: number = 0): Promise<FeedbackListResponse> => {
-    const response = await http.get(`${API_URL}/api/postgres/feedback`, {
-      params: { limit, offset }
-    });
-    return response.data;
-  },
+const FeedbackRecordSchema = z.looseObject({
+  feedback_id: z.string(),
+  timestamp_submitted: z.string().nullable(),
+  timestamp_processed: z.string().nullable(),
+  permit_type: z.string().nullable(),
+  category: z.string().nullable(),
+  subcategory: z.string().nullable(),
+  issue_description: z.string(),
+  ai_summary: z.string().nullable(),
+  sentiment_score: z.number().nullable(),
+  urgency_level: z.string().nullable(),
+  status: z.string(),
+  feedback_source: z.string(),
+  department_predicted: z.string().nullable(),
+  impact_type: z.array(z.string()).nullable(),
+  language: z.string().nullable(),
+  followup_opt_in: z.boolean().nullable(),
+  user_contact_info: z
+    .looseObject({
+      name: z.string().nullish(),
+      email: z.string().nullish(),
+      phone: z.string().nullish(),
+    })
+    .nullable(),
+  config_version: z.number().nullable(),
+});
 
-  augmentFeedback: async (
-    input: AugmentationInput
-  ): Promise<AugmentationResponse> => {
-    const response = await http.post(`${API_URL}/api/augment-feedback`, input);
-    return response.data;
-  },
-};
+const FeedbackListResponseSchema = z.looseObject({
+  feedbacks: z.array(FeedbackRecordSchema),
+  count: z.number(),
+  limit: z.number(),
+  offset: z.number(),
+});
+
+const AugmentationResponseSchema = z.looseObject({
+  additional_note: z.string(),
+});
+
+export type ClassifiedFeedback = z.infer<typeof ClassifiedFeedbackSchema>;
+export type GraphNode = z.infer<typeof GraphNodeSchema>;
+export type GraphRelationship = z.infer<typeof GraphRelationshipSchema>;
+export type GraphData = z.infer<typeof GraphDataSchema>;
+export type Stats = z.infer<typeof StatsSchema>;
+export type IndividualResponse = z.infer<typeof IndividualResponseSchema>;
+export type FileUploadResponse = z.infer<typeof FileUploadResponseSchema>;
+export type ConversationResponse = z.infer<typeof ConversationResponseSchema>;
+export type FeedbackRecord = z.infer<typeof FeedbackRecordSchema>;
+export type FeedbackListResponse = z.infer<typeof FeedbackListResponseSchema>;
+export type AugmentationResponse = z.infer<typeof AugmentationResponseSchema>;
 
 export interface FeedbackInput {
   text: string;
-}
-
-export interface ClassifiedFeedback {
-  text: string;
-  category_map?: { [category: string]: string[] };
-  sentiment: string;
-  priority?: string;
-}
-
-export interface GraphNode {
-  id: string;
-  type: string;
-  // Node properties from Neo4j (type-specific)
-  text?: string;  // Full feedback text (only for Feedback nodes)
-  sentiment?: string;  // Sentiment (only for Feedback nodes)
-  timestamp?: string;  // Timestamp (only for Feedback nodes)
-  name?: string;  // Name (only for Category/Subcategory nodes)
-  deprecated?: boolean;  // True if category/subcategory is not in active config
-}
-
-export interface GraphRelationship {
-  source: string;
-  target: string;
-  type: string;
-}
-
-export interface GraphData {
-  nodes: GraphNode[];
-  relationships: GraphRelationship[];
-}
-
-export interface Stats {
-  total_feedback: number;
-  categories: Array<{
-    category: string;
-    count: number;
-  }>;
-}
-
-export interface IndividualResponse {
-  message: string;
-  text_content: string;
-  classified_feedback?: ClassifiedFeedback;
-}
-
-export interface FileUploadResponse {
-  individual_responses: IndividualResponse[];
-  original_filename: string;
-  file_type: string;
 }
 
 export interface ConversationMessage {
@@ -137,50 +135,95 @@ export interface ConversationInput {
   conversation_history: ConversationMessage[];
 }
 
-export interface ConversationResponse {
-  message: string;
-  needs_followup: boolean;
-  quality_score?: number;
-  is_invalid?: boolean;
-}
-
-export interface FeedbackRecord {
-  feedback_id: string;
-  timestamp_submitted: string | null;
-  timestamp_processed: string | null;
-  permit_type: string | null;
-  category: string | null;
-  subcategory: string | null;
-  issue_description: string;
-  ai_summary: string | null;
-  sentiment_score: number | null;
-  urgency_level: string | null;
-  status: string;
-  feedback_source: string;
-  department_predicted: string | null;
-  impact_type: string[] | null;
-  language: string | null;
-  followup_opt_in: boolean | null;
-  user_contact_info: {
-    name?: string;
-    email?: string;
-    phone?: string;
-  } | null;
-  config_version: number | null;
-}
-
-export interface FeedbackListResponse {
-  feedbacks: FeedbackRecord[];
-  count: number;
-  limit: number;
-  offset: number;
-}
-
 export interface AugmentationInput {
   original_feedback: string;
   conversation_history: ConversationMessage[];
 }
 
-export interface AugmentationResponse {
-  additional_note: string;
-}
+export const api = {
+  submitFeedback: async (
+    feedback: FeedbackInput
+  ): Promise<ClassifiedFeedback> => {
+    return checkedResponse(
+      "/api/submit-feedback",
+      ClassifiedFeedbackSchema,
+      http.post(`${API_URL}/api/submit-feedback`, feedback)
+    );
+  },
+
+  uploadFeedbackFile: async (file: File): Promise<FileUploadResponse> => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    return checkedResponse(
+      "/api/upload-feedback",
+      FileUploadResponseSchema,
+      http.post(`${API_URL}/api/upload-feedback`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      })
+    );
+  },
+
+  classifyFeedbackFile: async (file: File): Promise<FileUploadResponse> => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    return checkedResponse(
+      "/api/classify-feedback",
+      FileUploadResponseSchema,
+      http.post(`${API_URL}/api/classify-feedback`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      })
+    );
+  },
+
+  getGraph: async (): Promise<GraphData> => {
+    return checkedResponse(
+      "/api/graph",
+      GraphDataSchema,
+      http.get(`${API_URL}/api/graph`)
+    );
+  },
+
+  getStats: async (): Promise<Stats> => {
+    return checkedResponse(
+      "/api/stats",
+      StatsSchema,
+      http.get(`${API_URL}/api/stats`)
+    );
+  },
+
+  feedbackAgent: async (
+    input: ConversationInput
+  ): Promise<ConversationResponse> => {
+    return checkedResponse(
+      "/api/feedback-agent",
+      ConversationResponseSchema,
+      http.post(`${API_URL}/api/feedback-agent`, input)
+    );
+  },
+
+  getAllFeedback: async (limit: number = 100, offset: number = 0): Promise<FeedbackListResponse> => {
+    return checkedResponse(
+      "/api/postgres/feedback",
+      FeedbackListResponseSchema,
+      http.get(`${API_URL}/api/postgres/feedback`, {
+        params: { limit, offset }
+      })
+    );
+  },
+
+  augmentFeedback: async (
+    input: AugmentationInput
+  ): Promise<AugmentationResponse> => {
+    return checkedResponse(
+      "/api/augment-feedback",
+      AugmentationResponseSchema,
+      http.post(`${API_URL}/api/augment-feedback`, input)
+    );
+  },
+};
