@@ -84,6 +84,9 @@ export function GraphLegend({
   );
 }
 
+// Distance one pan step moves the view, in screen pixels (buttons and Shift+arrow)
+export const PAN_STEP = 60;
+
 function ControlButton({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
   return (
     <button
@@ -100,33 +103,55 @@ function ControlButton({ label, onClick, children }: { label: string; onClick: (
   );
 }
 
+// Pan moves the view, so content shifts the opposite way (left reveals what is on the left)
+const PAN_BUTTONS = [
+  { label: "Pan left", dx: PAN_STEP, dy: 0, d: "M15 19l-7-7 7-7" },
+  { label: "Pan up", dx: 0, dy: PAN_STEP, d: "M5 15l7-7 7 7" },
+  { label: "Pan down", dx: 0, dy: -PAN_STEP, d: "M5 9l7 7 7-7" },
+  { label: "Pan right", dx: -PAN_STEP, dy: 0, d: "M9 5l7 7-7 7" },
+];
+
 interface ZoomControlsProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onReset: () => void;
+  onPan: (dx: number, dy: number) => void;
 }
 
-export function ZoomControls({ onZoomIn, onZoomOut, onReset }: ZoomControlsProps) {
+export function ZoomControls({ onZoomIn, onZoomOut, onReset, onPan }: ZoomControlsProps) {
   return (
-    <div
-      role="group"
-      aria-label="Zoom"
-      className="absolute left-3 top-3 z-10 flex flex-col divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 shadow-sm"
-    >
-      <ControlButton label="Zoom in" onClick={onZoomIn}>
-        <path strokeLinecap="round" strokeWidth={2} d="M12 5v14M5 12h14" />
-      </ControlButton>
-      <ControlButton label="Zoom out" onClick={onZoomOut}>
-        <path strokeLinecap="round" strokeWidth={2} d="M5 12h14" />
-      </ControlButton>
-      <ControlButton label="Reset view" onClick={onReset}>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-        />
-      </ControlButton>
-    </div>
+    <>
+      <div
+        role="group"
+        aria-label="Zoom"
+        className="absolute left-3 top-3 z-10 flex flex-col divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 shadow-sm"
+      >
+        <ControlButton label="Zoom in" onClick={onZoomIn}>
+          <path strokeLinecap="round" strokeWidth={2} d="M12 5v14M5 12h14" />
+        </ControlButton>
+        <ControlButton label="Zoom out" onClick={onZoomOut}>
+          <path strokeLinecap="round" strokeWidth={2} d="M5 12h14" />
+        </ControlButton>
+        <ControlButton label="Reset view" onClick={onReset}>
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+          />
+        </ControlButton>
+      </div>
+      <div
+        role="group"
+        aria-label="Pan"
+        className="absolute bottom-3 left-3 z-10 flex divide-x divide-slate-200 overflow-hidden rounded-lg border border-slate-200 shadow-sm"
+      >
+        {PAN_BUTTONS.map(({ label, dx, dy, d }) => (
+          <ControlButton key={label} label={label} onClick={() => onPan(dx, dy)}>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={d} />
+          </ControlButton>
+        ))}
+      </div>
+    </>
   );
 }

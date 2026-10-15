@@ -74,7 +74,10 @@ export function useZoomPan(width: number, height: number, onBackgroundClick: () 
     [width, height]
   );
   const reset = useCallback(() => setView(IDENTITY), []);
-  const panBy = useCallback((dx: number) => setView((v) => ({ ...v, x: v.x + dx, smooth: true })), []);
+  const panBy = useCallback(
+    (dx: number, dy = 0) => setView((v) => ({ ...v, x: v.x + dx, y: v.y + dy, smooth: true })),
+    []
+  );
 
   return {
     view,

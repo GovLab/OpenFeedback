@@ -3,11 +3,11 @@ import { KeyboardEvent, useCallback, useEffect, useId, useMemo, useRef, useState
 import { GraphData } from "@/lib/api";
 import { computeLayout, graphHeightFor } from "@/lib/graphLayout";
 import { buildGraphModel, connectedTo, truncate } from "@/lib/graphModel";
-import { firstNodeId, nextNodeId } from "@/lib/graphNavigation";
+import { firstNodeId, nextNodeId, revealOffset } from "@/lib/graphNavigation";
 import { GraphCanvas } from "@/components/graph/GraphCanvas";
 import { GraphDetailsPanel } from "@/components/graph/GraphDetailsPanel";
 import { GraphHierarchyTable } from "@/components/graph/GraphHierarchyTable";
-import { GraphLegend, ZoomControls } from "@/components/graph/GraphLegend";
+import { GraphLegend, PAN_STEP, ZoomControls } from "@/components/graph/GraphLegend";
 import { MONTSERRAT } from "@/components/graph/graphTheme";
 import { useElementWidth, usePrefersReducedMotion } from "@/components/graph/hooks";
 import { useZoomPan } from "@/components/graph/useZoomPan";
@@ -22,6 +22,15 @@ const EDGE_SPACE = 48;
 const ZOOM_STEP = 1.3;
 const TOOLTIP_CHARS = 90;
 const NAV_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"]);
+// Shift with an arrow key pans a zoomed graph, the same way the pan buttons do
+const SHIFT_PAN: Record<string, [number, number]> = {
+  ArrowLeft: [PAN_STEP, 0],
+  ArrowRight: [-PAN_STEP, 0],
+  ArrowUp: [0, PAN_STEP],
+  ArrowDown: [0, -PAN_STEP],
+};
+// A focused node is panned into view this far from the frame edge
+const REVEAL_MARGIN = 48;
 
 // ================ Empty State Component ================
 function GraphEmptyState() {
@@ -104,9 +113,26 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
     else nodeRefs.current.delete(id);
   }, []);
 
+  // Pan just enough that a node is inside the frame, so keyboard focus never lands off screen
+  const revealNode = useCallback(
+    (id: string) => {
+      const place = layout?.nodes.get(id);
+      if (!place) return;
+      const dx = revealOffset(view.k * place.x + view.x, width, REVEAL_MARGIN);
+      const dy = revealOffset(view.k * place.y + view.y, height, REVEAL_MARGIN);
+      if (dx || dy) panBy(dx, dy);
+    },
+    [layout, view, width, height, panBy]
+  );
+
   const onNodeKeyDown = useCallback(
     (e: KeyboardEvent<SVGGElement>, id: string) => {
       if (!layout) return;
+      if (e.shiftKey && SHIFT_PAN[e.key]) {
+        e.preventDefault();
+        const [dx, dy] = SHIFT_PAN[e.key];
+        return panBy(dx, dy);
+      }
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         return toggleSelect(id);
@@ -121,8 +147,9 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
       if (!next) return;
       setRovingId(next);
       nodeRefs.current.get(next)?.focus();
+      revealNode(next);
     },
-    [layout, model, toggleSelect, clearSelection, zoom]
+    [layout, model, toggleSelect, clearSelection, zoom, panBy, revealNode]
   );
 
   // Closing from the panel button hands focus back to the node it described
@@ -163,7 +190,8 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
         <p id={`${ids}-help`} className="sr-only">
           Use the arrow keys to move between nodes: left and right along a ring, up toward categories, down
           toward feedback. Press Enter or Space to select a node and show its details, and Escape to clear.
-          Plus and minus zoom, zero resets the view. A table version is available from the View as table button.
+          Plus and minus zoom, zero resets the view. Shift with an arrow key pans a zoomed graph, and the Pan buttons
+          do the same. A table version is available from the View as table button.
         </p>
       </div>
 
@@ -185,6 +213,7 @@ export default function GraphVisualization({ data }: GraphVisualizationProps) {
           onZoomIn={() => zoom.zoomBy(ZOOM_STEP)}
           onZoomOut={() => zoom.zoomBy(1 / ZOOM_STEP)}
           onReset={resetView}
+          onPan={(dx, dy) => panBy(dx, dy)}
         />
         {isEmptyView && (
           <p className="absolute inset-0 flex items-center justify-center px-6 text-center text-slate-600">

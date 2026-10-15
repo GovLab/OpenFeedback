@@ -23,6 +23,14 @@ function ringOf(model: GraphModel, node: ModelNode): ModelNode[] {
   return model.feedback;
 }
 
+// How far the view must move (in screen pixels) so a point at `position`
+// sits at least `margin` inside a frame of `size`. Zero when it already fits.
+export function revealOffset(position: number, size: number, margin: number): number {
+  if (position < margin) return margin - position;
+  if (position > size - margin) return size - margin - position;
+  return 0;
+}
+
 export function firstNodeId(model: GraphModel): string | null {
   return (model.categories[0] || model.subcategories[0] || model.feedback[0])?.id ?? null;
 }
