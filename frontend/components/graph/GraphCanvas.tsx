@@ -41,6 +41,8 @@ interface GraphCanvasProps {
 const PARTICLES_PER_LINK = 2;
 const PARTICLE_SECONDS = 1.6;
 const MAX_PARTICLE_LINKS = 60;
+// Selection particles loop a few times and stop, so they never move for longer than 5 s (WCAG 2.2.2)
+const PARTICLE_REPEATS = 3;
 
 function entranceDelay(model: GraphModel, node: ModelNode, order: number): number {
   if (node.kind === "Category") return order * ENTRANCE.categoryStep;
@@ -130,9 +132,9 @@ export function GraphCanvas({
                 const dur = `${PARTICLE_SECONDS}s`;
                 return (
                   <circle key={`${link.id}-${i}`} r={2.6} fill={LINK_ACTIVE} cx={a.x} cy={a.y} opacity={0}>
-                    <animate attributeName="cx" from={a.x} to={b.x} dur={dur} begin={begin} repeatCount="indefinite" />
-                    <animate attributeName="cy" from={a.y} to={b.y} dur={dur} begin={begin} repeatCount="indefinite" />
-                    <animate attributeName="opacity" values="0;1;1;0" dur={dur} begin={begin} repeatCount="indefinite" />
+                    <animate attributeName="cx" from={a.x} to={b.x} dur={dur} begin={begin} repeatCount={PARTICLE_REPEATS} />
+                    <animate attributeName="cy" from={a.y} to={b.y} dur={dur} begin={begin} repeatCount={PARTICLE_REPEATS} />
+                    <animate attributeName="opacity" values="0;1;1;0" dur={dur} begin={begin} repeatCount={PARTICLE_REPEATS} />
                   </circle>
                 );
               });

@@ -27,7 +27,7 @@ export function DashboardHeader() {
               </p>
             ) : (
               <p className="font-ui flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-sm font-semibold text-white">
-                <span className="h-2 w-2 rounded-full bg-green-400 motion-safe:animate-pulse" aria-hidden="true" />
+                <span className="h-2 w-2 rounded-full bg-green-400" aria-hidden="true" />
                 Live Data
               </p>
             )}
