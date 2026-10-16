@@ -6,10 +6,9 @@ import SuccessMessage from "@/components/SuccessMessage";
 import Navigation from "@/components/Navigation";
 import PrivacyNotice from "@/components/PrivacyNotice";
 import { topic } from "@/lib/topic";
-import { useDocumentTitle } from "@/lib/useDocumentTitle";
+import { DocumentTitle } from "@/components/DocumentTitle";
 
 export default function Home() {
-  useDocumentTitle("Share feedback");
   const [showSuccess, setShowSuccess] = useState(false);
 
   // The message stays until the person closes it, so slower readers and
@@ -20,6 +19,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen min-w-[320px] bg-[var(--boston-gray-light)]">
+      <DocumentTitle page="Share feedback" />
       {/* First in the source so keyboard order matches the top-right position on screen */}
       <Navigation />
 

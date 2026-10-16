@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CircleAlert, LoaderCircle, LockKeyhole } from "lucide-react";
 import { loginStaff } from "@/lib/http";
-import { useDocumentTitle } from "@/lib/useDocumentTitle";
+import { DocumentTitle } from "@/components/DocumentTitle";
 import Navigation from "@/components/Navigation";
 import { Button } from "@/components/ui/Button";
 import { CARD, INPUT } from "@/components/ui/styles";
@@ -15,7 +15,6 @@ interface StaffLoginProps {
 }
 
 export default function StaffLogin({ onLoggedIn, dialog = false }: StaffLoginProps) {
-  useDocumentTitle(dialog ? null : "Staff sign in");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +53,7 @@ export default function StaffLogin({ onLoggedIn, dialog = false }: StaffLoginPro
       aria-modal={dialog || undefined}
       aria-labelledby={dialog ? "staff-login-title" : undefined}
     >
+      <DocumentTitle page={dialog ? null : "Staff sign in"} />
       {!dialog && <Navigation />}
       <Content className="w-full max-w-sm">
         <form onSubmit={handleSubmit} className={`${CARD} p-8`} noValidate>

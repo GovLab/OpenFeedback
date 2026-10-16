@@ -18,7 +18,7 @@ import { Tabs, tabPanelProps } from "@/components/ui/Tabs";
 import { api, GraphData, Stats } from "@/lib/api";
 import { getStaffToken, STAFF_LOGOUT_EVENT, STAFF_SESSION_EXPIRED_EVENT } from "@/lib/http";
 import SessionExpiryNotice from "@/components/SessionExpiryNotice";
-import { useDocumentTitle } from "@/lib/useDocumentTitle";
+import { DocumentTitle } from "@/components/DocumentTitle";
 
 type TabType = "dashboard" | "config";
 
@@ -63,7 +63,6 @@ export default function GovtPage() {
 
 function GovtDashboard() {
   const [activeTab, setActiveTab] = useState<TabType>("dashboard");
-  useDocumentTitle(activeTab === "config" ? "System configuration" : "Dashboard");
   const [graphData, setGraphData] = useState<GraphData>({
     nodes: [],
     relationships: [],
@@ -109,6 +108,7 @@ function GovtDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <DocumentTitle page={activeTab === "config" ? "System configuration" : "Dashboard"} />
       {/* Skip link is the first stop, so keyboard users can jump past the navigation and header */}
       <a
         href="#main-content"

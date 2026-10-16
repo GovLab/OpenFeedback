@@ -15,8 +15,9 @@ const lora = Lora({
   style: ["normal", "italic"],
 });
 
+// No title here: each view sets its own (components/DocumentTitle.tsx). A layout title
+// would appear in the head next to it and win in the browser tab.
 export const metadata: Metadata = {
-  title: topic.appTitle,
   description: topic.appDescription,
 };
 
