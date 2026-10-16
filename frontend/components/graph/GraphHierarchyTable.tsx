@@ -15,7 +15,7 @@ const HEAD = "px-3 py-2 text-left text-xs font-semibold uppercase tracking-[0.08
 export function GraphHierarchyTable({ id, model }: GraphHierarchyTableProps) {
   const orphans = model.subcategories.filter((s) => !s.parentId);
   return (
-    <div id={id} className="mt-4 overflow-x-auto rounded-xl border border-gray-200 bg-white">
+    <div id={id} className="relative mt-4 overflow-x-auto rounded-xl border border-gray-200 bg-white">
       <table className="w-full text-sm">
         <caption className="sr-only">Feedback by category and subcategory</caption>
         <thead className="bg-gray-50" style={{ fontFamily: MONTSERRAT }}>

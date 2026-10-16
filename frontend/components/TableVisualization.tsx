@@ -131,7 +131,7 @@ export default function FeedbackTable({ refreshTrigger }: FeedbackTableProps) {
       <ActiveFilters filters={filters} onRemove={(key) => updateFilter(key, "")} onClearAll={clearAllFilters} />
 
       {/* Table */}
-      <div className="overflow-x-auto">
+      <div className="relative overflow-x-auto">
         <table className="w-full min-w-[680px] lg:min-w-[960px]">
           <caption className="sr-only">
             Feedback submissions, grouped by configuration version. Use the column buttons to filter and the last
