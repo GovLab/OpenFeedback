@@ -108,6 +108,23 @@ const AugmentationResponseSchema = z.looseObject({
   additional_note: z.string(),
 });
 
+const SegmentSaveResponseSchema = z.looseObject({
+  individual_responses: z.array(IndividualResponseSchema),
+});
+
+// The 500 body when a staff upload could not save some segments
+const UnsavedSegmentsSchema = z.looseObject({
+  message: z.string(),
+  saved_count: z.number(),
+  total_count: z.number(),
+  unsaved_segments: z.array(
+    z.looseObject({
+      position: z.number(),
+      text_content: z.string(),
+    })
+  ),
+});
+
 export type ClassifiedFeedback = z.infer<typeof ClassifiedFeedbackSchema>;
 export type GraphNode = z.infer<typeof GraphNodeSchema>;
 export type GraphRelationship = z.infer<typeof GraphRelationshipSchema>;
@@ -119,6 +136,23 @@ export type ConversationResponse = z.infer<typeof ConversationResponseSchema>;
 export type FeedbackRecord = z.infer<typeof FeedbackRecordSchema>;
 export type FeedbackListResponse = z.infer<typeof FeedbackListResponseSchema>;
 export type AugmentationResponse = z.infer<typeof AugmentationResponseSchema>;
+export type SegmentSaveResponse = z.infer<typeof SegmentSaveResponseSchema>;
+export type UnsavedSegments = z.infer<typeof UnsavedSegmentsSchema>;
+
+// The `detail` the server sent with a failed request, if any
+function serverDetail(error: unknown): unknown {
+  return (error as { response?: { data?: { detail?: unknown } } } | null)?.response?.data?.detail;
+}
+
+export function serverMessageFrom(error: unknown): string | null {
+  const detail = serverDetail(error);
+  return typeof detail === "string" ? detail : null;
+}
+
+export function unsavedSegmentsFrom(error: unknown): UnsavedSegments | null {
+  const parsed = UnsavedSegmentsSchema.safeParse(serverDetail(error));
+  return parsed.success ? parsed.data : null;
+}
 
 export interface FeedbackInput {
   text: string;
@@ -214,6 +248,14 @@ export const api = {
       http.get(`${API_URL}/api/postgres/feedback`, {
         params: { limit, offset }
       })
+    );
+  },
+
+  retryUnsavedSegments: async (segments: string[]): Promise<SegmentSaveResponse> => {
+    return checkedResponse(
+      "/api/upload-feedback/retry",
+      SegmentSaveResponseSchema,
+      http.post(`${API_URL}/api/upload-feedback/retry`, { segments })
     );
   },
 

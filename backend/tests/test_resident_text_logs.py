@@ -76,6 +76,7 @@ def mocked(monkeypatch):
     postgres, neo4j = MagicMock(name="postgres_db"), MagicMock(name="neo4j_db")
     monkeypatch.setitem(pipeline_globals, "postgres_db", postgres)
     monkeypatch.setitem(pipeline_globals, "db", neo4j)
+    monkeypatch.setitem(pipeline_globals, "STORE_RETRY_DELAYS_SECONDS", (0, 0))
     main.app.dependency_overrides[require_staff] = lambda: None
     try:
         yield SimpleNamespace(http=TestClient(main.app), postgres=postgres, neo4j=neo4j)

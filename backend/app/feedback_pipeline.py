@@ -6,9 +6,10 @@ falls back to "Unclassified" and the original text is still stored.
 """
 import asyncio
 import logging
+import time
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Callable, Optional
 
 from .classifier import classify_feedback, detect_spam_or_invalid
 from .database import db
@@ -26,6 +27,9 @@ SENTIMENT_SCORES = {
     "very positive": 1.0,
     "very negative": -1.0,
 }
+# A write that fails is retried, so a short database blip does not lose the submission
+STORE_ATTEMPTS = 3
+STORE_RETRY_DELAYS_SECONDS = (0.5, 1.0)  # wait before attempt 2, then before attempt 3
 FEEDBACK_SOURCE = "OpenPermit"  # value of the Postgres feedback_source enum
 URGENCY_ENUM_VALUES = ("Low", "Medium", "High")  # Postgres urgency_level_enum (schema.sql)
 
@@ -108,37 +112,44 @@ def _postgres_row(text: str, classified: ClassifiedFeedback, contact_info: Optio
     }
 
 
-def store_feedback(text: str, classified: ClassifiedFeedback, contact_info: Optional[dict] = None) -> str:
-    """Write to Postgres and Neo4j. Returns the shared id.
+def _write_with_retries(store_name: str, feedback_id: str, write: Callable[[], None]) -> bool:
+    """Run one database write, retrying on failure. Returns True once it succeeds.
 
-    One store failing is tolerated. If both fail, the full text is logged at
-    ERROR with the id so it can be recovered, and StorageError is raised.
+    Any error is retried: a failed write cannot be told apart from a transient
+    one here. Logs carry the id, attempt number and error type only.
+    """
+    for attempt in range(1, STORE_ATTEMPTS + 1):
+        try:
+            write()
+            return True
+        except Exception as e:
+            logger.error(
+                f"Failed to store feedback {feedback_id} in {store_name} "
+                f"(attempt {attempt} of {STORE_ATTEMPTS}): {describe_error(e)}"
+            )
+            if attempt < STORE_ATTEMPTS:
+                time.sleep(STORE_RETRY_DELAYS_SECONDS[attempt - 1])
+    return False
+
+
+def store_feedback(text: str, classified: ClassifiedFeedback, contact_info: Optional[dict] = None) -> str:
+    """Write to Postgres and Neo4j, retrying each write. Returns the shared id.
+
+    One store failing is tolerated. If both still fail after their retries,
+    StorageError is raised and the resident's text is not written to the log:
+    the form keeps the text so the resident can submit again.
     """
     feedback_id = str(uuid.uuid4())
-    postgres_ok = neo4j_ok = False
 
-    try:
-        postgres_db.add_feedback(
-            _postgres_row(text, classified, contact_info),
-            feedback_id=feedback_id,
-            config_version=classified.config_version,
-        )
-        postgres_ok = True
-    except Exception as e:
-        logger.error(f"Failed to store feedback {feedback_id} in PostgreSQL: {describe_error(e)}")
-
-    try:
-        db.add_feedback(classified, feedback_id=feedback_id)
-        neo4j_ok = True
-    except Exception as e:
-        logger.error(f"Failed to store feedback {feedback_id} in Neo4j: {describe_error(e)}")
+    postgres_ok = _write_with_retries("PostgreSQL", feedback_id, lambda: postgres_db.add_feedback(
+        _postgres_row(text, classified, contact_info),
+        feedback_id=feedback_id,
+        config_version=classified.config_version,
+    ))
+    neo4j_ok = _write_with_retries("Neo4j", feedback_id, lambda: db.add_feedback(classified, feedback_id=feedback_id))
 
     if not postgres_ok and not neo4j_ok:
-        logger.error(
-            f"UNSTORED SUBMISSION {feedback_id}: both databases failed. "
-            f"timestamp={datetime.now().isoformat()} chars={len(text)} "
-            f"language={classified.language} followup_opt_in={_contact_fields(contact_info)[0]}"
-        )
+        logger.error(f"UNSTORED SUBMISSION {feedback_id}: both databases failed after {STORE_ATTEMPTS} attempts each, chars={len(text)}")
         raise StorageError(feedback_id)
     if not (postgres_ok and neo4j_ok):
         logger.error(f"Feedback {feedback_id} stored in only one database (postgres={postgres_ok}, neo4j={neo4j_ok})")
@@ -148,5 +159,6 @@ def store_feedback(text: str, classified: ClassifiedFeedback, contact_info: Opti
 async def process_submission(text: str, contact_info: Optional[dict] = None) -> ClassifiedFeedback:
     """Classify, tag and store one submission."""
     classified = await classify_and_tag(text)
-    store_feedback(text, classified, contact_info)
+    # Retries sleep between attempts, so the write runs off the event loop
+    await asyncio.to_thread(store_feedback, text, classified, contact_info)
     return classified

@@ -77,6 +77,19 @@ class FileUploadResponse(BaseModel):
     file_type: str
 
 
+MAX_RETRY_SEGMENTS = 1000
+
+
+class SegmentRetryInput(BaseModel):
+    """Segments from a staff upload that could not be saved, to save again."""
+    segments: List[str] = Field(min_length=1, max_length=MAX_RETRY_SEGMENTS)
+
+
+class SegmentSaveResponse(BaseModel):
+    """Result of saving segments again: one entry per segment that was saved."""
+    individual_responses: List[IndividualResponse]
+
+
 class ConversationMessage(BaseModel):
     """Model for a message in chatbot conversation."""
     role: str  # "user" or "assistant"

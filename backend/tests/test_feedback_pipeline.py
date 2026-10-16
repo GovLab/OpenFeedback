@@ -41,6 +41,7 @@ def pipeline(monkeypatch):
     sys.modules.pop("app.feedback_pipeline", None)
     module = importlib.import_module("app.feedback_pipeline")
     module.classifier_stub = stubs["app.classifier"]
+    monkeypatch.setattr(module, "STORE_RETRY_DELAYS_SECONDS", (0, 0))  # no real waiting in retries
     yield module
     sys.modules.pop("app.feedback_pipeline", None)
 
@@ -133,6 +134,69 @@ def test_both_stores_failing_logs_id_and_length_but_not_text_and_raises(pipeline
     assert err.value.feedback_id in lost[0].getMessage()
     assert f"chars={len(text)}" in lost[0].getMessage()
     assert text not in caplog.text
+
+
+def test_postgres_write_is_retried_and_succeeds_on_second_attempt(pipeline):
+    pipeline.postgres_db.add_feedback.side_effect = [RuntimeError("blip"), "row-id"]
+    feedback_id = pipeline.store_feedback("Park benches are broken", _good())
+    assert pipeline.postgres_db.add_feedback.call_count == 2
+    pipeline.db.add_feedback.assert_called_once()
+    assert feedback_id
+
+
+def test_postgres_write_gives_up_after_three_attempts_and_the_other_store_keeps_it(pipeline):
+    pipeline.postgres_db.add_feedback.side_effect = RuntimeError("down")
+    feedback_id = pipeline.store_feedback("Park benches are broken", _good())
+    assert pipeline.postgres_db.add_feedback.call_count == 3
+    pipeline.db.add_feedback.assert_called_once()
+    assert feedback_id
+
+
+def test_neo4j_write_is_retried_and_succeeds_on_second_attempt(pipeline):
+    pipeline.db.add_feedback.side_effect = [RuntimeError("blip"), None]
+    pipeline.store_feedback("Park benches are broken", _good())
+    assert pipeline.db.add_feedback.call_count == 2
+
+
+def test_both_stores_failing_retries_each_three_times_then_raises(pipeline):
+    pipeline.postgres_db.add_feedback.side_effect = RuntimeError("pg down")
+    pipeline.db.add_feedback.side_effect = RuntimeError("neo4j down")
+    with pytest.raises(pipeline.StorageError):
+        pipeline.store_feedback("Park benches are broken", _good())
+    assert pipeline.postgres_db.add_feedback.call_count == 3
+    assert pipeline.db.add_feedback.call_count == 3
+
+
+def test_retries_wait_half_a_second_then_a_second(pipeline, monkeypatch):
+    waits = []
+    monkeypatch.setattr(pipeline, "STORE_RETRY_DELAYS_SECONDS", (0.5, 1.0))
+    monkeypatch.setattr(pipeline, "time", types.SimpleNamespace(sleep=waits.append))
+    pipeline.postgres_db.add_feedback.side_effect = RuntimeError("down")
+    pipeline.store_feedback("Park benches are broken", _good())
+    assert waits == [0.5, 1.0]
+
+
+def test_retry_logs_carry_id_and_attempt_but_no_text(pipeline, caplog):
+    sentinel = "RETRY-SENTINEL-41c2"
+    pipeline.postgres_db.add_feedback.side_effect = RuntimeError(f"insert params {sentinel}")
+    pipeline.db.add_feedback.side_effect = RuntimeError(f"neo4j params {sentinel}")
+    with caplog.at_level(logging.DEBUG):
+        with pytest.raises(pipeline.StorageError):
+            pipeline.store_feedback(f"Benches are broken {sentinel}", _good())
+    assert "attempt 3 of 3" in caplog.text
+    assert sentinel not in caplog.text
+
+
+def test_neo4j_feedback_node_write_is_idempotent():
+    """A retried write must not create a second Feedback node for the same id."""
+    from app.database import Neo4jDatabase
+    database = Neo4jDatabase.__new__(Neo4jDatabase)
+    database.driver = MagicMock()
+    database.add_feedback(_good(), feedback_id="same-id")
+    session = database.driver.session.return_value.__enter__.return_value
+    first_query = session.run.call_args_list[0][0][0]
+    assert "MERGE (f:Feedback {id: $id})" in first_query
+    assert "CREATE (f:Feedback" not in first_query
 
 
 def test_system_categories_are_never_deprecated():

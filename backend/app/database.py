@@ -60,11 +60,8 @@ class Neo4jDatabase:
             # Create feedback node
             session.run(
                 """
-                CREATE (f:Feedback {
-                    id: $id,
-                    text: $text,
-                    timestamp: datetime()
-                })
+                MERGE (f:Feedback {id: $id})
+                ON CREATE SET f.text = $text, f.timestamp = datetime()
                 """,
                 id=feedback_id,
                 text=feedback.text,

@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { CircleAlert, CircleCheck, FileText, LoaderCircle } from "lucide-react";
-import { api, FileUploadResponse } from "@/lib/api";
+import { api, FileUploadResponse, serverMessageFrom, UnsavedSegments, unsavedSegmentsFrom } from "@/lib/api";
 import { UploadResultCard } from "@/components/upload/UploadResultCard";
+import { UnsavedSegmentsPanel } from "@/components/upload/UnsavedSegmentsPanel";
 import { Badge } from "@/components/ui/Badge";
 import { buttonClass, CARD } from "@/components/ui/styles";
 
@@ -19,6 +20,7 @@ export default function FileUploadForm({
   const [result, setResult] = useState<FileUploadResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [action, setAction] = useState<"store" | "classify" | null>(null);
+  const [unsaved, setUnsaved] = useState<UnsavedSegments | null>(null);
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -49,14 +51,44 @@ export default function FileUploadForm({
     setAction("store");
     setError(null);
     setResult(null);
+    setUnsaved(null);
 
     try {
       const uploadResult = await api.uploadFeedbackFile(selectedFile);
       setResult(uploadResult);
       onFeedbackSubmitted();
     } catch (err) {
-      setError("Failed to process file. Please try again.");
-      console.error(err);
+      const failure = unsavedSegmentsFrom(err);
+      setUnsaved(failure);
+      setError(failure?.message ?? serverMessageFrom(err) ?? "Failed to process file. Please try again.");
+      console.error("File upload failed:", err instanceof Error ? err.message : "unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Saves only the segments the earlier upload could not save, so none is stored twice
+  const handleRetryUnsaved = async () => {
+    if (!unsaved || !selectedFile) return;
+
+    setLoading(true);
+    setAction("store");
+    setError(null);
+
+    try {
+      const saved = await api.retryUnsavedSegments(unsaved.unsaved_segments.map((segment) => segment.text_content));
+      setResult({
+        original_filename: selectedFile.name,
+        file_type: selectedFile.name.split(".").pop() ?? "",
+        individual_responses: saved.individual_responses,
+      });
+      setUnsaved(null);
+      onFeedbackSubmitted();
+    } catch (err) {
+      const failure = unsavedSegmentsFrom(err);
+      if (failure) setUnsaved(failure);
+      setError(failure?.message ?? serverMessageFrom(err) ?? "Could not save the segments. Please try again.");
+      console.error("Saving unsaved segments failed:", err instanceof Error ? err.message : "unknown error");
     } finally {
       setLoading(false);
     }
@@ -87,6 +119,7 @@ export default function FileUploadForm({
     setSelectedFile(null);
     setResult(null);
     setError(null);
+    setUnsaved(null);
   };
 
   const responses = result?.individual_responses ?? [];
@@ -126,7 +159,7 @@ export default function FileUploadForm({
 
         {selectedFile && (
           <div className="flex flex-wrap gap-3">
-            <button type="submit" disabled={loading} className={buttonClass("primary", "md", "flex-1")}>
+            <button type="submit" disabled={loading || unsaved !== null} className={buttonClass("primary", "md", "flex-1")}>
               {loading && action === "store" && <LoaderCircle className="h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />}
               {loading ? "Processing..." : "Process & Store"}
             </button>
@@ -151,6 +184,8 @@ export default function FileUploadForm({
           {error}
         </p>
       )}
+
+      {unsaved && <UnsavedSegmentsPanel failure={unsaved} onRetry={handleRetryUnsaved} disabled={loading} />}
 
       {responses.length > 0 && result && (
         <div role="status" className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">

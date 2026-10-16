@@ -5,7 +5,7 @@ import asyncio
 from fastapi import FastAPI, HTTPException, File, UploadFile, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse, IndividualResponse, ConversationInput, AugmentationInput, AugmentationResponse, ConfigResponse, ConfigUpdateRequest, ConfigUpdateResponse, ConfigHistoryResponse, ConfigVersion, SystemConfig, Category, StaffLoginInput, StaffLoginResponse
+from .models import FeedbackInput, ClassifiedFeedback, GraphData, FileUploadResponse, IndividualResponse, SegmentRetryInput, SegmentSaveResponse, ConversationInput, AugmentationInput, AugmentationResponse, ConfigResponse, ConfigUpdateRequest, ConfigUpdateResponse, ConfigHistoryResponse, ConfigVersion, SystemConfig, Category, StaffLoginInput, StaffLoginResponse
 from .classifier import chatbot_agent, augment_feedback, determine_topic_context, detect_spam_or_invalid, clear_config_cache
 from .feedback_pipeline import classify_and_tag, process_submission, store_feedback, StorageError
 from .database import db
@@ -319,19 +319,10 @@ async def upload_feedback_file(file: UploadFile = File(...), store_in_database: 
         logger.info(f"All {len(classified_results)} feedback segments classified")
 
         if store_in_database:
-            stored, unstored = 0, 0
-            for text, classified in zip(feedback_texts, classified_results):
-                try:
-                    store_feedback(text, classified)
-                    stored += 1
-                except StorageError:
-                    unstored += 1  # full text already logged at ERROR with its id
-            logger.info(f"Feedback storage completed. Stored: {stored}, failed: {unstored}")
-            if unstored:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"{unstored} of {len(classified_results)} segments could not be saved. Please try again.",
-                )
+            unsaved = await _store_segments(feedback_texts, classified_results)
+            logger.info(f"Feedback storage completed. Stored: {len(feedback_texts) - len(unsaved)}, failed: {len(unsaved)}")
+            if unsaved:
+                raise _unsaved_segments_error(feedback_texts, unsaved)
         else:
             logger.info("Classification only: not storing feedbacks in database")
 
@@ -357,6 +348,46 @@ async def upload_feedback_file(file: UploadFile = File(...), store_in_database: 
         logger.error(f"Error processing file upload: {describe_error(e)}")
         logger.debug(f"Exception type: {type(e).__name__}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
+
+async def _store_segments(texts: list[str], classified_results: list[ClassifiedFeedback]) -> list[int]:
+    """Save every segment in parallel. Returns the 0-based positions that could not be saved."""
+    async def save(text: str, classified: ClassifiedFeedback) -> bool:
+        try:
+            await asyncio.to_thread(store_feedback, text, classified)
+            return True
+        except StorageError:
+            return False  # the id and attempts are already logged; the text is kept by the staff UI
+
+    saved = await asyncio.gather(*(save(text, classified) for text, classified in zip(texts, classified_results)))
+    return [index for index, ok in enumerate(saved) if not ok]
+
+
+def _unsaved_segments_error(texts: list[str], unsaved: list[int]) -> HTTPException:
+    """The 500 the staff UI reads: which segments were not saved, so they can be shown and saved again."""
+    return HTTPException(
+        status_code=500,
+        detail={
+            "message": f"{len(unsaved)} of {len(texts)} segments could not be saved. Please try again.",
+            "saved_count": len(texts) - len(unsaved),
+            "total_count": len(texts),
+            "unsaved_segments": [{"position": index + 1, "text_content": texts[index]} for index in unsaved],
+        },
+    )
+
+
+@app.post("/api/upload-feedback/retry", response_model=SegmentSaveResponse, dependencies=[Depends(require_staff)])
+async def retry_unsaved_segments(payload: SegmentRetryInput):
+    """Classify and save only the segments that an earlier staff upload could not save."""
+    logger.info(f"Retrying {len(payload.segments)} unsaved segments")
+    classified_results = await asyncio.gather(*(classify_and_tag(text) for text in payload.segments))
+    unsaved = await _store_segments(payload.segments, classified_results)
+    if unsaved:
+        raise _unsaved_segments_error(payload.segments, unsaved)
+    return SegmentSaveResponse(individual_responses=[
+        IndividualResponse(message="Feedback segment saved", text_content=text, classified_feedback=classified)
+        for text, classified in zip(payload.segments, classified_results)
+    ])
+
 
 @app.post("/api/classify-feedback", response_model=FileUploadResponse, dependencies=[Depends(require_staff)])
 async def classify_feedback_file(file: UploadFile = File(...)):

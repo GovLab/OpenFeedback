@@ -154,8 +154,8 @@ export default function FeedbackForm({ onFeedbackSubmitted }: FeedbackFormProps)
       onFeedbackSubmitted();
       setLoading(false);
     } catch (err) {
-      setError('We could not send your feedback. Your text is still here, so please try again.');
-      console.error(err);
+      setError("We couldn't save your feedback. Your text is still here, please try again.");
+      console.error('Feedback submission failed:', err instanceof Error ? err.message : 'unknown error');
       setLoading(false);
     }
   };
