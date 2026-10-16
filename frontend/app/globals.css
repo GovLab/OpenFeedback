@@ -121,6 +121,12 @@ html {
   outline-offset: 2px;
 }
 
+/* Graph zoom and pan buttons sit in a clipped group, so their ring is drawn inside
+   the button. Unlayered on purpose: utility classes lose to the rule above. */
+.og-control:focus-visible {
+  outline-offset: -2px;
+}
+
 /* Montserrat for UI chrome (pills, labels) without the heading uppercase */
 .font-ui,
 .font-ui * {

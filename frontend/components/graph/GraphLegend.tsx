@@ -94,7 +94,7 @@ function ControlButton({ label, onClick, children }: { label: string; onClick: (
       onClick={onClick}
       aria-label={label}
       title={label}
-      className="flex h-9 w-9 items-center justify-center bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#1871bd]"
+      className="og-control flex h-9 w-9 items-center justify-center bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
     >
       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         {children}
