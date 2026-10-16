@@ -7,6 +7,7 @@ import docx
 from openai import OpenAI
 from pydantic import ValidationError
 from .ai_schemas import SegmentList, describe_validation_error, strip_code_fence
+from .log_safety import describe_error
 from .config import settings
 from .prompts import prompt_builder
 
@@ -65,7 +66,7 @@ class FileProcessor:
             
             return text.strip()
         except Exception as e:
-            logger.error(f"Error extracting text from PDF: {str(e)}")
+            logger.error(f"Error extracting text from PDF: {describe_error(e)}")
             raise HTTPException(
                 status_code=500, 
                 detail=f"Error extracting text from PDF: {str(e)}"
@@ -82,7 +83,7 @@ class FileProcessor:
                 text = file_content.decode('latin-1')
                 return text.strip()
             except Exception as e:
-                logger.error(f"Error decoding text file: {str(e)}")
+                logger.error(f"Error decoding text file: {describe_error(e)}")
                 raise HTTPException(
                     status_code=500, 
                     detail=f"Error decoding text file. Please ensure it's properly encoded: {str(e)}"
@@ -101,7 +102,7 @@ class FileProcessor:
             
             return text.strip()
         except Exception as e:
-            logger.error(f"Error extracting text from DOCX: {str(e)}")
+            logger.error(f"Error extracting text from DOCX: {describe_error(e)}")
             raise HTTPException(
                 status_code=500, 
                 detail=f"Error extracting text from DOCX: {str(e)}"
@@ -137,7 +138,6 @@ class FileProcessor:
             if response_text:
                 response_text = response_text.strip()
             
-            logger.info(f"AI segmentation full response: '{response_text}'")
             logger.debug(f"Response length: {len(response_text) if response_text else 0}")
             
             # Check if response is empty or None
@@ -164,7 +164,7 @@ class FileProcessor:
             return valid_segments
                 
         except Exception as e:
-            logger.error(f"Error in AI text segmentation: {str(e)}")
+            logger.error(f"Error in AI text segmentation: {describe_error(e)}")
             return [text]  # Fallback to original text as single item
 
     @staticmethod

@@ -119,7 +119,7 @@ def test_one_store_failing_is_tolerated(pipeline):
     pipeline.db.add_feedback.assert_called_once()
 
 
-def test_both_stores_failing_logs_full_text_with_id_and_raises(pipeline, caplog):
+def test_both_stores_failing_logs_id_and_length_but_not_text_and_raises(pipeline, caplog):
     pipeline.postgres_db.add_feedback.side_effect = RuntimeError("pg down")
     pipeline.db.add_feedback.side_effect = RuntimeError("neo4j down")
     text = "A long, important submission that must be recoverable."
@@ -130,7 +130,9 @@ def test_both_stores_failing_logs_full_text_with_id_and_raises(pipeline, caplog)
 
     lost = [r for r in caplog.records if "UNSTORED SUBMISSION" in r.getMessage()]
     assert len(lost) == 1 and lost[0].levelno == logging.ERROR
-    assert err.value.feedback_id in lost[0].getMessage() and text in lost[0].getMessage()
+    assert err.value.feedback_id in lost[0].getMessage()
+    assert f"chars={len(text)}" in lost[0].getMessage()
+    assert text not in caplog.text
 
 
 def test_system_categories_are_never_deprecated():
@@ -159,4 +161,6 @@ def test_unknown_urgency_is_logged_and_the_submission_still_stored(pipeline, mon
         asyncio.run(pipeline.process_submission("Lights are out on the trail", None))
     pipeline.postgres_db.add_feedback.assert_called_once()
     pipeline.db.add_feedback.assert_called_once()
-    assert any("Critical" in r.getMessage() for r in caplog.records if r.levelno == logging.WARNING)
+    warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
+    assert any("not in the database enum" in message for message in warnings)
+    assert not any("Critical" in message for message in warnings)

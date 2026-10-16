@@ -14,6 +14,7 @@ from .classifier import classify_feedback, detect_spam_or_invalid
 from .database import db
 from .models import ClassifiedFeedback
 from .postgres_db import postgres_db
+from .log_safety import describe_error
 from .relevance import fallback_classification, mark_not_relevant
 
 logger = logging.getLogger(__name__)
@@ -51,7 +52,7 @@ async def classify_and_tag(text: str) -> ClassifiedFeedback:
     try:
         classified = await classify_feedback(text)
     except Exception as e:
-        logger.error(f"Classification failed, storing as Unclassified: {type(e).__name__}: {e}")
+        logger.error(f"Classification failed, storing as Unclassified: {describe_error(e)}")
         classified = fallback_classification(text)
 
     relevance = await asyncio.to_thread(detect_spam_or_invalid, text)
@@ -81,7 +82,7 @@ def _database_urgency(value: Optional[str]) -> Optional[str]:
         return None
     match = next((level for level in URGENCY_ENUM_VALUES if level.lower() == value.strip().lower()), None)
     if match is None:
-        logger.warning(f"Urgency {value!r} is not in the database enum, storing it as empty")
+        logger.warning("Urgency is not in the database enum, storing it as empty")
     return match
 
 
@@ -124,19 +125,19 @@ def store_feedback(text: str, classified: ClassifiedFeedback, contact_info: Opti
         )
         postgres_ok = True
     except Exception as e:
-        logger.error(f"Failed to store feedback {feedback_id} in PostgreSQL: {e}")
+        logger.error(f"Failed to store feedback {feedback_id} in PostgreSQL: {describe_error(e)}")
 
     try:
         db.add_feedback(classified, feedback_id=feedback_id)
         neo4j_ok = True
     except Exception as e:
-        logger.error(f"Failed to store feedback {feedback_id} in Neo4j: {e}")
+        logger.error(f"Failed to store feedback {feedback_id} in Neo4j: {describe_error(e)}")
 
     if not postgres_ok and not neo4j_ok:
         logger.error(
             f"UNSTORED SUBMISSION {feedback_id}: both databases failed. "
-            f"Recover from this log. timestamp={datetime.now().isoformat()} "
-            f"language={classified.language} followup_opt_in={_contact_fields(contact_info)[0]} text={text!r}"
+            f"timestamp={datetime.now().isoformat()} chars={len(text)} "
+            f"language={classified.language} followup_opt_in={_contact_fields(contact_info)[0]}"
         )
         raise StorageError(feedback_id)
     if not (postgres_ok and neo4j_ok):

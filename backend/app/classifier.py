@@ -7,6 +7,7 @@ from .prompts import prompt_builder
 from .context_loader import load_context
 from .config import topic
 from .system_config import system_config_manager
+from .log_safety import describe_error
 from .ai_schemas import (
     ClassificationReply,
     label_options,
@@ -54,7 +55,7 @@ def _get_active_config() -> Tuple[Optional[Dict[str, Any]], Optional[int]]:
                 return None, None
         return _active_config_cache, _active_config_version
     except Exception as e:
-        logger.error(f"Error loading active config: {str(e)}")
+        logger.error(f"Error loading active config: {describe_error(e)}")
         logger.warning("Falling back to hardcoded values")
         return None, None
 
@@ -86,7 +87,7 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
     Returns:
         ClassifiedFeedback object with categories, subcategories, and sentiment
     """
-    logger.debug(f"Classifier function called with feedback: {feedback_text[:100]}...")
+    logger.debug(f"Classifier called with {len(feedback_text)} chars")
     
     # Try to load active config (will use defaults if None)
     # Capture both config_data and version at the time of classification
@@ -116,7 +117,6 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
 
         # Extract the response content
         content = response.choices[0].message.content.strip()
-        logger.debug(f"Raw response content: {content}")
         reply = ClassificationReply.model_validate_json(
             _json_object_span(content), context=label_options(config_data)
         )
@@ -126,12 +126,11 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
         _, config_version = _get_active_config()
         return fallback_classification(feedback_text, config_version)
     except Exception as e:
-        logger.error(f"Error classifying feedback: {str(e)}")
-        logger.debug(f"Exception details: {type(e).__name__}: {str(e)}")
-        raise Exception(f"Error classifying feedback: {str(e)}")
+        logger.error(f"Error classifying feedback: {describe_error(e)}")
+        raise Exception("Error classifying feedback") from e
 
     logger.info(f"Successfully classified feedback. Categories: {list(reply.category_map.keys())}")
-    logger.debug(f"Full classification result: {reply}")
+    logger.debug(f"Classification has {len(reply.category_map)} categories")
     return ClassifiedFeedback(text=feedback_text, config_version=config_version, **reply.model_dump())
 
 def determine_topic_context(feedback_text: str, category_map: dict = None) -> str:
@@ -154,7 +153,7 @@ def determine_topic_context(feedback_text: str, category_map: dict = None) -> st
         logger.warning("OpenAI API key not configured, skipping context loading")
         return ""
     
-    logger.info(f"Feedback preview: {feedback_text[:100]}...")
+    logger.info(f"Feedback length: {len(feedback_text)} chars")
     if category_map:
         logger.info(f"Pre-classified categories available: {list(category_map.keys())}")
     
@@ -208,10 +207,6 @@ def determine_topic_context(feedback_text: str, category_map: dict = None) -> st
         
         logger.info(f"📨 OpenAI response received:")
         logger.info(f"   - Role: {response.choices[0].message.role}")
-        logger.info(f"   - Content: {response.choices[0].message.content}")
-        logger.info(f"   - Tool calls: {response.choices[0].message.tool_calls}")
-        if response.choices[0].message.tool_calls:
-            logger.info(f"   - Tool call details: {response.choices[0].message.tool_calls[0]}")
         # Extract the category from tool call
         if response.choices[0].message.tool_calls:
             tool_call = response.choices[0].message.tool_calls[0]
@@ -237,7 +232,7 @@ def determine_topic_context(feedback_text: str, category_map: dict = None) -> st
         logger.info("=" * 60)
         return ""
     except Exception as e:
-        logger.error(f"❌ Error determining topic context: {str(e)}")
+        logger.error(f"❌ Error determining topic context: {describe_error(e)}")
         logger.info("=" * 60)
         return ""
 
@@ -261,7 +256,7 @@ def detect_spam_or_invalid(feedback_text: str) -> dict:
         return {"is_invalid": False}
     
     try:
-        logger.info(f"Checking feedback: {feedback_text[:100]}...")
+        logger.info(f"Checking feedback: {len(feedback_text)} chars")
         
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -284,7 +279,7 @@ def detect_spam_or_invalid(feedback_text: str) -> dict:
 
         logger.info(f"Spam detection result: is_invalid={reply.is_invalid}")
         if reply.is_invalid:
-            logger.info(f"Reason: {reply.reason}")
+            logger.info(f"Kind: {reply.kind}")
         logger.info("=" * 60)
 
         return reply.model_dump()
@@ -294,7 +289,7 @@ def detect_spam_or_invalid(feedback_text: str) -> dict:
         logger.error(f"Spam detection reply failed validation, treating as relevant: {describe_validation_error(e)}")
         return {"is_invalid": False}
     except Exception as e:
-        logger.error(f"Error in spam detection: {str(e)}")
+        logger.error(f"Error in spam detection: {describe_error(e)}")
         # On error, default to not invalid (be lenient)
         return {"is_invalid": False}
 
@@ -318,7 +313,7 @@ def chatbot_agent(original_feedback: str, conversation_history: List, topic_cont
     if not settings.openai_api_key:
         raise Exception("OpenAI API key not configured")
     
-    logger.info(f"Feedback preview: {original_feedback[:100]}...")
+    logger.info(f"Feedback length: {len(original_feedback)} chars")
     logger.info(f"Conversation history: {len(conversation_history)} messages")
     logger.info(f"Topic context: {'Available (' + str(len(topic_context)) + ' chars)' if topic_context else 'Not provided'}")
     
@@ -377,7 +372,7 @@ def chatbot_agent(original_feedback: str, conversation_history: List, topic_cont
     logger.info(f"✓ AI Response received:")
     logger.info(f"   - Quality score: {result['quality_score']}/10")
     logger.info(f"   - Needs followup: {result['needs_followup']}")
-    logger.info(f"   - Message preview: {result.get('message', '')[:80]}...")
+    logger.info(f"   - Message length: {len(result.get('message', ''))} chars")
     
     # Enforce quality thresholds
     if result["quality_score"] < 6:
@@ -445,7 +440,7 @@ def augment_feedback(original_feedback: str, conversation_history: List) -> str:
         return additional_note
         
     except Exception as e:
-        logger.error(f"Error generating additional note: {str(e)}")
+        logger.error(f"Error generating additional note: {describe_error(e)}")
         # Fallback to simple concatenation if AI fails
         user_responses = [msg.content for msg in conversation_history if msg.role == "user"]
         return ' '.join(user_responses)

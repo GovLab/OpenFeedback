@@ -13,6 +13,7 @@ from .postgres_db import postgres_db
 from .file_processor import FileProcessor
 from .system_config import system_config_manager
 from .auth import require_staff, rate_limit_public, check_staff_password, issue_token
+from .log_safety import describe_error, file_extension
 
 
 # Configure logging
@@ -103,7 +104,7 @@ app = FastAPI(
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     """Catch all unhandled exceptions and return a proper error response."""
-    logger.error(f"Unhandled exception: {type(exc).__name__}: {str(exc)}", exc_info=True)
+    logger.error(f"Unhandled exception: {describe_error(exc)}")
     return JSONResponse(
         status_code=500,
         content={
@@ -136,7 +137,7 @@ DASHBOARD_UNAVAILABLE = "Dashboard data could not be loaded right now. Please tr
 
 def _dashboard_unavailable(what: str, error: Exception) -> HTTPException:
     """Log the detail and return the friendly 503 the dashboard shows as an error."""
-    logger.error(f"Error retrieving {what}: {type(error).__name__}: {error}", exc_info=True)
+    logger.error(f"Error retrieving {what}: {describe_error(error)}")
     return HTTPException(status_code=503, detail=DASHBOARD_UNAVAILABLE)
 
 
@@ -181,7 +182,7 @@ async def feedback_agent(conversation: ConversationInput):
     logger.info("=" * 70)
     logger.info("==== FEEDBACK AGENT ENDPOINT CALLED ====")
     logger.info("=" * 70)
-    logger.info(f"Feedback: {conversation.original_feedback[:100]}...")
+    logger.info(f"Feedback: {len(conversation.original_feedback)} chars")
     logger.info(f"Conversation turn: {len(conversation.conversation_history) + 1}")
     
     try:
@@ -227,13 +228,13 @@ async def feedback_agent(conversation: ConversationInput):
         logger.info("==== FINAL RESULT ====")
         logger.info(f"Needs followup: {result['needs_followup']}")
         logger.info(f"Quality score: {result.get('quality_score', 'N/A')}/10")
-        logger.info(f"Response message: {result.get('message', '')[:100]}...")
+        logger.info(f"Response message: {len(result.get('message', ''))} chars")
         logger.info("=" * 70 + "\n")
         
         return result
         
     except Exception as e:
-        logger.error(f"❌ Error in feedback agent: {str(e)}")
+        logger.error(f"❌ Error in feedback agent: {describe_error(e)}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
 
 
@@ -248,7 +249,7 @@ async def augment_feedback_endpoint(input_data: AugmentationInput):
     Returns:
         AugmentationResponse with the additional note text
     """
-    logger.info(f"Generating additional note for feedback: {input_data.original_feedback[:100]}...")
+    logger.info(f"Generating additional note for feedback: {len(input_data.original_feedback)} chars")
     
     try:
         # Call the augmentation function
@@ -262,7 +263,7 @@ async def augment_feedback_endpoint(input_data: AugmentationInput):
         return AugmentationResponse(additional_note=additional_note_text)
         
     except Exception as e:
-        logger.error(f"Error generating additional note: {str(e)}")
+        logger.error(f"Error generating additional note: {describe_error(e)}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
 
 
@@ -283,8 +284,8 @@ async def submit_feedback(feedback: FeedbackInput):
         return await process_submission(feedback.text, feedback.contact_info)
     except StorageError as e:
         logger.error(f"Submission {e.feedback_id} could not be stored")
-    except Exception:
-        logger.exception("Error processing feedback submission")
+    except Exception as e:
+        logger.error(f"Error processing feedback submission: {describe_error(e)}")
     raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
 
 @app.post("/api/upload-feedback", response_model=FileUploadResponse, dependencies=[Depends(require_staff)])
@@ -298,7 +299,7 @@ async def upload_feedback_file(file: UploadFile = File(...), store_in_database: 
     Returns:
         FileUploadResponse with extracted text and classification
     """
-    logger.info(f"Received file upload: {file.filename}")
+    logger.info(f"Received file upload: {file_extension(file.filename)}")
     
     try:
         # Extract and segment text from the file
@@ -353,7 +354,7 @@ async def upload_feedback_file(file: UploadFile = File(...), store_in_database: 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error processing file upload: {str(e)}")
+        logger.error(f"Error processing file upload: {describe_error(e)}")
         logger.debug(f"Exception type: {type(e).__name__}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
 
@@ -365,15 +366,15 @@ async def classify_feedback_file(file: UploadFile = File(...)):
     Args:
         file: UploadFile object containing the uploaded file
     """
-    logger.info(f"Received file for classification: {file.filename}")
+    logger.info(f"Received file for classification: {file_extension(file.filename)}")
     try:
         response = await upload_feedback_file(file, store_in_database=False)
-        logger.info(f"File classified successfully. Response: {response}")
+        logger.info(f"File classified successfully: {len(response.individual_responses)} segments")
         return response
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error classifying feedback file: {str(e)}")
+        logger.error(f"Error classifying feedback file: {describe_error(e)}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
 
 @app.get("/api/graph", response_model=GraphData, dependencies=[Depends(require_staff)])
