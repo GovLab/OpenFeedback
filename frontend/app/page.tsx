@@ -24,7 +24,7 @@ export default function Home() {
       <Navigation />
 
       {/* Main Content */}
-      <main className="mx-auto min-w-[320px] max-w-4xl px-4 pt-20 pb-8 sm:py-10">
+      <main className="mx-auto min-w-[320px] max-w-4xl px-4 pt-20 pb-8 sm:pb-10">
         {/* Minimal Header - centered and clean */}
         <div className="mb-8 text-center">
           <h1 className="mb-2 text-3xl tracking-tight text-[#091F2F] sm:text-4xl">
