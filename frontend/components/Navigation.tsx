@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChartColumn, House } from 'lucide-react';
 
 const LINKS = [
@@ -20,13 +20,19 @@ export default function Navigation() {
   // they come back on the next hover or focus
   const [labelsHidden, setLabelsHidden] = useState(false);
 
+  // Document level, so Escape works with the pointer on the pill and focus elsewhere
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLabelsHidden(true);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   return (
     <nav
       aria-label="Main"
       className="fixed top-4 right-4 z-50 sm:top-6 sm:right-6"
-      onKeyDown={(e) => {
-        if (e.key === "Escape") setLabelsHidden(true);
-      }}
       onMouseEnter={() => setLabelsHidden(false)}
       onFocus={() => setLabelsHidden(false)}
     >
