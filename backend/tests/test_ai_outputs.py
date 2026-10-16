@@ -111,6 +111,68 @@ def test_validation_log_does_not_contain_resident_text(monkeypatch, caplog):
     assert secret not in caplog.text
 
 
+# Staff-configured labels
+
+CUSTOM_CONFIG = {
+    "sentiment_options": ["Mixed", "Calm"],
+    "priority_levels": ["Critical", "Routine"],
+    "urgency_levels": ["Critical", "Minor"],
+}
+
+
+def _with_active_config(monkeypatch, config, version=7):
+    monkeypatch.setattr(classifier, "_get_active_config", lambda: (config, version))
+    _mock_client(monkeypatch, classifier, _completion(content=json.dumps(VALID_CLASSIFICATION)))
+
+
+def _classify_reply(monkeypatch, **fields):
+    _mock_client(monkeypatch, classifier, _completion(content=json.dumps(dict(VALID_CLASSIFICATION, **fields))))
+    return asyncio.run(classifier.classify_feedback("Park benches are broken."))
+
+
+def test_configured_labels_survive_validation(monkeypatch):
+    _with_active_config(monkeypatch, CUSTOM_CONFIG)
+    result = _classify_reply(monkeypatch, sentiment="Mixed", priority="Critical", urgency_level="Critical")
+    assert (result.sentiment, result.priority, result.urgency_level) == ("Mixed", "Critical", "Critical")
+    assert result.config_version == 7
+
+
+def test_configured_label_spelling_is_taken_from_config(monkeypatch):
+    _with_active_config(monkeypatch, CUSTOM_CONFIG)
+    result = _classify_reply(monkeypatch, sentiment="  mixed ", priority="ROUTINE", urgency_level="minor")
+    assert (result.sentiment, result.priority, result.urgency_level) == ("Mixed", "Routine", "Minor")
+
+
+def test_default_labels_are_not_accepted_when_config_replaces_them(monkeypatch):
+    _with_active_config(monkeypatch, CUSTOM_CONFIG)
+    result = _classify_reply(monkeypatch, sentiment="Negative", priority="High", urgency_level="High")
+    assert result.sentiment == "Mixed"     # first configured option
+    assert result.priority == "Critical"   # first configured option
+    assert result.urgency_level is None    # not configured, so no label
+
+
+def test_missing_sentiment_uses_first_option_when_default_is_not_configured(monkeypatch):
+    _with_active_config(monkeypatch, CUSTOM_CONFIG)
+    reply = {k: v for k, v in VALID_CLASSIFICATION.items() if k != "sentiment"}
+    _mock_client(monkeypatch, classifier, _completion(content=json.dumps(reply)))
+    assert asyncio.run(classifier.classify_feedback("Park benches are broken.")).sentiment == "Mixed"
+
+
+def test_empty_config_lists_fall_back_to_defaults(monkeypatch):
+    _with_active_config(monkeypatch, {"sentiment_options": [], "priority_levels": [], "urgency_levels": []})
+    result = _classify_reply(monkeypatch, sentiment="Positive", priority="Low", urgency_level="High")
+    assert (result.sentiment, result.priority, result.urgency_level) == ("Positive", "Low", "High")
+
+
+def test_configured_urgency_is_stored_as_empty_when_not_in_database_enum(monkeypatch):
+    from app import feedback_pipeline
+    _with_active_config(monkeypatch, CUSTOM_CONFIG)
+    result = _classify_reply(monkeypatch, urgency_level="Critical")
+    assert result.urgency_level == "Critical"                       # kept in the result
+    assert feedback_pipeline._database_urgency(result.urgency_level) is None  # Postgres enum is Low/Medium/High
+    assert feedback_pipeline._database_urgency("high") == "High"
+
+
 # Topic context tool call
 
 def test_valid_tool_call_loads_that_context(monkeypatch):

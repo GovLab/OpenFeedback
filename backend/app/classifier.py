@@ -9,6 +9,7 @@ from .config import topic
 from .system_config import system_config_manager
 from .ai_schemas import (
     ClassificationReply,
+    label_options,
     FollowupVerdict,
     RelevanceReply,
     TopicContextArguments,
@@ -116,7 +117,9 @@ async def classify_feedback(feedback_text: str) -> ClassifiedFeedback:
         # Extract the response content
         content = response.choices[0].message.content.strip()
         logger.debug(f"Raw response content: {content}")
-        reply = ClassificationReply.model_validate_json(_json_object_span(content))
+        reply = ClassificationReply.model_validate_json(
+            _json_object_span(content), context=label_options(config_data)
+        )
     except ValidationError as e:
         logger.error(f"Classification reply failed validation, storing as Unclassified: {describe_validation_error(e)}")
         # Get config version even for fallback (may be None if no active config)
