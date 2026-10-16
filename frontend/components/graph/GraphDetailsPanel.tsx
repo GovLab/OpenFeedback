@@ -152,7 +152,7 @@ export function GraphDetailsPanel({ node, model, variant, onClose }: GraphDetail
       ? "absolute right-3 top-3 max-h-[calc(100%-1.5rem)] w-80 shadow-[-10px_20px_50px_-20px_rgba(9,31,47,0.4)] og-panel-in"
       : "mt-4 w-full";
   return (
-    <aside
+    <section
       ref={ref}
       onKeyDown={(e) => e.key === "Escape" && onClose()}
       aria-labelledby="graph-details-title"
@@ -191,6 +191,6 @@ export function GraphDetailsPanel({ node, model, variant, onClose }: GraphDetail
         )}
         <DetailsBody node={node} model={model} />
       </div>
-    </aside>
+    </section>
   );
 }
