@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine, Column, String, Text, Boolean, Float, TIMESTAMP, ARRAY, Integer
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import func
 from contextlib import contextmanager
@@ -146,19 +147,33 @@ class PostgresDB:
         if self.engine is None or self.SessionLocal is None:
             raise Exception(f"PostgreSQL database not connected: {self._connection_error}")
         
+        # If feedback_id is provided, add it to the data
+        if feedback_id:
+            feedback_data['feedback_id'] = uuid.UUID(feedback_id)
+
+        # Add config_version if provided
+        if config_version is not None:
+            feedback_data['config_version'] = config_version
+
+        try:
+            with self.get_session() as session:
+                feedback = FeedbackDB(**feedback_data)
+                session.add(feedback)
+                session.flush()
+                return str(feedback.feedback_id)
+        except IntegrityError:
+            # A retry after a commit whose reply was lost hits the primary key.
+            # The row is already there, so the write succeeded.
+            if feedback_id and self.feedback_exists(feedback_id):
+                return feedback_id
+            raise
+
+    def feedback_exists(self, feedback_id: str) -> bool:
+        """True when a feedback row with this id is stored."""
         with self.get_session() as session:
-            # If feedback_id is provided, add it to the data
-            if feedback_id:
-                feedback_data['feedback_id'] = uuid.UUID(feedback_id)
-            
-            # Add config_version if provided
-            if config_version is not None:
-                feedback_data['config_version'] = config_version
-            
-            feedback = FeedbackDB(**feedback_data)
-            session.add(feedback)
-            session.flush()
-            return str(feedback.feedback_id)
+            return session.query(FeedbackDB.feedback_id).filter(
+                FeedbackDB.feedback_id == uuid.UUID(feedback_id)
+            ).first() is not None
     
     def get_all_feedback(self, limit: int = 100, offset: int = 0):
         """Get all feedback with pagination."""
