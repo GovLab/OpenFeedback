@@ -17,7 +17,7 @@ Browser → Amplify (static site) → App Runner (FastAPI) ─┬→ RDS Postgre
 Rough cost: about $45/month (RDS ~$14, Neo4j EC2 ~$15, App Runner ~$8 idle, NAT ~$6, public IP ~$4).
 
 ## Prerequisites
-- AWS CLI signed in to the Burnes account
+- AWS CLI signed in to the AWS account you want to deploy to
 - Terraform 1.5+, Docker, Node 20+, `jq`
 
 ## Deploy

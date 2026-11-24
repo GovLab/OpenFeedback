@@ -29,7 +29,7 @@ class ClassifiedFeedback(BaseModel):
     priority: Optional[str] = None
     
     # Enhanced AI outputs
-    permit_type: Optional[str] = None  # Type of Boston permit
+    permit_type: Optional[str] = None  # Item type for the active topic (permit type, park feature, or issue area)
     ai_summary: Optional[str] = None  # Condensed version (1-2 sentences)
     department_predicted: Optional[str] = None  # Target agency
     urgency_level: Optional[str] = None  # Low, Medium, High

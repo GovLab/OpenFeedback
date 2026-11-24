@@ -24,10 +24,10 @@ class Neo4jDatabase:
             
             self.driver = GraphDatabase.driver(AWS_URI, auth=AWS_AUTH)
             self.driver.verify_connectivity()
-            logger.info(f"✅ Successfully connected to Neo4j at {AWS_URI}")
+            logger.info(f"Successfully connected to Neo4j at {AWS_URI}")
         except Exception as e:
             self._connection_error = str(e)
-            logger.error(f"❌ Failed to connect to Neo4j: {str(e)}")
+            logger.error(f"Failed to connect to Neo4j: {str(e)}")
             logger.warning("Server will continue to run, but Neo4j operations will fail")
             # Don't raise - allow server to start even if database is unavailable
     

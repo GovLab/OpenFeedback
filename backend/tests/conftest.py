@@ -22,6 +22,8 @@ os.environ.update({
     "POSTGRES_PASSWORD": "test",
     "STAFF_PASSWORD": "test-staff-password",
     "SESSION_SECRET": "t" * 40,
+    # Pinned so prompt wording tests do not depend on the developer's shell
+    "TOPIC": "permits",
 })
 
 # Modules that hold a reference to a database handle. Patched for every test.

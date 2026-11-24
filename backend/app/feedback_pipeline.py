@@ -30,7 +30,7 @@ SENTIMENT_SCORES = {
 # A write that fails is retried, so a short database blip does not lose the submission
 STORE_ATTEMPTS = 3
 STORE_RETRY_DELAYS_SECONDS = (0.5, 1.0)  # wait before attempt 2, then before attempt 3
-FEEDBACK_SOURCE = "OpenPermit"  # value of the Postgres feedback_source enum
+FEEDBACK_SOURCE = "OpenPermit"  # value of the Postgres feedback_source enum (kept from the original permits app; renaming it needs a database migration)
 URGENCY_ENUM_VALUES = ("Low", "Medium", "High")  # Postgres urgency_level_enum (schema.sql)
 
 

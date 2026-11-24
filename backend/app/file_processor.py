@@ -160,7 +160,7 @@ class FileProcessor:
                 logger.warning("No valid segments found, returning original text")
                 return [text]
 
-            logger.info(f"===================================\nSuccessfully segmented text into {len(valid_segments)} feedback items\n===================================")
+            logger.info(f"Successfully segmented text into {len(valid_segments)} feedback items")
             return valid_segments
                 
         except Exception as e:

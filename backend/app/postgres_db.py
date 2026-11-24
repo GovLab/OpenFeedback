@@ -85,10 +85,10 @@ class PostgresDB:
         try:
             self._bootstrap_schema()
             Base.metadata.create_all(bind=engine)
-            logger.info("✅ PostgreSQL tables created/verified successfully")
+            logger.info("PostgreSQL tables created/verified successfully")
         except Exception as e:
             self._connection_error = str(e)
-            logger.error(f"❌ Failed to create PostgreSQL tables: {str(e)}")
+            logger.error(f"Failed to create PostgreSQL tables: {str(e)}")
             logger.warning("Server will continue to run, but PostgreSQL operations will fail")
             # Don't raise - allow server to start even if database is unavailable
     

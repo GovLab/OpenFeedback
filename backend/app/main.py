@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 import uuid
 import logging
 import asyncio
+import sys
 from fastapi import FastAPI, HTTPException, File, UploadFile, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -16,42 +17,28 @@ from .auth import require_staff, rate_limit_public, check_staff_password, issue_
 from .log_safety import describe_error, file_extension
 
 
-# Configure logging
-# Remove any existing handlers (to reset FastAPI's logging)
+# Logs go to stdout only (CloudWatch reads stdout)
 for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
-# Configure root logger to INFO level (to avoid too much noise)
-# Use UTF-8 encoding to support emojis in logs
-import sys
 stream_handler = logging.StreamHandler(sys.stdout)
 stream_handler.setLevel(logging.INFO)
 stream_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-# Force UTF-8 encoding on the stream
-if hasattr(sys.stdout, 'reconfigure'):
-    sys.stdout.reconfigure(encoding='utf-8')
-
-file_handler = logging.FileHandler('app.log', encoding='utf-8')
-file_handler.setLevel(logging.INFO)
-file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 
 logging.basicConfig(
     level=logging.INFO,
-    handlers=[stream_handler, file_handler]
+    handlers=[stream_handler]
 )
 
-# Set specific loggers for detailed debugging
-# Enable DEBUG for your classifier to see detailed classification logs
 logging.getLogger('app.classifier').setLevel(logging.DEBUG)
-logging.getLogger('app.main').setLevel(logging.INFO)  # Your main app
+logging.getLogger('app.main').setLevel(logging.INFO)
 
-# Reduce noise from other libraries
-logging.getLogger('neo4j').setLevel(logging.WARNING)  # Reduce Neo4j noise
-logging.getLogger('urllib3').setLevel(logging.WARNING)  # Reduce urllib3 noise
-logging.getLogger('openai').setLevel(logging.INFO)  # Reduce OpenAI noise
+logging.getLogger('neo4j').setLevel(logging.WARNING)
+logging.getLogger('urllib3').setLevel(logging.WARNING)
+logging.getLogger('openai').setLevel(logging.INFO)
 
 logger = logging.getLogger(__name__)
-logger.info("Application logging configured with filtered levels")
+logger.info("Logging configured")
 
 
 # Helper function for config conversion
@@ -179,23 +166,20 @@ async def feedback_agent(conversation: ConversationInput):
     Returns:
         Agent response with next question or completion status
     """
-    logger.info("=" * 70)
-    logger.info("==== FEEDBACK AGENT ENDPOINT CALLED ====")
-    logger.info("=" * 70)
     logger.info(f"Feedback: {len(conversation.original_feedback)} chars")
     logger.info(f"Conversation turn: {len(conversation.conversation_history) + 1}")
     
     try:
         # Check for spam/invalid feedback only on first call (empty conversation history)
         if not conversation.conversation_history:
-            logger.info("📍 FIRST TURN: Checking for spam/invalid content")
+            logger.info("First turn: checking for spam/invalid content")
             spam_check = detect_spam_or_invalid(conversation.original_feedback)
             
             # Every submission must be accepted, so an irrelevant one is not
             # rejected: skip the follow-up questions and let the form submit it.
             # submit_feedback re-checks and files it under Not Relevant.
             if spam_check.get("is_invalid", False):
-                logger.info("⚠️ Feedback looks not relevant - no follow-up, will be tagged on submit")
+                logger.info("Feedback looks not relevant: no follow-up, will be tagged on submit")
                 return {
                     "message": "",
                     "needs_followup": False,
@@ -204,15 +188,14 @@ async def feedback_agent(conversation: ConversationInput):
                 }
             
             # Determine topic context only on first call
-            logger.info("📍 FIRST TURN: Will determine topic context")
+            logger.info("First turn: determining topic context")
             topic_context = determine_topic_context(
                 conversation.original_feedback,
                 conversation.category_map
             )
         else:
-            logger.info("📍 SUBSEQUENT TURN: Skipping spam check and topic context (already loaded)")
+            logger.info("Subsequent turn: skipping spam check and topic context (already loaded)")
             topic_context = ""
-            logger.info("=" * 60)
         
         # Call the chatbot agent with topic context
         result = chatbot_agent(
@@ -224,17 +207,14 @@ async def feedback_agent(conversation: ConversationInput):
         # Ensure is_invalid is set in result
         result["is_invalid"] = False
         
-        logger.info("\n" + "=" * 70)
-        logger.info("==== FINAL RESULT ====")
         logger.info(f"Needs followup: {result['needs_followup']}")
         logger.info(f"Quality score: {result.get('quality_score', 'N/A')}/10")
         logger.info(f"Response message: {len(result.get('message', ''))} chars")
-        logger.info("=" * 70 + "\n")
         
         return result
         
     except Exception as e:
-        logger.error(f"❌ Error in feedback agent: {describe_error(e)}")
+        logger.error(f"Error in feedback agent: {describe_error(e)}")
         raise HTTPException(status_code=500, detail="Something went wrong processing your request. Please try again.")
 
 

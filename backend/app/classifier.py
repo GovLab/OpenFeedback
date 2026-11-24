@@ -145,9 +145,6 @@ def determine_topic_context(feedback_text: str, category_map: dict = None) -> st
     Returns:
         The loaded context text (or empty string if none needed)
     """
-    logger.info("=" * 60)
-    logger.info("==== TOPIC CONTEXT DETERMINATION (Tool Calling) ====")
-    logger.info("=" * 60)
     
     if not settings.openai_api_key:
         logger.warning("OpenAI API key not configured, skipping context loading")
@@ -187,7 +184,7 @@ def determine_topic_context(feedback_text: str, category_map: dict = None) -> st
     
     # Call AI to determine which context to load
     try:
-        logger.info("🤖 Calling OpenAI (gpt-4o-mini) with tool to determine category...")
+        logger.info("Calling OpenAI (gpt-4o-mini) with tool to determine category...")
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             temperature=0.3,
@@ -205,35 +202,31 @@ def determine_topic_context(feedback_text: str, category_map: dict = None) -> st
             tool_choice={"type": "function", "function": {"name": "get_context"}}
         )
         
-        logger.info(f"📨 OpenAI response received:")
+        logger.info(f"OpenAI response received:")
         logger.info(f"   - Role: {response.choices[0].message.role}")
         # Extract the category from tool call
         if response.choices[0].message.tool_calls:
             tool_call = response.choices[0].message.tool_calls[0]
             category = TopicContextArguments.model_validate_json(tool_call.function.arguments).category
 
-            logger.info(f"✓ AI selected category: '{category}'")
-            logger.info(f"📄 Loading {topic.key} context from file...")
+            logger.info(f"AI selected category: '{category}'")
+            logger.info(f"Loading {topic.key} context from file...")
             
             # Load and return the context
             context_content = load_context(category)
             context_length = len(context_content)
-            logger.info(f"✓ Context loaded: {context_length} characters")
-            logger.info("=" * 60)
+            logger.info(f"Context loaded: {context_length} characters")
             
             return context_content
         else:
-            logger.warning("⚠️ No tool call returned, using empty context")
-            logger.info("=" * 60)
+            logger.warning("No tool call returned, using empty context")
             return ""
 
     except ValidationError as e:
-        logger.error(f"❌ Topic context tool call failed validation, using empty context: {describe_validation_error(e)}")
-        logger.info("=" * 60)
+        logger.error(f"Topic context tool call failed validation, using empty context: {describe_validation_error(e)}")
         return ""
     except Exception as e:
-        logger.error(f"❌ Error determining topic context: {describe_error(e)}")
-        logger.info("=" * 60)
+        logger.error(f"Error determining topic context: {describe_error(e)}")
         return ""
 
 
@@ -247,9 +240,6 @@ def detect_spam_or_invalid(feedback_text: str) -> dict:
     Returns:
         Dict with is_invalid (bool) and reason (str, optional)
     """
-    logger.info("=" * 60)
-    logger.info("==== SPAM/INVALID DETECTION ====")
-    logger.info("=" * 60)
     
     if not settings.openai_api_key:
         logger.warning("OpenAI API key not configured, skipping spam detection")
@@ -280,7 +270,6 @@ def detect_spam_or_invalid(feedback_text: str) -> dict:
         logger.info(f"Spam detection result: is_invalid={reply.is_invalid}")
         if reply.is_invalid:
             logger.info(f"Kind: {reply.kind}")
-        logger.info("=" * 60)
 
         return reply.model_dump()
 
@@ -306,9 +295,6 @@ def chatbot_agent(original_feedback: str, conversation_history: List, topic_cont
     Returns:
         Dict with needs_followup, message, and quality_score
     """
-    logger.info("=" * 60)
-    logger.info("==== CHATBOT AGENT (Quality Evaluation) ====")
-    logger.info("=" * 60)
     
     if not settings.openai_api_key:
         raise Exception("OpenAI API key not configured")
@@ -347,7 +333,7 @@ def chatbot_agent(original_feedback: str, conversation_history: List, topic_cont
     item_types = (config_data or {}).get("permit_types", [])
     prompt = prompt_builder.build_chatbot_agent_prompt(context=context, item_types=item_types)
     
-    logger.info("🤖 Calling OpenAI (gpt-4o-mini) for quality evaluation...")
+    logger.info("Calling OpenAI (gpt-4o-mini) for quality evaluation...")
     logger.info("   - No tools involved (context already in system prompt)")
     
     # Single API call with context already in system prompt (no tools needed)
@@ -369,21 +355,20 @@ def chatbot_agent(original_feedback: str, conversation_history: List, topic_cont
         raise
     result = verdict.model_dump()
 
-    logger.info(f"✓ AI Response received:")
+    logger.info(f"AI Response received:")
     logger.info(f"   - Quality score: {result['quality_score']}/10")
     logger.info(f"   - Needs followup: {result['needs_followup']}")
     logger.info(f"   - Message length: {len(result.get('message', ''))} chars")
     
     # Enforce quality thresholds
     if result["quality_score"] < 6:
-        logger.info(f"⚠️ Quality score below threshold (< 6), requiring followup")
+        logger.info(f"Quality score below threshold (< 6), requiring followup")
         result["needs_followup"] = True
     elif result["quality_score"] >= 6:
-        logger.info(f"✓ Quality threshold met (>= 6), marking as complete")
+        logger.info(f"Quality threshold met (>= 6), marking as complete")
         result["needs_followup"] = False
         result["message"] = "Thank you for your feedback!"
     
-    logger.info("=" * 60)
     
     return result
 
