@@ -172,6 +172,10 @@ Please report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## License
+
+MIT. See [LICENSE](LICENSE).
+
 ## Authors and acknowledgments
 
 - Built by the OpenFeedback team: [Arnav Jaiswal](https://github.com/ShadowMasterAJ), [Isabella Iype](https://isabellaiype.com) and Dhruv Kamalesh Kumar
