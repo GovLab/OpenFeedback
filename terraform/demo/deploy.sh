@@ -10,6 +10,28 @@ REGION="${REGION:-us-east-1}"  # keep in sync with var.aws_region
 
 tf_out() { terraform output -raw "$1"; }
 
+# Wait for one App Runner operation to finish; fail unless it succeeded.
+# A rejected update rolls back and leaves the service RUNNING on the old
+# settings, so RUNNING alone does not mean the change went live.
+wait_for_operation() {
+  local arn="$1" op_id="$2" what="$3" status
+  until status="$(aws apprunner list-operations --region "$REGION" --service-arn "$arn" \
+      --query "OperationSummaryList[?Id=='$op_id'].Status | [0]" --output text)" \
+    && [[ "$status" =~ ^(SUCCEEDED|FAILED|ROLLBACK_SUCCEEDED|ROLLBACK_FAILED)$ ]]; do
+    sleep 15
+  done
+  echo "App Runner $what: $status"
+  if [ "$status" != "SUCCEEDED" ]; then
+    echo "ERROR: App Runner $what did not go live. See the service and application logs under /aws/apprunner/ in CloudWatch." >&2
+    return 1
+  fi
+}
+
+latest_operation() {
+  aws apprunner list-operations --region "$REGION" --service-arn "$1" --max-results 1 \
+    --query 'OperationSummaryList[0].[Id,Type]' --output text
+}
+
 deploy_backend() {
   echo "==> Creating container registry"
   terraform apply -auto-approve -input=false -target=aws_ecr_repository.backend
@@ -21,16 +43,27 @@ deploy_backend() {
   docker build --platform linux/amd64 -t "$repo:latest" "$REPO_ROOT/backend"
   docker push "$repo:latest"
 
+  # Roll out the new image before applying setting changes. App Runner applies
+  # a settings update to the image it last deployed, so a new setting that
+  # needs new code (a new TOPIC, say) would crash on the old image and roll back.
+  local arn op_id op_type before
+  arn="$(terraform output -raw apprunner_service_arn 2>/dev/null || true)"
+  if [[ "$arn" == arn:* ]]; then
+    echo "==> Rolling out latest image"
+    op_id="$(aws apprunner start-deployment --region "$REGION" --service-arn "$arn" --query OperationId --output text)"
+    wait_for_operation "$arn" "$op_id" "image rollout"
+    before="$op_id"
+  fi
+
   echo "==> Applying infrastructure"
   terraform apply -auto-approve -input=false
 
-  echo "==> Rolling out latest image"
-  local arn
+  # Check the settings update, if the apply made one, actually went live
   arn="$(tf_out apprunner_service_arn)"
-  aws apprunner start-deployment --region "$REGION" --service-arn "$arn" >/dev/null
-  until [ "$(aws apprunner describe-service --region "$REGION" --service-arn "$arn" --query Service.Status --output text)" = "RUNNING" ]; do
-    sleep 15
-  done
+  read -r op_id op_type < <(latest_operation "$arn")
+  if [ "$op_id" != "${before:-}" ]; then
+    wait_for_operation "$arn" "$op_id" "$op_type"
+  fi
 }
 
 deploy_frontend() {
