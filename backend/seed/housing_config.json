@@ -1,0 +1,75 @@
+{
+  "categories": [
+    {
+      "name": "Housing Conditions",
+      "subcategories": [
+        "Unresolved Repairs",
+        "Mold & Leaks",
+        "Pests & Sanitation"
+      ]
+    },
+    {
+      "name": "Extreme Heat",
+      "subcategories": [
+        "Cooling Centers",
+        "Heat Safety & Outreach",
+        "Shade & Tree Canopy"
+      ]
+    },
+    {
+      "name": "Affordability & Displacement",
+      "subcategories": [
+        "Rent Increases",
+        "Evictions & Notices",
+        "Housing Assistance"
+      ]
+    },
+    {
+      "name": "Access & Language",
+      "subcategories": [
+        "Interpretation & Translation",
+        "Older Residents & Mobility"
+      ]
+    }
+  ],
+  "permit_types": [
+    "Housing conditions",
+    "Extreme heat",
+    "Rent & affordability",
+    "Language access",
+    "Other"
+  ],
+  "departments": [
+    "Inspectional Services (Housing)",
+    "Office of Neighborhood Services",
+    "Mayor's Office of Housing",
+    "Office of Emergency Management",
+    "Age Strong Commission",
+    "Boston Public Health Commission",
+    "Environment Department",
+    "Boston Public Library"
+  ],
+  "impact_types": [
+    "Heat Exposure",
+    "Housing Stability",
+    "Health & Wellbeing",
+    "Cost to Families",
+    "Accessibility Barrier",
+    "Child Safety"
+  ],
+  "urgency_levels": [
+    "Low",
+    "Medium",
+    "High"
+  ],
+  "sentiment_options": [
+    "Positive",
+    "Neutral",
+    "Negative"
+  ],
+  "priority_levels": [
+    "Low",
+    "Medium",
+    "High"
+  ]
+}

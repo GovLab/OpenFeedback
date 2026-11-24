@@ -38,7 +38,7 @@ aws apprunner start-deployment --region us-east-1 \
 ```
 
 ## Topic and demo data
-`var.topic` (default `parks`) sets the back end's `TOPIC` and the front end's wording. `var.show_sample_data_notice` (default `true`) labels the dashboard "Sample Data". After changing either one, run `./deploy.sh`.
+`var.topic` (default `housing`; also `parks` or `permits`) sets the back end's `TOPIC` and the front end's wording. `var.show_sample_data_notice` (default `true`) labels the dashboard "Sample Data". After changing either one, run `./deploy.sh`.
 
 To load the parks demo data (about 40 items, roughly 5 minutes, under $1 of OpenAI usage):
 ```bash

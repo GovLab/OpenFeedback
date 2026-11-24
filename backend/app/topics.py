@@ -1,7 +1,7 @@
 """
 Topic profiles: everything the AI prompts say that is specific to one subject.
 
-The active topic comes from the TOPIC env var ("permits" or "parks"). Categories,
+The active topic comes from the TOPIC env var ("permits", "parks" or "housing"). Categories,
 item types and departments are not here: they live in the versioned system
 config in PostgreSQL, so each topic has its own config version.
 """
@@ -135,7 +135,56 @@ PARKS = Topic(
     },
 )
 
-TOPICS = {topic.key: topic for topic in (PERMITS, PARKS)}
+HOUSING = Topic(
+    key="housing",
+    subject="housing conditions and extreme heat in Boston",
+    item_label="Issue Area",
+    item_question="Which issue area this relates to",
+    chatbot_role="You are an intelligent feedback quality assistant for the City of Boston, collecting resident feedback about housing conditions and extreme heat.",
+    required_info="""1. Issue Area - Housing conditions, extreme heat, rent and affordability, or language access
+2. Location - Which neighborhood, building or street
+3. Problem or Idea - What is wrong, or what would help
+4. Concrete Details - How long it has been happening, who is affected, and whether anyone (landlord, 311, the City) has been contacted""",
+    item_hints="""- "AC/air conditioning/no cooling/too hot inside" → Housing conditions (and Extreme heat if it's during a heat wave)
+- "heat/heating/boiler/radiator/no hot water" → Housing conditions
+- "mold/leak/pests/mice/roaches/bedbugs/broken repairs" → Housing conditions
+- "cooling center/heat wave/heat alert/shade" → Extreme heat
+- "rent increase/eviction/notice to vacate/lease" → Rent & affordability
+- "interpreter/translation/information in my language" → Language access
+- Unclear → Ask what is happening and where""",
+    sufficient_examples="""✓ "No working AC in our Mattapan apartment for a week; the landlord hasn't answered three calls"
+✓ "Black mold on the bedroom wall in East Boston where the roof leaks; my son's asthma is worse"
+✓ "The nearest cooling center closes at 5pm, when our apartment is hottest\"""",
+    quality_scoring="""- 1-2: Single words ("hot", "bad") or completely unintelligible
+- 3-4: Vague complaints without specifics ("my apartment is terrible", "it's too hot")
+- 5: Has an issue OR a location but missing what is wrong or for how long
+- 6-7: Has issue + location (neighborhood or building) + ANY specific detail
+       Examples: "No AC in my Dorchester apartment for nine days" or "Mold in the bathroom of my Roxbury unit since spring"
+- 8-9: Has issue + location + MULTIPLE specific details
+       Examples: "No AC in our Mattapan triple-decker for a week during the heat wave, over 90 degrees at night, landlord not responding"
+- 10: Comprehensive, actionable detail with issue, location, duration, who is affected and what has been tried
+      Example: "Our Hyde Park building's central air has been out for a week; my mother has asthma, it's 88 degrees inside, and management gives no repair date\"""",
+    valid_topics="""- Housing conditions: repairs, heat and cooling, mold, leaks, pests, safety in rental housing
+- Extreme heat: cooling centers, heat alerts, outreach to older residents, shade and trees
+- Rent increases, evictions, notices and housing assistance
+- Interpretation, translation and access for older residents or people with disabilities
+- How City departments respond to housing and heat problems
+- Ideas for helping Boston residents stay safely housed and cool""",
+    invalid_examples="""- Random text: "asdfghjkl" or "test test test"
+- Completely unrelated: "I love pizza", "My internet is slow"
+- Promotional/spam: "Buy now!", "Click here for deals"
+- Trolling: "You're all idiots" (without any housing or heat context)
+- Personal disputes unrelated to housing or heat: "My coworker is annoying\"""",
+    context_categories={
+        "general_info": "who handles housing and heat issues, how to report, contacts",
+        "housing_conditions": "repairs, cooling and heating, mold, leaks, pests, inspections",
+        "extreme_heat": "heat waves, cooling centers, heat alerts, outreach",
+        "rent_displacement": "rent increases, evictions, notices, housing assistance",
+        "language_access": "interpretation, translation, older residents and mobility",
+    },
+)
+
+TOPICS = {topic.key: topic for topic in (PERMITS, PARKS, HOUSING)}
 
 
 def get_topic(key: str) -> Topic:

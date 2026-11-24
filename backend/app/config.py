@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     staff_password: str
     session_secret: str
 
-    # Which topic profile the AI prompts use: "permits" or "parks"
+    # Which topic profile the AI prompts use: "permits", "parks" or "housing"
     topic: str = "permits"
 
     

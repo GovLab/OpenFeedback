@@ -41,6 +41,20 @@ const TOPICS: Record<string, TopicCopy> = {
     itemLabel: "Park Feature",
     itemLabelPlural: "Park Features",
   },
+  housing: {
+    appTitle: "Boston Housing & Heat Feedback",
+    appDescription: "Tell the City about housing conditions and extreme heat where you live.",
+    formQuestion: "How can the City help with housing conditions or extreme heat where you live?",
+    formPlaceholder: "Tell us what is happening where you live.",
+    suggestionPrompts: [
+      "Which neighborhood do you live in?",
+      "What is wrong, and how long has it been happening?",
+      "Have you contacted anyone about it?",
+    ],
+    dashboardTitle: "Housing & Heat Feedback Analytics",
+    itemLabel: "Issue Area",
+    itemLabelPlural: "Issue Areas",
+  },
 };
 
 const topicKey = process.env.NEXT_PUBLIC_TOPIC || "permits";

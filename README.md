@@ -77,16 +77,17 @@ OpenFeedback bridges the gap between **how residents share feedback** and **how 
 
 ## Topics
 
-The app was built for permit feedback, and can also run as a parks and playgrounds feedback tool. One setting, `TOPIC`, picks which:
+The app was built for permit feedback, and can also run as a parks and playgrounds tool or a housing conditions and extreme heat tool. One setting, `TOPIC`, picks which:
 
 | `TOPIC` | Resident question | What the AI looks for |
 |---|---|---|
 | `permits` (default) | "How was your experience with permitting?" | Permit type, cost, delays, process problems |
 | `parks` | "How could your local park or playground be better?" | Park feature, location, safety, upkeep, access |
+| `housing` | "How can the City help with housing conditions or extreme heat where you live?" | Issue area, neighborhood or building, how long, who was contacted |
 
 - **Back end:** set `TOPIC` in `backend/.env.local`. The topic-specific AI wording lives in `backend/app/topics.py`, and the chatbot's background notes are in `backend/app/context/<topic>/`.
 - **Front end:** set `NEXT_PUBLIC_TOPIC` to the same value (the screen wording is in `frontend/lib/topic.ts`).
-- **Categories:** the category lists themselves are not in code. They're versions in the **System Configuration** tab, so switching topic also means activating that topic's config version (v1 is permits, and `backend/seed/parks_config.json` is parks).
+- **Categories:** the category lists themselves are not in code. They're versions in the **System Configuration** tab, so switching topic also means activating that topic's config version (v1 is permits, `backend/seed/parks_config.json` is parks, and `backend/seed/housing_config.json` is housing).
 
 ### Demo data
 `backend/seed/seed_demo.py` publishes a config file and then submits made-up feedback through the public form endpoint, so every item gets real AI classification:
@@ -151,7 +152,7 @@ Read from `backend/.env.local` locally, or from the App Runner service in AWS. T
 | `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | yes | PostgreSQL database (port defaults to 5432) | Secrets Manager |
 | `STAFF_PASSWORD` | yes | Shared password for the staff dashboard | Secrets Manager |
 | `SESSION_SECRET` | yes | Signs staff login tokens (at least 32 characters) | Secrets Manager |
-| `TOPIC` | no, default `permits` | `permits` or `parks`; must match `NEXT_PUBLIC_TOPIC` | Terraform variable `topic` |
+| `TOPIC` | no, default `permits` | `permits`, `parks` or `housing`; must match `NEXT_PUBLIC_TOPIC` | Terraform variable `topic` |
 | `CORS_ALLOWED_ORIGINS` | no, default `http://localhost:3000,http://localhost:3001` | Comma-separated frontend origins allowed to call the API | Set to the Amplify frontend URL |
 | `USE_SECRETS_MANAGER`, `SECRET_NAME`, `AWS_REGION` | no, legacy | Load settings from AWS Secrets Manager instead of environment variables. Only the older `terraform/prod` and `terraform/test` environments use these | Not used by `terraform/demo` |
 

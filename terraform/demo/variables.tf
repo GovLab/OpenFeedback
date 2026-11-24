@@ -46,13 +46,13 @@ variable "app_runner_max_instances" {
 }
 
 variable "topic" {
-  description = "Which topic profile the app runs: permits or parks"
+  description = "Which topic profile the app runs: permits, parks or housing"
   type        = string
-  default     = "parks"
+  default     = "housing"
 
   validation {
-    condition     = contains(["permits", "parks"], var.topic)
-    error_message = "topic must be permits or parks."
+    condition     = contains(["permits", "parks", "housing"], var.topic)
+    error_message = "topic must be permits, parks or housing."
   }
 }
 
